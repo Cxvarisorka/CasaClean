@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Image } from "@/components/ui/Image";
 import { carouselSlide } from "@/animations/slide";
 import { TESTIMONIALS } from "@/data/testimonials";
+import { useTranslation } from "@/i18n";
 
 /*
  * TestimonialsCarousel
@@ -20,6 +21,7 @@ import { TESTIMONIALS } from "@/data/testimonials";
 const AUTOPLAY_MS = 6500;
 
 export function TestimonialsCarousel({ items = TESTIMONIALS }) {
+  const { t } = useTranslation();
   const [[index, direction], setState] = useState([0, 0]);
   const [paused, setPaused] = useState(false);
 
@@ -65,7 +67,7 @@ export function TestimonialsCarousel({ items = TESTIMONIALS }) {
             >
               <StarRating rating={active.rating} size="size-5" />
               <blockquote className="mt-5 text-heading-md font-medium leading-snug text-ink-900">
-                “{active.quote}”
+                “{t(`testimonials.${active.id}.quote`)}”
               </blockquote>
 
               <figcaption className="mt-7 flex items-center gap-4">
@@ -91,7 +93,7 @@ export function TestimonialsCarousel({ items = TESTIMONIALS }) {
                   </p>
                 </div>
                 <Badge variant="brand" className="ml-auto hidden sm:inline-flex">
-                  {active.metric}
+                  {t(`testimonials.${active.id}.metric`)}
                 </Badge>
               </figcaption>
             </motion.figure>

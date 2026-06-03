@@ -3,6 +3,7 @@ import { Container } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/shared/SectionHeading";
 import { Icon } from "@/components/shared/Icon";
 import { WHY_CASACLEAN } from "@/data/company";
+import { useTranslation } from "@/i18n";
 import { staggerContainer, staggerItem } from "@/animations/stagger";
 import { viewportOnce } from "@/animations/pageTransitions";
 
@@ -14,6 +15,8 @@ import { viewportOnce } from "@/animations/pageTransitions";
  */
 
 export function WhyCasaCleanSection() {
+  const { t } = useTranslation();
+
   return (
     <section className="bg-sand-50 py-20 lg:py-28">
       <Container>
@@ -21,9 +24,9 @@ export function WhyCasaCleanSection() {
           <div className="lg:sticky lg:top-28 lg:self-start">
             <SectionHeading
               align="left"
-              eyebrow="Why CasaClean"
-              title="The reliability of an in-house team, without the overhead"
-              subtitle="We obsess over the operational details so your reviews stay five stars and your time stays yours."
+              eyebrow={t("why.eyebrow")}
+              title={t("why.title")}
+              subtitle={t("why.subtitle")}
             />
           </div>
 
@@ -43,8 +46,12 @@ export function WhyCasaCleanSection() {
                 <span className="grid size-12 place-items-center rounded-2xl bg-brand-50 text-brand-600">
                   <Icon name={item.icon} className="size-6" />
                 </span>
-                <h3 className="mt-5 text-heading-sm text-ink-900">{item.title}</h3>
-                <p className="mt-2 text-body-md text-ink-500">{item.description}</p>
+                <h3 className="mt-5 text-heading-sm text-ink-900">
+                  {t(`why.items.${item.id}.title`)}
+                </h3>
+                <p className="mt-2 text-body-md text-ink-500">
+                  {t(`why.items.${item.id}.description`)}
+                </p>
               </motion.div>
             ))}
           </motion.div>

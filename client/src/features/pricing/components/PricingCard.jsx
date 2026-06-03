@@ -4,6 +4,7 @@ import { cn } from "@/lib/cn";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { useTranslation } from "@/i18n";
 import { ROUTES } from "@/constants/routes";
 import { staggerItemScale } from "@/animations/stagger";
 
@@ -16,7 +17,13 @@ import { staggerItemScale } from "@/animations/stagger";
  */
 
 export function PricingCard({ plan }) {
+  const { t } = useTranslation();
   const highlight = plan.highlight;
+  const base = `pricingPlans.${plan.id}`;
+  const features = t(`${base}.features`);
+  const featureList = Array.isArray(features) ? features : plan.features;
+  // Numeric tiers share the "/ turnover" unit; the custom tier has its own.
+  const unit = plan.price != null ? t("common.perTurnover") : t(`${base}.unit`);
 
   return (
     <motion.div
@@ -30,15 +37,15 @@ export function PricingCard({ plan }) {
     >
       {plan.badge && (
         <Badge variant="accent" className="absolute -top-3 left-1/2 -translate-x-1/2">
-          {plan.badge}
+          {t(`${base}.badge`)}
         </Badge>
       )}
 
       <h3 className={cn("text-heading-sm", highlight ? "text-white" : "text-ink-900")}>
-        {plan.name}
+        {t(`${base}.name`)}
       </h3>
       <p className={cn("mt-1.5 text-body-sm", highlight ? "text-ink-300" : "text-ink-500")}>
-        {plan.description}
+        {t(`${base}.description`)}
       </p>
 
       <div className="mt-6 flex items-end gap-1.5">
@@ -53,7 +60,7 @@ export function PricingCard({ plan }) {
               {formatCurrency(plan.price)}
             </span>
             <span className={cn("mb-2 text-body-sm", highlight ? "text-ink-400" : "text-ink-500")}>
-              {plan.unit}
+              {unit}
             </span>
           </>
         ) : (
@@ -63,16 +70,16 @@ export function PricingCard({ plan }) {
               highlight ? "text-white" : "text-ink-900"
             )}
           >
-            {plan.unit}
+            {unit}
           </span>
         )}
       </div>
       <p className={cn("mt-1 text-caption", highlight ? "text-brand-300" : "text-ink-400")}>
-        {plan.cadence}
+        {t(`${base}.cadence`)}
       </p>
 
       <ul className="mt-7 flex-1 space-y-3.5">
-        {plan.features.map((feature) => (
+        {featureList.map((feature) => (
           <li
             key={feature}
             className={cn(
@@ -98,7 +105,7 @@ export function PricingCard({ plan }) {
         fullWidth
         className="mt-8"
       >
-        {plan.cta}
+        {t(`${base}.cta`)}
       </Button>
     </motion.div>
   );

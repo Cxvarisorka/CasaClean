@@ -7,6 +7,7 @@ import { Image } from "@/components/ui/Image";
 import { formatDate } from "@/utils/formatDate";
 import { ROUTES } from "@/constants/routes";
 import { IMAGES } from "@/constants/images";
+import { useTranslation } from "@/i18n";
 import { staggerItemScale } from "@/animations/stagger";
 
 /*
@@ -18,6 +19,8 @@ import { staggerItemScale } from "@/animations/stagger";
  */
 
 export function BlogCard({ post, featured = false }) {
+  const { t } = useTranslation();
+
   return (
     <motion.article
       variants={staggerItemScale}
@@ -54,7 +57,7 @@ export function BlogCard({ post, featured = false }) {
             <span>{formatDate(post.publishedAt)}</span>
             <span aria-hidden="true">·</span>
             <span className="inline-flex items-center gap-1">
-              <Clock className="size-3.5" /> {post.readingMinutes} min read
+              <Clock className="size-3.5" /> {post.readingMinutes} {t("pages.blog.minRead")}
             </span>
           </div>
 

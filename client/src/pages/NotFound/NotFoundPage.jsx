@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Seo } from "@/seo";
 import { PAGE_META } from "@/constants/metadata";
 import { ROUTES } from "@/constants/routes";
+import { useTranslation } from "@/i18n";
 
 /*
  * NotFoundPage
@@ -15,6 +16,8 @@ import { ROUTES } from "@/constants/routes";
  */
 
 const NotFoundPage = () => {
+  const { t } = useTranslation();
+
   return (
     <Page>
       <Seo {...PAGE_META.notFound} noIndex />
@@ -28,21 +31,20 @@ const NotFoundPage = () => {
             transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
             className="mx-auto max-w-xl text-center"
           >
-            <p className="text-display font-bold text-gradient">404</p>
+            <p className="text-display font-bold text-gradient">{t("pages.notFound.code")}</p>
             <h1 className="mt-2 text-heading-lg text-ink-900">
-              This page checked out early
+              {t("pages.notFound.title")}
             </h1>
             <p className="mt-4 text-body-lg text-ink-500">
-              The page you're looking for doesn't exist or has moved. Let's get
-              you back to a clean space.
+              {t("pages.notFound.subtitle")}
             </p>
 
             <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Button to={ROUTES.home} size="lg" leftIcon={Home}>
-                Back home
+                {t("pages.notFound.home")}
               </Button>
               <Button to={ROUTES.services} size="lg" variant="outline" leftIcon={Search}>
-                Browse services
+                {t("pages.notFound.services")}
               </Button>
             </div>
 
@@ -51,7 +53,7 @@ const NotFoundPage = () => {
               onClick={() => window.history.back()}
               className="mt-6 inline-flex items-center gap-1.5 text-body-sm font-medium text-ink-500 transition-colors hover:text-ink-800"
             >
-              <ArrowLeft className="size-4" /> Go back
+              <ArrowLeft className="size-4" /> {t("pages.notFound.goBack")}
             </button>
           </motion.div>
         </Container>

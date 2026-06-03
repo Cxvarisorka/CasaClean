@@ -8,6 +8,7 @@ import { Seo } from "@/seo";
 import { PAGE_META } from "@/constants/metadata";
 import { SITE } from "@/constants/metadata";
 import { IMAGES } from "@/constants/images";
+import { useTranslation } from "@/i18n";
 
 /*
  * ContactPage
@@ -16,39 +17,41 @@ import { IMAGES } from "@/constants/images";
  * validated ContactForm (which owns its own submission + success states).
  */
 
-const CHANNELS = [
-  {
-    icon: Mail,
-    label: "Email us",
-    value: SITE.email,
-    href: `mailto:${SITE.email}`,
-    note: "We reply within one business day",
-  },
-  {
-    icon: Phone,
-    label: "Call us",
-    value: SITE.phone,
-    href: "tel:+390612345678",
-    note: "Mon–Sat, 9:00–18:00 CET",
-  },
-  {
-    icon: MapPin,
-    label: "Visit",
-    value: `${SITE.address.street}, ${SITE.address.city}`,
-    note: "By appointment",
-  },
-];
-
 const ContactPage = () => {
+  const { t } = useTranslation();
+
+  const CHANNELS = [
+    {
+      icon: Mail,
+      label: t("pages.contact.emailLabel"),
+      value: SITE.email,
+      href: `mailto:${SITE.email}`,
+      note: t("pages.contact.emailNote"),
+    },
+    {
+      icon: Phone,
+      label: t("pages.contact.phoneLabel"),
+      value: SITE.phone,
+      href: "tel:+390612345678",
+      note: t("pages.contact.phoneNote"),
+    },
+    {
+      icon: MapPin,
+      label: t("pages.contact.visitLabel"),
+      value: `${SITE.address.street}, ${SITE.address.city}`,
+      note: t("pages.contact.visitNote"),
+    },
+  ];
+
   return (
     <Page>
       <Seo {...PAGE_META.contact} />
 
       <PageHero
         image={IMAGES.bathroom}
-        eyebrow="Contact"
-        title="Let's get your turnovers handled"
-        subtitle="Questions about coverage, pricing or onboarding a portfolio? We're here to help."
+        eyebrow={t("pages.contact.heroEyebrow")}
+        title={t("pages.contact.heroTitle")}
+        subtitle={t("pages.contact.heroSubtitle")}
       />
 
       <section className="pb-20 lg:pb-28">
@@ -95,10 +98,10 @@ const ContactPage = () => {
                 </span>
                 <div>
                   <p className="text-body-sm font-semibold text-ink-900">
-                    Property manager?
+                    {t("pages.contact.pmTitle")}
                   </p>
                   <p className="text-body-sm text-ink-600">
-                    Ask about volume pricing and our multi-property dashboard.
+                    {t("pages.contact.pmNote")}
                   </p>
                 </div>
               </div>
@@ -107,9 +110,11 @@ const ContactPage = () => {
             {/* Form */}
             <Reveal delay={0.1}>
               <div className="rounded-3xl border border-ink-100 bg-white p-7 shadow-medium sm:p-9">
-                <h2 className="text-heading-md text-ink-900">Send us a message</h2>
+                <h2 className="text-heading-md text-ink-900">
+                  {t("pages.contact.formTitle")}
+                </h2>
                 <p className="mt-1.5 text-body-md text-ink-500">
-                  Fill in the form and we'll be in touch shortly.
+                  {t("pages.contact.formSubtitle")}
                 </p>
                 <div className="mt-7">
                   <ContactForm />

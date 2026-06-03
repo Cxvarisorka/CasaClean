@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Container } from "@/components/ui/Container";
 import { TRUSTED_BY } from "@/data/stats";
+import { useTranslation } from "@/i18n";
 import { viewportOnce } from "@/animations/pageTransitions";
 
 /*
@@ -11,6 +12,8 @@ import { viewportOnce } from "@/animations/pageTransitions";
  */
 
 export function TrustedBySection() {
+  const { t } = useTranslation();
+
   return (
     <section className="border-y border-ink-100 bg-white py-10">
       <Container>
@@ -20,7 +23,7 @@ export function TrustedBySection() {
           viewport={viewportOnce}
           className="text-center text-caption uppercase tracking-widest text-ink-400"
         >
-          Trusted by hosts and managers on the platforms you already use
+          {t("trustedBy.label")}
         </motion.p>
 
         <div className="mt-7 flex flex-wrap items-center justify-center gap-x-10 gap-y-5">

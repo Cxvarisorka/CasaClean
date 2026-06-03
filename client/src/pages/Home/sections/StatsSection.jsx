@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Container } from "@/components/ui/Container";
 import { AnimatedNumber } from "@/components/shared/AnimatedNumber";
 import { STATS } from "@/data/stats";
+import { useTranslation } from "@/i18n";
 import { staggerContainer, staggerItem } from "@/animations/stagger";
 import { viewportOnce } from "@/animations/pageTransitions";
 
@@ -13,6 +14,8 @@ import { viewportOnce } from "@/animations/pageTransitions";
  */
 
 export function StatsSection() {
+  const { t } = useTranslation();
+
   return (
     <section className="py-16 lg:py-20">
       <Container>
@@ -32,7 +35,7 @@ export function StatsSection() {
                   suffix={stat.suffix}
                 />
               </p>
-              <p className="mt-2 text-body-md text-ink-500">{stat.label}</p>
+              <p className="mt-2 text-body-md text-ink-500">{t(`stats.${stat.id}`)}</p>
             </motion.div>
           ))}
         </motion.div>

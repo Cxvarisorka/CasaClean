@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
+import { useTranslation } from "@/i18n";
 import { contactSchema, CONTACT_TOPICS } from "../validation/contactSchema";
 import { useSubmitContact } from "../hooks/useContactMutations";
 
@@ -18,6 +19,7 @@ import { useSubmitContact } from "../hooks/useContactMutations";
  */
 
 export function ContactForm() {
+  const { t } = useTranslation();
   const {
     register,
     handleSubmit,
@@ -31,6 +33,12 @@ export function ContactForm() {
 
   const onSubmit = (values) => mutateAsync(values);
 
+  // Translate the topic labels while keeping the stable submission values.
+  const topicOptions = CONTACT_TOPICS.map((topic) => ({
+    value: topic.value,
+    label: t(`pages.contact.topics.${topic.value}`),
+  }));
+
   if (isSuccess) {
     return (
       <motion.div
@@ -41,10 +49,11 @@ export function ContactForm() {
         <span className="grid size-14 place-items-center rounded-2xl bg-white shadow-soft">
           <CheckCircle2 className="size-7 text-brand-600" />
         </span>
-        <h3 className="mt-5 text-heading-md text-ink-900">Message sent</h3>
+        <h3 className="mt-5 text-heading-md text-ink-900">
+          {t("pages.contact.successTitle")}
+        </h3>
         <p className="mt-2 max-w-sm text-body-md text-ink-500">
-          Thanks for reaching out — a member of our team will get back to you
-          within one business day.
+          {t("pages.contact.successBody")}
         </p>
       </motion.div>
     );
@@ -54,14 +63,14 @@ export function ContactForm() {
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
       <div className="grid gap-5 sm:grid-cols-2">
         <Input
-          label="Full name"
+          label={t("pages.contact.fields.name")}
           placeholder="Jane Cooper"
           required
           error={errors.name?.message}
           {...register("name")}
         />
         <Input
-          label="Email"
+          label={t("pages.contact.fields.email")}
           type="email"
           placeholder="jane@email.com"
           required
@@ -72,26 +81,26 @@ export function ContactForm() {
 
       <div className="grid gap-5 sm:grid-cols-2">
         <Input
-          label="Phone"
+          label={t("pages.contact.fields.phone")}
           type="tel"
           placeholder="+39 ..."
-          hint="Optional"
+          hint={t("common.optional")}
           error={errors.phone?.message}
           {...register("phone")}
         />
         <Select
-          label="Topic"
-          placeholder="Select a topic"
+          label={t("pages.contact.fields.topic")}
+          placeholder={t("pages.contact.fields.topicPlaceholder")}
           required
-          options={CONTACT_TOPICS}
+          options={topicOptions}
           error={errors.topic?.message}
           {...register("topic")}
         />
       </div>
 
       <Textarea
-        label="How can we help?"
-        placeholder="Tell us about your property and what you need…"
+        label={t("pages.contact.fields.message")}
+        placeholder={t("pages.contact.fields.messagePlaceholder")}
         rows={5}
         required
         error={errors.message?.message}
@@ -103,7 +112,7 @@ export function ContactForm() {
       )}
 
       <Button type="submit" size="lg" loading={isPending} rightIcon={Send}>
-        Send message
+        {t("common.send")}
       </Button>
     </form>
   );

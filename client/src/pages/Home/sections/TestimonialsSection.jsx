@@ -1,6 +1,7 @@
 import { Container } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/shared/SectionHeading";
 import { TestimonialsCarousel } from "@/features/testimonials";
+import { useTranslation } from "@/i18n";
 
 /*
  * TestimonialsSection
@@ -10,13 +11,15 @@ import { TestimonialsCarousel } from "@/features/testimonials";
  */
 
 export function TestimonialsSection() {
+  const { t } = useTranslation();
+
   return (
     <section className="bg-sand-50 py-20 lg:py-28">
       <Container>
         <SectionHeading
-          eyebrow="Loved by hosts"
-          title="Hosts don't just like us — they rebook"
-          subtitle="Real words from the operators who trust CasaClean with their guests."
+          eyebrow={t("testimonialsSection.eyebrow")}
+          title={t("testimonialsSection.title")}
+          subtitle={t("testimonialsSection.subtitle")}
         />
         <div className="mt-14">
           <TestimonialsCarousel />

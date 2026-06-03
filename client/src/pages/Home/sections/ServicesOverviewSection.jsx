@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { SectionHeading } from "@/components/shared/SectionHeading";
 import { ServiceCard } from "@/features/services";
 import { SERVICES } from "@/data/services";
+import { useTranslation } from "@/i18n";
 import { ROUTES } from "@/constants/routes";
 import { staggerContainer } from "@/animations/stagger";
 import { viewportOnce } from "@/animations/pageTransitions";
@@ -17,13 +18,15 @@ import { viewportOnce } from "@/animations/pageTransitions";
  */
 
 export function ServicesOverviewSection() {
+  const { t } = useTranslation();
+
   return (
     <section id="services" className="py-20 lg:py-28">
       <Container>
         <SectionHeading
-          eyebrow="What we do"
-          title="Everything a turnover needs, under one roof"
-          subtitle="Mix and match the services your listings need. One vendor, one dashboard, one standard."
+          eyebrow={t("servicesSection.eyebrow")}
+          title={t("servicesSection.title")}
+          subtitle={t("servicesSection.subtitle")}
         />
 
         <motion.div
@@ -44,7 +47,7 @@ export function ServicesOverviewSection() {
 
         <div className="mt-12 flex justify-center">
           <Button to={ROUTES.services} variant="outline" size="lg" rightIcon={ArrowRight}>
-            Explore all services
+            {t("servicesSection.exploreAll")}
           </Button>
         </div>
       </Container>

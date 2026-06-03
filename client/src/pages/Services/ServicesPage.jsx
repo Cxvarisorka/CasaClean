@@ -8,6 +8,7 @@ import { SectionHeading } from "@/components/shared/SectionHeading";
 import { Icon } from "@/components/shared/Icon";
 import { ServiceCard } from "@/features/services";
 import { IMAGES } from "@/constants/images";
+import { useTranslation } from "@/i18n";
 import { Seo, serviceSchema } from "@/seo";
 import { PAGE_META } from "@/constants/metadata";
 import { SERVICES } from "@/data/services";
@@ -24,18 +25,20 @@ import { viewportOnce } from "@/animations/pageTransitions";
  */
 
 const ServicesPage = () => {
+  const { t } = useTranslation();
+
   return (
     <Page>
       <Seo {...PAGE_META.services} schema={SERVICES.map(serviceSchema)} />
 
       <PageHero
         image={IMAGES.kitchen}
-        eyebrow="Our services"
-        title="Full-service operations for short-term rentals"
-        subtitle="From a single turnover to fully managed linens, restocking and inspections — choose exactly what your listings need."
+        eyebrow={t("pages.services.heroEyebrow")}
+        title={t("pages.services.heroTitle")}
+        subtitle={t("pages.services.heroSubtitle")}
         actions={
           <Button to={ROUTES.booking} size="lg">
-            Book a turnover
+            {t("common.bookTurnover")}
           </Button>
         }
       />
@@ -60,9 +63,9 @@ const ServicesPage = () => {
       <section className="bg-sand-50 py-20 lg:py-28">
         <Container>
           <SectionHeading
-            eyebrow="The process"
-            title="Effortless from the first booking"
-            subtitle="However many services you choose, the experience is the same: simple, reliable, documented."
+            eyebrow={t("pages.services.processEyebrow")}
+            title={t("pages.services.processTitle")}
+            subtitle={t("pages.services.processSubtitle")}
           />
           <motion.div
             variants={staggerContainer(0.1)}
@@ -85,8 +88,12 @@ const ServicesPage = () => {
                     0{i + 1}
                   </span>
                 </div>
-                <h3 className="mt-5 text-heading-sm text-ink-900">{step.title}</h3>
-                <p className="mt-2 text-body-sm text-ink-500">{step.description}</p>
+                <h3 className="mt-5 text-heading-sm text-ink-900">
+                  {t(`workflow.items.${step.id}.title`)}
+                </h3>
+                <p className="mt-2 text-body-sm text-ink-500">
+                  {t(`workflow.items.${step.id}.description`)}
+                </p>
               </motion.div>
             ))}
           </motion.div>
@@ -97,9 +104,9 @@ const ServicesPage = () => {
       <section className="py-20 lg:py-28">
         <Container size="md">
           <SectionHeading
-            eyebrow="Always included"
-            title="Every turnover, guaranteed"
-            subtitle="No matter which services you book, these come standard."
+            eyebrow={t("pages.services.includedEyebrow")}
+            title={t("pages.services.includedTitle")}
+            subtitle={t("pages.services.includedSubtitle")}
           />
           <motion.ul
             variants={staggerContainer(0.06)}
@@ -108,14 +115,7 @@ const ServicesPage = () => {
             viewport={viewportOnce}
             className="mt-12 grid gap-4 sm:grid-cols-2"
           >
-            {[
-              "Vetted, background-checked professionals",
-              "50-point quality checklist",
-              "Timestamped photo completion report",
-              "Full liability insurance on every visit",
-              "Damage & lost-item documentation",
-              "Guest-Ready Guarantee or we re-clean free",
-            ].map((item) => (
+            {t("pages.services.included").map((item) => (
               <motion.li
                 key={item}
                 variants={staggerItem}
@@ -130,8 +130,8 @@ const ServicesPage = () => {
       </section>
 
       <CtaSection
-        title="Build the turnover plan your listings deserve"
-        subtitle="Tell us about your property and we'll recommend the right mix of services."
+        title={t("pages.services.ctaTitle")}
+        subtitle={t("pages.services.ctaSubtitle")}
       />
     </Page>
   );

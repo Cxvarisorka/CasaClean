@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { useTranslation } from "@/i18n";
 import { useBookingNav } from "../store/BookingContext";
 
 /*
@@ -12,6 +13,7 @@ import { useBookingNav } from "../store/BookingContext";
  */
 
 export function BookingProgress() {
+  const { t } = useTranslation();
   const { steps, step, maxReached, goTo } = useBookingNav();
   const progress = (step / (steps.length - 1)) * 100;
 
@@ -56,7 +58,7 @@ export function BookingProgress() {
                   isActive ? "text-ink-900" : "text-ink-400"
                 )}
               >
-                {s.title}
+                {t(`booking.steps.${s.id}.title`)}
               </span>
             </li>
           );

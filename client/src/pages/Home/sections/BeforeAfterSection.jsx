@@ -6,6 +6,7 @@ import { SectionHeading } from "@/components/shared/SectionHeading";
 import { Badge } from "@/components/ui/Badge";
 import { Image } from "@/components/ui/Image";
 import { IMAGES } from "@/constants/images";
+import { useTranslation } from "@/i18n";
 import { viewportOnce } from "@/animations/pageTransitions";
 
 /*
@@ -17,6 +18,7 @@ import { viewportOnce } from "@/animations/pageTransitions";
  */
 
 function ComparisonSlider() {
+  const { t } = useTranslation();
   const containerRef = useRef(null);
   const [position, setPosition] = useState(50);
 
@@ -63,7 +65,7 @@ function ComparisonSlider() {
         draggable={false}
         overlay={
           <Badge variant="dark" className="absolute right-4 top-4">
-            After
+            {t("beforeAfter.after")}
           </Badge>
         }
       />
@@ -85,7 +87,7 @@ function ComparisonSlider() {
             <>
               <div className="absolute inset-0 bg-ink-950/20" aria-hidden="true" />
               <Badge variant="neutral" className="absolute left-4 top-4">
-                Before
+                {t("beforeAfter.before")}
               </Badge>
             </>
           }
@@ -106,13 +108,15 @@ function ComparisonSlider() {
 }
 
 export function BeforeAfterSection() {
+  const { t } = useTranslation();
+
   return (
     <section className="py-20 lg:py-28">
       <Container>
         <SectionHeading
-          eyebrow="The CasaClean difference"
-          title="See the transformation"
-          subtitle="Drag to compare a post-checkout space with a CasaClean guest-ready turnover."
+          eyebrow={t("beforeAfter.eyebrow")}
+          title={t("beforeAfter.title")}
+          subtitle={t("beforeAfter.subtitle")}
         />
 
         <motion.div

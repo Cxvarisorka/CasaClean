@@ -12,6 +12,7 @@ import { PAGE_META } from "@/constants/metadata";
 import { IMAGES } from "@/constants/images";
 import { COMPANY_VALUES, LEADERSHIP, COMPANY_MILESTONES } from "@/data/company";
 import { STATS } from "@/data/stats";
+import { useTranslation } from "@/i18n";
 import { staggerContainer, staggerItem } from "@/animations/stagger";
 import { viewportOnce } from "@/animations/pageTransitions";
 
@@ -23,15 +24,17 @@ import { viewportOnce } from "@/animations/pageTransitions";
  */
 
 const AboutPage = () => {
+  const { t } = useTranslation();
+
   return (
     <Page>
       <Seo {...PAGE_META.about} />
 
       <PageHero
         image={IMAGES.interiorLux}
-        eyebrow="Our story"
-        title="We built the operations partner we wished we had"
-        subtitle="CasaClean started with three crews and a five-star obsession. Today we keep thousands of listings guest-ready across Italy."
+        eyebrow={t("pages.about.heroEyebrow")}
+        title={t("pages.about.heroTitle")}
+        subtitle={t("pages.about.heroSubtitle")}
       />
 
       {/* Mission */}
@@ -44,10 +47,9 @@ const AboutPage = () => {
             transition={{ duration: 0.6 }}
             className="rounded-3xl border border-ink-100 bg-gradient-to-b from-white to-sand-50 p-8 text-center shadow-soft sm:p-12"
           >
-            <p className="text-eyebrow text-brand-600">Our mission</p>
+            <p className="text-eyebrow text-brand-600">{t("pages.about.missionLabel")}</p>
             <p className="mt-5 text-heading-lg text-balance leading-snug text-ink-900">
-              To make running a short-term rental feel effortless — so hosts can
-              grow their business while every guest walks into a flawless space.
+              {t("pages.about.mission")}
             </p>
           </motion.div>
         </Container>
@@ -97,7 +99,7 @@ const AboutPage = () => {
                 <p className="text-heading-xl font-bold text-gradient">
                   <AnimatedNumber value={stat.value} decimals={stat.decimals || 0} suffix={stat.suffix} />
                 </p>
-                <p className="mt-2 text-body-sm text-ink-500">{stat.label}</p>
+                <p className="mt-2 text-body-sm text-ink-500">{t(`stats.${stat.id}`)}</p>
               </motion.div>
             ))}
           </motion.div>
@@ -108,8 +110,8 @@ const AboutPage = () => {
       <section className="bg-sand-50 py-20 lg:py-28">
         <Container>
           <SectionHeading
-            eyebrow="What we value"
-            title="The principles behind every turnover"
+            eyebrow={t("pages.about.valuesEyebrow")}
+            title={t("pages.about.valuesTitle")}
           />
           <motion.div
             variants={staggerContainer(0.1)}
@@ -127,8 +129,12 @@ const AboutPage = () => {
                 <span className="grid size-12 place-items-center rounded-2xl bg-brand-50 text-brand-600">
                   <Icon name={value.icon} className="size-6" />
                 </span>
-                <h3 className="mt-5 text-heading-sm text-ink-900">{value.title}</h3>
-                <p className="mt-2 text-body-sm text-ink-500">{value.description}</p>
+                <h3 className="mt-5 text-heading-sm text-ink-900">
+                  {t(`values.${value.id}.title`)}
+                </h3>
+                <p className="mt-2 text-body-sm text-ink-500">
+                  {t(`values.${value.id}.description`)}
+                </p>
               </motion.div>
             ))}
           </motion.div>
@@ -138,7 +144,10 @@ const AboutPage = () => {
       {/* Timeline */}
       <section className="py-20 lg:py-28">
         <Container size="md">
-          <SectionHeading eyebrow="Milestones" title="How we got here" />
+          <SectionHeading
+            eyebrow={t("pages.about.milestonesEyebrow")}
+            title={t("pages.about.milestonesTitle")}
+          />
           <motion.ol
             variants={staggerContainer(0.12)}
             initial="hidden"
@@ -154,8 +163,12 @@ const AboutPage = () => {
                 <p className="text-caption font-bold uppercase tracking-wider text-brand-600">
                   {m.year}
                 </p>
-                <h3 className="mt-1 text-heading-sm text-ink-900">{m.title}</h3>
-                <p className="mt-1 text-body-md text-ink-500">{m.description}</p>
+                <h3 className="mt-1 text-heading-sm text-ink-900">
+                  {t(`milestones.${m.id}.title`)}
+                </h3>
+                <p className="mt-1 text-body-md text-ink-500">
+                  {t(`milestones.${m.id}.description`)}
+                </p>
               </motion.li>
             ))}
           </motion.ol>
@@ -166,8 +179,8 @@ const AboutPage = () => {
       <section className="bg-sand-50 py-20 lg:py-28">
         <Container>
           <SectionHeading
-            eyebrow="Leadership"
-            title="The people behind CasaClean"
+            eyebrow={t("pages.about.teamEyebrow")}
+            title={t("pages.about.teamTitle")}
           />
           <motion.div
             variants={staggerContainer(0.1)}
@@ -193,8 +206,12 @@ const AboutPage = () => {
                 <h3 className="mt-4 text-body-md font-semibold text-ink-900">
                   {person.name}
                 </h3>
-                <p className="text-body-sm font-medium text-brand-600">{person.role}</p>
-                <p className="mt-2 text-body-sm text-ink-500">{person.bio}</p>
+                <p className="text-body-sm font-medium text-brand-600">
+                  {t(`leadership.${person.id}.role`)}
+                </p>
+                <p className="mt-2 text-body-sm text-ink-500">
+                  {t(`leadership.${person.id}.bio`)}
+                </p>
               </motion.div>
             ))}
           </motion.div>
@@ -202,8 +219,8 @@ const AboutPage = () => {
       </section>
 
       <CtaSection
-        title="Join thousands of hosts who trust CasaClean"
-        subtitle="Experience the operations partner built for short-term rentals."
+        title={t("pages.about.ctaTitle")}
+        subtitle={t("pages.about.ctaSubtitle")}
       />
     </Page>
   );

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { formatDate } from "@/utils/formatDate";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { ROUTES } from "@/constants/routes";
+import { useTranslation } from "@/i18n";
 import { EASE_SPRING } from "@/animations/tokens";
 
 /*
@@ -14,6 +15,9 @@ import { EASE_SPRING } from "@/animations/tokens";
  */
 
 export function ConfirmationStep({ booking }) {
+  const { t } = useTranslation();
+  const firstName = booking.customer_name?.split(" ")[0] || "there";
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -35,16 +39,16 @@ export function ConfirmationStep({ booking }) {
         </motion.span>
       </motion.span>
 
-      <h2 className="mt-6 text-heading-lg text-ink-900">Booking confirmed!</h2>
+      <h2 className="mt-6 text-heading-lg text-ink-900">
+        {t("booking.confirmation.title")}
+      </h2>
       <p className="mt-3 text-body-lg text-ink-500">
-        Thanks, {booking.customer_name?.split(" ")[0] || "there"} — your turnover
-        is booked. We've emailed your confirmation and we'll be in touch with the
-        crew's arrival window.
+        {firstName} — {t("booking.confirmation.body")}
       </p>
 
       <div className="mt-8 rounded-2xl border border-ink-100 bg-white p-6 text-left shadow-soft">
         <div className="flex items-center justify-between">
-          <span className="text-body-sm text-ink-500">Booking reference</span>
+          <span className="text-body-sm text-ink-500">{t("booking.confirmation.reference")}</span>
           <span className="font-mono text-body-sm font-bold text-ink-900">
             {booking.id}
           </span>
@@ -61,7 +65,7 @@ export function ConfirmationStep({ booking }) {
               · {booking.booking_time}
             </p>
             <p className="text-caption text-ink-500">
-              {formatCurrency(booking.total_amount)} total
+              {formatCurrency(booking.total_amount)} {t("booking.confirmation.total")}
             </p>
           </div>
         </div>
@@ -69,10 +73,10 @@ export function ConfirmationStep({ booking }) {
 
       <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
         <Button to={ROUTES.home} leftIcon={Home} size="lg">
-          Back to home
+          {t("booking.confirmation.home")}
         </Button>
         <Button to={ROUTES.services} variant="outline" size="lg">
-          Explore more services
+          {t("booking.confirmation.more")}
         </Button>
       </div>
     </motion.div>
