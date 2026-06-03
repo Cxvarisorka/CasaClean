@@ -38,7 +38,7 @@ const BookingPage = () => {
             </p>
           </div>
 
-          <div className="mt-12 rounded-3xl border border-ink-100 bg-white p-6 shadow-medium sm:p-9 lg:p-10">
+          <div className="mt-12 rounded-3xl border border-ink-100 bg-surface p-6 shadow-medium sm:p-9 lg:p-10">
             <BookingWizard />
           </div>
         </Container>

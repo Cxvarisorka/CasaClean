@@ -46,7 +46,7 @@ export function ContactForm() {
         animate={{ opacity: 1, scale: 1 }}
         className="flex flex-col items-center rounded-2xl border border-brand-100 bg-brand-50/60 px-6 py-14 text-center"
       >
-        <span className="grid size-14 place-items-center rounded-2xl bg-white shadow-soft">
+        <span className="grid size-14 place-items-center rounded-2xl bg-surface shadow-soft">
           <CheckCircle2 className="size-7 text-brand-600" />
         </span>
         <h3 className="mt-5 text-heading-md text-ink-900">

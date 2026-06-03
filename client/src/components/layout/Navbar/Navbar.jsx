@@ -7,6 +7,7 @@ import { Container } from "@/components/ui/Container";
 import { Button } from "@/components/ui/Button";
 import { Logo } from "@/components/shared/Logo";
 import { LanguageSwitcher } from "../LanguageSwitcher";
+import { ThemeToggle } from "../ThemeToggle";
 import { useScrollPosition } from "@/hooks/useScrollPosition";
 import { useTranslation } from "@/i18n";
 import { PRIMARY_NAV } from "@/constants/navigation";
@@ -65,6 +66,7 @@ export function Navbar() {
             </ul>
 
             <div className="hidden items-center gap-1.5 lg:flex">
+              <ThemeToggle />
               <LanguageSwitcher />
               <Button variant="ghost" size="sm" to={ROUTES.signin}>
                 {t("common.signIn")}
@@ -75,6 +77,7 @@ export function Navbar() {
             </div>
 
             <div className="flex items-center gap-1 lg:hidden">
+              <ThemeToggle />
               <LanguageSwitcher />
               <button
                 type="button"

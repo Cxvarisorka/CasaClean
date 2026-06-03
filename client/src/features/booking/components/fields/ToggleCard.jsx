@@ -19,7 +19,7 @@ export function ToggleCard({ selected, onToggle, title, price, description }) {
         "flex items-center gap-3 rounded-xl border p-4 text-left transition-all",
         selected
           ? "border-brand-600 bg-brand-50 ring-2 ring-brand-500/15"
-          : "border-ink-200 bg-white hover:border-brand-300"
+          : "border-ink-200 bg-surface hover:border-brand-300"
       )}
     >
       <span

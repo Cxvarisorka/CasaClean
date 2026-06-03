@@ -78,14 +78,14 @@ const ContactPage = () => {
                   <a
                     key={channel.label}
                     href={channel.href}
-                    className="flex items-center gap-4 rounded-2xl border border-ink-100 bg-white p-5 shadow-soft transition-shadow hover:shadow-medium"
+                    className="flex items-center gap-4 rounded-2xl border border-ink-100 bg-surface p-5 shadow-soft transition-shadow hover:shadow-medium"
                   >
                     {Inner}
                   </a>
                 ) : (
                   <div
                     key={channel.label}
-                    className="flex items-center gap-4 rounded-2xl border border-ink-100 bg-white p-5 shadow-soft"
+                    className="flex items-center gap-4 rounded-2xl border border-ink-100 bg-surface p-5 shadow-soft"
                   >
                     {Inner}
                   </div>
@@ -93,7 +93,7 @@ const ContactPage = () => {
               })}
 
               <div className="flex items-start gap-4 rounded-2xl border border-brand-100 bg-brand-50/60 p-5">
-                <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-white text-brand-600 shadow-soft">
+                <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-surface text-brand-600 shadow-soft">
                   <MessageSquare className="size-6" />
                 </span>
                 <div>
@@ -109,7 +109,7 @@ const ContactPage = () => {
 
             {/* Form */}
             <Reveal delay={0.1}>
-              <div className="rounded-3xl border border-ink-100 bg-white p-7 shadow-medium sm:p-9">
+              <div className="rounded-3xl border border-ink-100 bg-surface p-7 shadow-medium sm:p-9">
                 <h2 className="text-heading-md text-ink-900">
                   {t("pages.contact.formTitle")}
                 </h2>

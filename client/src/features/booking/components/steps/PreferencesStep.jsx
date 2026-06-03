@@ -53,10 +53,10 @@ export function PreferencesStep() {
                       "flex items-start gap-3 rounded-xl border p-4 text-left transition-all",
                       selected
                         ? "border-brand-600 bg-brand-50 ring-2 ring-brand-500/15"
-                        : "border-ink-200 bg-white hover:border-brand-300"
+                        : "border-ink-200 bg-surface hover:border-brand-300"
                     )}
                   >
-                    <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white text-brand-600 shadow-soft">
+                    <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-surface text-brand-600 shadow-soft">
                       <Icon name={service.icon} className="size-5" />
                     </span>
                     <span>

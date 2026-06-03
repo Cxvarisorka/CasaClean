@@ -85,7 +85,7 @@ function ComparisonSlider() {
           draggable={false}
           overlay={
             <>
-              <div className="absolute inset-0 bg-ink-950/20" aria-hidden="true" />
+              <div className="absolute inset-0 bg-night-soft/20" aria-hidden="true" />
               <Badge variant="neutral" className="absolute left-4 top-4">
                 {t("beforeAfter.before")}
               </Badge>
@@ -96,10 +96,10 @@ function ComparisonSlider() {
 
       {/* Handle */}
       <div
-        className="absolute inset-y-0 w-0.5 bg-white shadow-large"
+        className="absolute inset-y-0 w-0.5 bg-surface shadow-large"
         style={{ left: `${position}%` }}
       >
-        <span className="absolute top-1/2 left-1/2 grid size-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-white text-ink-700 shadow-large">
+        <span className="absolute top-1/2 left-1/2 grid size-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-surface text-ink-700 shadow-large">
           <MoveHorizontal className="size-5" />
         </span>
       </div>

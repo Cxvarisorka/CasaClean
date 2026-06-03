@@ -13,7 +13,7 @@ const VARIANTS = {
   neutral: "bg-ink-100 text-ink-700 border-ink-200",
   success: "bg-emerald-50 text-emerald-700 border-emerald-100",
   outline: "bg-transparent text-ink-600 border-ink-200",
-  dark: "bg-ink-900 text-white border-ink-900",
+  dark: "bg-night text-white border-night",
 };
 
 const SIZES = {

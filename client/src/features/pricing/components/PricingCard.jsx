@@ -31,8 +31,8 @@ export function PricingCard({ plan }) {
       className={cn(
         "relative flex h-full flex-col rounded-3xl border p-7 shadow-soft",
         highlight
-          ? "border-brand-600 bg-ink-950 text-white shadow-premium lg:-my-3 lg:py-10"
-          : "border-ink-100 bg-white"
+          ? "border-brand-600 bg-night-soft text-white shadow-premium lg:-my-3 lg:py-10"
+          : "border-ink-100 bg-surface"
       )}
     >
       {plan.badge && (

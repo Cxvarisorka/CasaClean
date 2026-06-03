@@ -61,7 +61,7 @@ const CareersPage = () => {
               <motion.div
                 key={perk.id}
                 variants={staggerItem}
-                className="rounded-2xl border border-ink-100 bg-white p-6 shadow-soft"
+                className="rounded-2xl border border-ink-100 bg-surface p-6 shadow-soft"
               >
                 <span className="grid size-12 place-items-center rounded-2xl bg-brand-50 text-brand-600">
                   <Icon name={perk.icon} className="size-6" />
@@ -104,7 +104,7 @@ const CareersPage = () => {
                 <motion.li key={role.id} variants={staggerItem}>
                   <a
                     href={`mailto:careers@casaclean.com?subject=Application: ${role.title}`}
-                    className="group flex flex-col gap-3 rounded-2xl border border-ink-100 bg-white p-5 shadow-soft transition-shadow hover:shadow-medium sm:flex-row sm:items-center sm:justify-between"
+                    className="group flex flex-col gap-3 rounded-2xl border border-ink-100 bg-surface p-5 shadow-soft transition-shadow hover:shadow-medium sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div>
                       <div className="flex items-center gap-3">

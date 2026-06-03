@@ -44,7 +44,7 @@ export function WorkflowSection() {
               <motion.li key={step.id} variants={staggerItem} className="relative text-center">
                 <div className="relative mx-auto grid size-14 place-items-center rounded-2xl bg-brand-600 text-white shadow-medium">
                   <Icon name={step.icon} className="size-6" />
-                  <span className="absolute -right-2 -top-2 grid size-7 place-items-center rounded-full border-2 border-white bg-accent-400 text-caption font-bold text-ink-950">
+                  <span className="absolute -right-2 -top-2 grid size-7 place-items-center rounded-full border-2 border-white bg-accent-400 text-caption font-bold text-night-soft">
                     {i + 1}
                   </span>
                 </div>

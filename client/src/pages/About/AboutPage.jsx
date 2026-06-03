@@ -45,7 +45,7 @@ const AboutPage = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={viewportOnce}
             transition={{ duration: 0.6 }}
-            className="rounded-3xl border border-ink-100 bg-gradient-to-b from-white to-sand-50 p-8 text-center shadow-soft sm:p-12"
+            className="rounded-3xl border border-ink-100 bg-gradient-to-b from-surface to-sand-50 p-8 text-center shadow-soft sm:p-12"
           >
             <p className="text-eyebrow text-brand-600">{t("pages.about.missionLabel")}</p>
             <p className="mt-5 text-heading-lg text-balance leading-snug text-ink-900">
@@ -124,7 +124,7 @@ const AboutPage = () => {
               <motion.div
                 key={value.id}
                 variants={staggerItem}
-                className="rounded-2xl border border-ink-100 bg-white p-6 shadow-soft"
+                className="rounded-2xl border border-ink-100 bg-surface p-6 shadow-soft"
               >
                 <span className="grid size-12 place-items-center rounded-2xl bg-brand-50 text-brand-600">
                   <Icon name={value.icon} className="size-6" />
@@ -193,7 +193,7 @@ const AboutPage = () => {
               <motion.div
                 key={person.id}
                 variants={staggerItem}
-                className="rounded-2xl border border-ink-100 bg-white p-6 text-center shadow-soft"
+                className="rounded-2xl border border-ink-100 bg-surface p-6 text-center shadow-soft"
               >
                 <Image
                   src={person.photo}

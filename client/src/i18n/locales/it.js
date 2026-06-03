@@ -35,6 +35,8 @@ export default {
 
   language: { label: "Lingua", select: "Seleziona lingua" },
 
+  theme: { label: "Tema", light: "Chiaro", dark: "Scuro" },
+
   nav: {
     services: "Servizi",
     pricing: "Prezzi",

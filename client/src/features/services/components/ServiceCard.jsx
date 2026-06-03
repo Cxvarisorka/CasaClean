@@ -43,7 +43,7 @@ export function ServiceCard({ service, featured = false }) {
           gradient="from-brand-400 to-brand-600"
           overlay={
             <>
-              <span className="absolute left-4 top-4 grid size-11 place-items-center rounded-2xl bg-white/95 text-brand-600 shadow-soft backdrop-blur">
+              <span className="absolute left-4 top-4 grid size-11 place-items-center rounded-2xl bg-surface/95 text-brand-600 shadow-soft backdrop-blur">
                 <Icon name={service.icon} className="size-6" />
               </span>
               {service.popular && (

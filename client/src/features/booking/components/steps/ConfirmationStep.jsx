@@ -46,7 +46,7 @@ export function ConfirmationStep({ booking }) {
         {firstName} — {t("booking.confirmation.body")}
       </p>
 
-      <div className="mt-8 rounded-2xl border border-ink-100 bg-white p-6 text-left shadow-soft">
+      <div className="mt-8 rounded-2xl border border-ink-100 bg-surface p-6 text-left shadow-soft">
         <div className="flex items-center justify-between">
           <span className="text-body-sm text-ink-500">{t("booking.confirmation.reference")}</span>
           <span className="font-mono text-body-sm font-bold text-ink-900">

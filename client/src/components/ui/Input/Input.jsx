@@ -59,7 +59,7 @@ export const Input = forwardRef(function Input(
           aria-invalid={error ? "true" : undefined}
           aria-describedby={describedBy}
           className={cn(
-            "h-11 w-full rounded-xl border bg-white text-body-sm text-ink-900",
+            "h-11 w-full rounded-xl border bg-surface text-body-sm text-ink-900",
             "placeholder:text-ink-400 transition-colors duration-200",
             "focus:outline-none focus:ring-4 focus:ring-brand-500/15",
             LeftIcon ? "pl-10 pr-4" : "px-4",

@@ -25,7 +25,7 @@ export function BlogCard({ post, featured = false }) {
     <motion.article
       variants={staggerItemScale}
       className={cn(
-        "group h-full overflow-hidden rounded-2xl border border-ink-100 bg-white shadow-soft transition-shadow hover:shadow-large",
+        "group h-full overflow-hidden rounded-2xl border border-ink-100 bg-surface shadow-soft transition-shadow hover:shadow-large",
         featured && "lg:col-span-2 lg:grid lg:grid-cols-2"
       )}
     >
@@ -42,7 +42,7 @@ export function BlogCard({ post, featured = false }) {
           overlay={
             <>
               <div
-                className="absolute inset-0 bg-gradient-to-t from-ink-950/40 to-transparent"
+                className="absolute inset-0 bg-gradient-to-t from-night-soft/40 to-transparent"
                 aria-hidden="true"
               />
               <Badge variant="dark" className="absolute bottom-4 left-4">

@@ -35,6 +35,8 @@ export default {
 
   language: { label: "ენა", select: "აირჩიე ენა" },
 
+  theme: { label: "თემა", light: "ნათელი", dark: "ბნელი" },
+
   nav: {
     services: "სერვისები",
     pricing: "ფასები",

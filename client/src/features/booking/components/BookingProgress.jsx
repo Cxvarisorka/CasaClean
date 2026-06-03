@@ -43,7 +43,7 @@ export function BookingProgress() {
                 disabled={!isUnlocked}
                 aria-current={isActive ? "step" : undefined}
                 className={cn(
-                  "grid size-10 place-items-center rounded-full border-2 bg-white text-body-sm font-bold transition-colors",
+                  "grid size-10 place-items-center rounded-full border-2 bg-surface text-body-sm font-bold transition-colors",
                   isComplete && "border-brand-600 bg-brand-600 text-white",
                   isActive && "border-brand-600 text-brand-700 ring-4 ring-brand-500/15",
                   !isComplete && !isActive && "border-ink-200 text-ink-400",

@@ -33,7 +33,7 @@ export const Checkbox = forwardRef(function Checkbox(
           />
           <span
             className={cn(
-              "grid size-5 place-items-center rounded-md border border-ink-300 bg-white",
+              "grid size-5 place-items-center rounded-md border border-ink-300 bg-surface",
               "transition-colors duration-150",
               "peer-checked:border-brand-600 peer-checked:bg-brand-600",
               "peer-checked:[&>svg]:opacity-100",

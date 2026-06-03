@@ -33,7 +33,7 @@ export const Radio = forwardRef(function Radio(
         />
         <span
           className={cn(
-            "grid size-5 place-items-center rounded-full border border-ink-300 bg-white",
+            "grid size-5 place-items-center rounded-full border border-ink-300 bg-surface",
             "transition-colors duration-150",
             "peer-checked:border-brand-600",
             "peer-checked:[&>span]:scale-100",

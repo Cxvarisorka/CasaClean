@@ -6,6 +6,7 @@ import { cn } from "@/lib/cn";
 import { Drawer } from "@/components/ui/Drawer";
 import { Button } from "@/components/ui/Button";
 import { LanguageSwitcher } from "../LanguageSwitcher";
+import { ThemeToggle } from "../ThemeToggle";
 import { useTranslation } from "@/i18n";
 import { PRIMARY_NAV } from "@/constants/navigation";
 import { ROUTES } from "@/constants/routes";
@@ -56,8 +57,9 @@ export function MobileMenu({ open, onClose }) {
         ))}
       </motion.ul>
 
-      <div className="mt-6 border-t border-ink-100 pt-6">
+      <div className="mt-6 space-y-4 border-t border-ink-100 pt-6">
         <LanguageSwitcher variant="block" />
+        <ThemeToggle variant="block" />
       </div>
 
       <div className="mt-6 flex flex-col gap-3 border-t border-ink-100 pt-6">

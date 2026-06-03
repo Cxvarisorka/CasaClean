@@ -23,7 +23,7 @@ export function PageHero({ eyebrow, title, subtitle, actions, image, children })
     <section
       className={cn(
         "relative overflow-hidden pt-32 pb-16 lg:pt-40 lg:pb-20",
-        hasImage ? "bg-ink-950" : "bg-grid"
+        hasImage ? "bg-night-soft" : "bg-grid"
       )}
     >
       {hasImage ? (
@@ -36,10 +36,10 @@ export function PageHero({ eyebrow, title, subtitle, actions, image, children })
             rounded="rounded-none"
             className="absolute inset-0 size-full"
             imgClassName="opacity-45"
-            gradient="from-ink-800 to-ink-950"
+            gradient="from-ink-800 to-night-soft"
           />
           <div
-            className="absolute inset-0 bg-gradient-to-t from-ink-950 via-ink-950/70 to-ink-950/40"
+            className="absolute inset-0 bg-gradient-to-t from-night-soft via-night-soft/70 to-night-soft/40"
             aria-hidden="true"
           />
         </>

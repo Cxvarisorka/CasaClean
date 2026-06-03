@@ -15,7 +15,7 @@ export function TrustedBySection() {
   const { t } = useTranslation();
 
   return (
-    <section className="border-y border-ink-100 bg-white py-10">
+    <section className="border-y border-ink-100 bg-surface py-10">
       <Container>
         <motion.p
           initial={{ opacity: 0 }}

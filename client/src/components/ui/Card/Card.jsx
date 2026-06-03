@@ -10,10 +10,10 @@ import { cn } from "@/lib/cn";
  */
 
 const VARIANTS = {
-  default: "bg-white border border-ink-100 shadow-soft",
-  elevated: "bg-white border border-ink-100 shadow-medium",
+  default: "bg-surface border border-ink-100 shadow-soft",
+  elevated: "bg-surface border border-ink-100 shadow-medium",
   ghost: "bg-ink-50/60 border border-transparent",
-  outline: "bg-white border border-ink-200",
+  outline: "bg-surface border border-ink-200",
   brand: "bg-brand-50 border border-brand-100",
 };
 

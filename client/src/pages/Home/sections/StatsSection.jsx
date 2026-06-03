@@ -24,7 +24,7 @@ export function StatsSection() {
           initial="hidden"
           whileInView="visible"
           viewport={viewportOnce}
-          className="grid gap-8 rounded-3xl border border-ink-100 bg-gradient-to-b from-white to-sand-50 px-6 py-12 shadow-soft sm:grid-cols-2 lg:grid-cols-4"
+          className="grid gap-8 rounded-3xl border border-ink-100 bg-gradient-to-b from-surface to-sand-50 px-6 py-12 shadow-soft sm:grid-cols-2 lg:grid-cols-4"
         >
           {STATS.map((stat) => (
             <motion.div key={stat.id} variants={staggerItem} className="text-center">

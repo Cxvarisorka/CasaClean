@@ -78,7 +78,7 @@ const ServicesPage = () => {
               <motion.div
                 key={step.id}
                 variants={staggerItem}
-                className="rounded-2xl border border-ink-100 bg-white p-6 shadow-soft"
+                className="rounded-2xl border border-ink-100 bg-surface p-6 shadow-soft"
               >
                 <div className="flex items-center justify-between">
                   <span className="grid size-11 place-items-center rounded-2xl bg-brand-50 text-brand-600">
@@ -119,7 +119,7 @@ const ServicesPage = () => {
               <motion.li
                 key={item}
                 variants={staggerItem}
-                className="flex items-center gap-3 rounded-xl border border-ink-100 bg-white px-5 py-4 text-body-md text-ink-700 shadow-soft"
+                className="flex items-center gap-3 rounded-xl border border-ink-100 bg-surface px-5 py-4 text-body-md text-ink-700 shadow-soft"
               >
                 <Check className="size-5 shrink-0 text-brand-600" />
                 {item}

@@ -21,7 +21,7 @@ export function Footer() {
   const { t } = useTranslation();
 
   return (
-    <footer className="bg-ink-950 text-ink-300">
+    <footer className="bg-night-soft text-ink-300">
       <Container className="py-16 lg:py-20">
         <div className="grid gap-12 lg:grid-cols-[1.4fr_2fr]">
           {/* Brand + newsletter */}
@@ -94,7 +94,7 @@ export function Footer() {
                   aria-label={social.label}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="grid size-10 place-items-center rounded-full bg-ink-900 text-ink-400 transition-colors hover:bg-brand-600 hover:text-white"
+                  className="grid size-10 place-items-center rounded-full bg-night text-ink-400 transition-colors hover:bg-brand-600 hover:text-white"
                 >
                   <SocialIcon platform={social.platform} />
                 </a>

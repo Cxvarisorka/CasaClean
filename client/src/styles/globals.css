@@ -52,6 +52,17 @@
   --color-sand-50: #fbfaf7;
   --color-sand-100: #f5f2eb;
 
+  /* ----- Semantic surfaces (theme-aware; remapped under .dark) -----
+   * canvas  = the page background
+   * surface = elevated cards/inputs/popovers
+   * night / night-soft = intentionally-dark slabs (CTA band, footer,
+   *   timeline, scrims) that stay dark in BOTH themes.
+   */
+  --color-canvas: #ffffff;
+  --color-surface: #ffffff;
+  --color-night: #0e1424;
+  --color-night-soft: #070b16;
+
   /* ----- Typography ----- */
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
     Roboto, Helvetica, Arial, sans-serif;
@@ -89,6 +100,48 @@
   --color-ink-400: #828da6;
 }
 
+/*
+ * Dark theme
+ * ----------
+ * Activated by a `.dark` class on <html> (set by ThemeProvider). Because every
+ * color utility resolves to a CSS variable, we flip the whole UI by remapping
+ * tokens here — no per-component dark: classes required.
+ *
+ * The neutral `ink` ramp is inverted (dark text -> light text); `canvas` and
+ * `surface` become deep slate; `sand` sections darken. The `night*` tokens are
+ * deliberately NOT remapped so already-dark slabs (CTA, footer, timeline,
+ * modal scrims) stay dark and their white text keeps its contrast.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+.dark {
+  --color-canvas: #0a0e18;
+  --color-surface: #141b2c;
+
+  --color-sand-50: #0f1626;
+  --color-sand-100: #192134;
+
+  /* Inverted neutral ramp: low indices = dark surfaces, high = light text */
+  --color-ink-50: #0d1422;
+  --color-ink-100: #182032;
+  --color-ink-200: #283149;
+  --color-ink-300: #8893a8;
+  --color-ink-400: #99a3b8;
+  --color-ink-500: #aab3c6;
+  --color-ink-600: #c0c7d6;
+  --color-ink-700: #d4d9e4;
+  --color-ink-800: #e4e8f0;
+  --color-ink-900: #f2f4f8;
+  --color-ink-950: #f8f9fb;
+
+  /* Deeper shadows so elevation reads against dark surfaces */
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.45);
+  --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.45), 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-large: 0 12px 32px rgba(0, 0, 0, 0.55), 0 4px 8px rgba(0, 0, 0, 0.4);
+  --shadow-premium: 0 24px 64px -16px rgba(0, 0, 0, 0.7),
+    0 8px 24px -8px rgba(0, 0, 0, 0.5);
+}
+
 @layer base {
   *,
   ::before,
@@ -105,8 +158,10 @@
   }
 
   body {
-    background-color: #ffffff;
+    background-color: var(--color-canvas);
     color: var(--color-ink-900);
+    transition: background-color 0.3s var(--ease-premium),
+      color 0.3s var(--ease-premium);
     font-family: var(--font-sans);
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     line-height: 1.6;
@@ -144,6 +199,6 @@
 
   ::selection {
     background-color: var(--color-brand-200);
-    color: var(--color-ink-950);
+    color: var(--color-night-soft);
   }
 }

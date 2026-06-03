@@ -41,7 +41,7 @@ export function WhyCasaCleanSection() {
               <motion.div
                 key={item.id}
                 variants={staggerItem}
-                className="rounded-2xl border border-ink-100 bg-white p-6 shadow-soft transition-shadow hover:shadow-medium"
+                className="rounded-2xl border border-ink-100 bg-surface p-6 shadow-soft transition-shadow hover:shadow-medium"
               >
                 <span className="grid size-12 place-items-center rounded-2xl bg-brand-50 text-brand-600">
                   <Icon name={item.icon} className="size-6" />

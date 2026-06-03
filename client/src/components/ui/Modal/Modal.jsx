@@ -47,7 +47,7 @@ export function Modal({
       {open && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <motion.div
-            className="absolute inset-0 bg-ink-950/50 backdrop-blur-sm"
+            className="absolute inset-0 bg-night-soft/50 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -63,7 +63,7 @@ export function Modal({
             exit={{ opacity: 0, scale: 0.97, y: 8 }}
             transition={{ duration: 0.25, ease: EASE_PREMIUM }}
             className={cn(
-              "relative z-10 w-full rounded-2xl bg-white shadow-premium",
+              "relative z-10 w-full rounded-2xl bg-surface shadow-premium",
               SIZES[size]
             )}
           >

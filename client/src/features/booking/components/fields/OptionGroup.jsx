@@ -34,7 +34,7 @@ export function OptionGroup({ options, value, onChange, columns = 4, label, erro
                 "rounded-xl border px-3 py-2.5 text-body-sm font-semibold transition-all",
                 selected
                   ? "border-brand-600 bg-brand-50 text-brand-700 ring-2 ring-brand-500/15"
-                  : "border-ink-200 bg-white text-ink-600 hover:border-brand-300"
+                  : "border-ink-200 bg-surface text-ink-600 hover:border-brand-300"
               )}
             >
               {optLabel}

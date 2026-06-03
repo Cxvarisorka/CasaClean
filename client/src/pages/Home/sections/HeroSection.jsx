@@ -130,7 +130,7 @@ export function HeroSection() {
                 overlay={
                   <>
                     <div
-                      className="absolute inset-0 bg-gradient-to-t from-ink-950/70 via-ink-950/10 to-transparent"
+                      className="absolute inset-0 bg-gradient-to-t from-night-soft/70 via-night-soft/10 to-transparent"
                       aria-hidden="true"
                     />
                     <div className="absolute inset-x-0 bottom-0 p-7 text-white">
@@ -153,7 +153,7 @@ export function HeroSection() {
             <motion.div
               animate={{ y: [0, -12, 0] }}
               transition={FLOAT_TRANSITION}
-              className="absolute -left-4 top-10 w-52 rounded-2xl bg-white/95 p-4 shadow-large backdrop-blur sm:-left-8"
+              className="absolute -left-4 top-10 w-52 rounded-2xl bg-surface/95 p-4 shadow-large backdrop-blur sm:-left-8"
             >
               <div className="flex items-center gap-2">
                 <span className="grid size-9 place-items-center rounded-xl bg-brand-50 text-brand-600">
@@ -172,7 +172,7 @@ export function HeroSection() {
             <motion.div
               animate={{ y: [0, 10, 0] }}
               transition={{ ...FLOAT_TRANSITION, delay: 1 }}
-              className="absolute -right-3 bottom-16 w-44 rounded-2xl bg-white/95 p-4 shadow-large backdrop-blur sm:-right-6"
+              className="absolute -right-3 bottom-16 w-44 rounded-2xl bg-surface/95 p-4 shadow-large backdrop-blur sm:-right-6"
             >
               <div className="flex items-center gap-1.5">
                 <Star className="size-4 fill-accent-400 text-accent-400" />

@@ -77,7 +77,7 @@ const PricingPage = () => {
               <motion.div
                 key={addon.id}
                 variants={staggerItem}
-                className="flex items-center justify-between rounded-2xl border border-ink-100 bg-white px-6 py-5 shadow-soft"
+                className="flex items-center justify-between rounded-2xl border border-ink-100 bg-surface px-6 py-5 shadow-soft"
               >
                 <div>
                   <p className="text-body-md font-semibold text-ink-900">

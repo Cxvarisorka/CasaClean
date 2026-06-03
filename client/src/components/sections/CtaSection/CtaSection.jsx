@@ -39,7 +39,7 @@ export function CtaSection({
           whileInView={{ opacity: 1, y: 0 }}
           viewport={viewportOnce}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="relative overflow-hidden rounded-3xl bg-ink-950 px-7 py-14 text-center shadow-premium sm:px-12 lg:py-20"
+          className="relative overflow-hidden rounded-3xl bg-night-soft px-7 py-14 text-center shadow-premium sm:px-12 lg:py-20"
         >
           {/* Photographic backdrop */}
           <Image
@@ -49,10 +49,10 @@ export function CtaSection({
             rounded="rounded-none"
             className="absolute inset-0 size-full"
             imgClassName="opacity-25"
-            gradient="from-ink-800 to-ink-950"
+            gradient="from-ink-800 to-night-soft"
           />
           <div
-            className="absolute inset-0 bg-gradient-to-t from-ink-950 via-ink-950/85 to-ink-950/70"
+            className="absolute inset-0 bg-gradient-to-t from-night-soft via-night-soft/85 to-night-soft/70"
             aria-hidden="true"
           />
 
@@ -82,7 +82,7 @@ export function CtaSection({
                 size="lg"
                 variant="outline"
                 leftIcon={Phone}
-                className="border-ink-700 bg-transparent text-white hover:border-brand-400 hover:bg-ink-900"
+                className="border-ink-700 bg-transparent text-white hover:border-brand-400 hover:bg-night"
               >
                 {resolvedSecondary}
               </Button>

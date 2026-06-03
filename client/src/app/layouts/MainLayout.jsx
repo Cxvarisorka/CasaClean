@@ -15,7 +15,7 @@ export function MainLayout() {
     <div className="flex min-h-dvh flex-col">
       <a
         href="#main-content"
-        className="sr-only-focusable fixed left-4 top-4 z-[200] rounded-lg bg-ink-900 px-4 py-2 text-body-sm font-semibold text-white focus:not-sr-only"
+        className="sr-only-focusable fixed left-4 top-4 z-[200] rounded-lg bg-night px-4 py-2 text-body-sm font-semibold text-white focus:not-sr-only"
       >
         Skip to content
       </a>

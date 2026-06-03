@@ -20,13 +20,13 @@
 
 /* Frosted glass surface (navbar, floating cards) */
 @utility glass {
-  background-color: color-mix(in srgb, white 72%, transparent);
+  background-color: color-mix(in srgb, var(--color-surface) 72%, transparent);
   backdrop-filter: saturate(180%) blur(16px);
   -webkit-backdrop-filter: saturate(180%) blur(16px);
 }
 
 @utility glass-dark {
-  background-color: color-mix(in srgb, var(--color-ink-950) 55%, transparent);
+  background-color: color-mix(in srgb, var(--color-night-soft) 55%, transparent);
   backdrop-filter: saturate(180%) blur(16px);
   -webkit-backdrop-filter: saturate(180%) blur(16px);
 }

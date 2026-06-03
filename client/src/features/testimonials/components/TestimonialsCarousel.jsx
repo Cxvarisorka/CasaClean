@@ -52,7 +52,7 @@ export function TestimonialsCarousel({ items = TESTIMONIALS }) {
       onMouseLeave={() => setPaused(false)}
       aria-roledescription="carousel"
     >
-      <div className="relative overflow-hidden rounded-3xl border border-ink-100 bg-white p-8 shadow-medium sm:p-12">
+      <div className="relative overflow-hidden rounded-3xl border border-ink-100 bg-surface p-8 shadow-medium sm:p-12">
         <Quote className="absolute right-8 top-8 size-16 text-brand-50" aria-hidden="true" />
 
         <div className="relative min-h-[16rem]">
@@ -107,7 +107,7 @@ export function TestimonialsCarousel({ items = TESTIMONIALS }) {
           type="button"
           onClick={() => paginate(-1)}
           aria-label="Previous testimonial"
-          className="grid size-11 place-items-center rounded-full border border-ink-200 bg-white text-ink-600 transition-colors hover:border-brand-300 hover:text-brand-600"
+          className="grid size-11 place-items-center rounded-full border border-ink-200 bg-surface text-ink-600 transition-colors hover:border-brand-300 hover:text-brand-600"
         >
           <ChevronLeft className="size-5" />
         </button>
@@ -132,7 +132,7 @@ export function TestimonialsCarousel({ items = TESTIMONIALS }) {
           type="button"
           onClick={() => paginate(1)}
           aria-label="Next testimonial"
-          className="grid size-11 place-items-center rounded-full border border-ink-200 bg-white text-ink-600 transition-colors hover:border-brand-300 hover:text-brand-600"
+          className="grid size-11 place-items-center rounded-full border border-ink-200 bg-surface text-ink-600 transition-colors hover:border-brand-300 hover:text-brand-600"
         >
           <ChevronRight className="size-5" />
         </button>

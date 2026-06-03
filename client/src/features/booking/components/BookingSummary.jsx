@@ -18,7 +18,7 @@ export function BookingSummary() {
   const quote = computeQuote(values);
 
   return (
-    <aside className="rounded-2xl border border-ink-100 bg-white p-6 shadow-soft lg:sticky lg:top-24">
+    <aside className="rounded-2xl border border-ink-100 bg-surface p-6 shadow-soft lg:sticky lg:top-24">
       <h3 className="text-heading-sm text-ink-900">{t("booking.quote.title")}</h3>
       <p className="mt-1 text-body-sm text-ink-500">
         {t("booking.quote.subtitle")}

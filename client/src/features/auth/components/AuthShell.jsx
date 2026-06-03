@@ -26,7 +26,7 @@ export function AuthShell({ children }) {
   return (
     <div className="grid min-h-dvh lg:grid-cols-2">
       {/* Brand panel */}
-      <aside className="relative hidden overflow-hidden bg-ink-950 lg:block">
+      <aside className="relative hidden overflow-hidden bg-night-soft lg:block">
         <Image
           src={IMAGES.interiorLux}
           alt=""
@@ -35,10 +35,10 @@ export function AuthShell({ children }) {
           rounded="rounded-none"
           className="absolute inset-0 size-full"
           imgClassName="opacity-40"
-          gradient="from-ink-800 to-ink-950"
+          gradient="from-ink-800 to-night-soft"
         />
         <div
-          className="absolute inset-0 bg-gradient-to-tr from-ink-950 via-ink-950/80 to-brand-900/40"
+          className="absolute inset-0 bg-gradient-to-tr from-night-soft via-night-soft/80 to-brand-900/40"
           aria-hidden="true"
         />
 
@@ -65,7 +65,7 @@ export function AuthShell({ children }) {
                 const Icon = PROOF_ICONS[i];
                 return (
                   <li key={line} className="flex items-center gap-3 text-body-md text-ink-200">
-                    <span className="grid size-9 place-items-center rounded-xl bg-white/10 text-brand-300">
+                    <span className="grid size-9 place-items-center rounded-xl bg-surface/10 text-brand-300">
                       <Icon className="size-5" />
                     </span>
                     {line}

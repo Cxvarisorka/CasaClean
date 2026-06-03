@@ -24,7 +24,7 @@ export function ProcessTimelineSection() {
   const { t } = useTranslation();
 
   return (
-    <section className="bg-ink-950 py-20 text-white lg:py-28">
+    <section className="bg-night-soft py-20 text-white lg:py-28">
       <Container>
         <SectionHeading
           eyebrow={t("timeline.eyebrow")}
@@ -51,10 +51,10 @@ export function ProcessTimelineSection() {
             <motion.li key={step.id} variants={itemVariant} className="relative mb-9 last:mb-0">
               {/* Node */}
               <span
-                className="absolute -left-8 top-1.5 size-[0.875rem] rounded-full border-2 border-brand-400 bg-ink-950 ring-4 ring-brand-500/10"
+                className="absolute -left-8 top-1.5 size-[0.875rem] rounded-full border-2 border-brand-400 bg-night-soft ring-4 ring-brand-500/10"
                 aria-hidden="true"
               />
-              <div className="rounded-2xl border border-ink-800 bg-ink-900/60 p-5">
+              <div className="rounded-2xl border border-ink-800 bg-night/60 p-5">
                 <div className="flex items-center gap-3">
                   <span className="rounded-full bg-brand-500/15 px-2.5 py-1 text-caption font-bold text-brand-300">
                     {step.time}
