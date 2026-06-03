@@ -106,4 +106,8 @@ const getMe = (req, res) => {
     });
 };
 
-module.exports = { signup, signin, logout, getMe };
+const googleCallback = catchAsync(async (req, res, next) => {
+    createSendToken(req.user, res);
+});
+
+module.exports = { signup, signin, logout, getMe, googleCallback };

@@ -1,6 +1,11 @@
+// Modules
 const express = require("express");
+const passport = require("passport");
 
-const { signup, signin, logout, getMe } = require("../controllers/auth.controller");
+// Controllers
+const { signup, signin, logout, getMe, googleCallback } = require("../controllers/auth.controller");
+
+// Middlewares
 const { protect } = require("../middlewares/protect.middleware");
 
 const authRouter = express.Router();
@@ -8,6 +13,10 @@ const authRouter = express.Router();
 // Public routes
 authRouter.post("/signup", signup);
 authRouter.post("/signin", signin);
+
+// Google OAuth
+authRouter.get("/google", passport.authenticate("google", { scope: ["profile", "email"] }));
+authRouter.get("/google/callback", passport.authenticate("google", { session: false, failureRedirect: "/signin" }), googleCallback);
 
 // Protected routes (require a valid auth cookie)
 authRouter.use(protect); // everything below this line is guarded

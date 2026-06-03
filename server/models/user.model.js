@@ -15,12 +15,12 @@ const userSchema = new mongoose.Schema({
     },
     phone: {
         type: String,
-        required: [true, "Phone number is required!"],
+        required: [function () { return this.provider === "local" }, "Phone number is required!"],
         trim: true
     },
     password: {
         type: String,
-        required: [true, "Password is required!"],
+        required: [function () { return this.provider === "local" }, "Password is required!"],
         minlength: [8, "Password must be at least 8 characters!"],
         select: false                    // never returned by default queries
     },
@@ -32,7 +32,18 @@ const userSchema = new mongoose.Schema({
     isVerified: {
         type: Boolean,
         default: false
-    }
+    },
+    googleId: {
+        type: String,
+        unique: true,
+        sparse: true
+    },
+    provider: {
+        type: String,
+        enum: ["local", "google"],
+        default: "local"
+    },
+    avatar: String
 }, {
     timestamps: true
 });
