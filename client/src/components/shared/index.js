@@ -1,0 +1,12 @@
+/* Shared composite components barrel. */
+export { Page } from "./Page";
+export { Reveal } from "./Reveal";
+export { SectionHeading } from "./SectionHeading";
+export { AnimatedNumber } from "./AnimatedNumber";
+export { StarRating } from "./StarRating";
+export { Icon } from "./Icon";
+export { SocialIcon } from "./SocialIcon";
+export { Logo } from "./Logo";
+export { ScrollToTop } from "./ScrollToTop";
+export { ErrorBoundary } from "./ErrorBoundary";
+export { PageLoader } from "./PageLoader";
