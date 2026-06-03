@@ -7,6 +7,8 @@
  * primitive, which gracefully falls back to a brand gradient if a URL fails.
  */
 
+import beforeRoomImg from "@/assets/before-room.png";
+
 const CDN = "https://images.unsplash.com";
 
 /**
@@ -25,8 +27,8 @@ export const IMAGES = {
   interiorLux: img("photo-1600210492486-724fe5c67fb0", { w: 1200 }),
   dining: img("photo-1600607687939-ce8a6c25118c", { w: 1200 }),
 
-  // Before / after showcase
-  beforeRoom: img("photo-1493809842364-78817add7ffb", { w: 1200, h: 800 }),
+  // Before / after showcase — "before" is a locally-stored messy room (pre-turnover)
+  beforeRoom: beforeRoomImg,
   afterRoom: img("photo-1505693416388-ac5ce068fe85", { w: 1200, h: 800 }),
 
   // Service-specific

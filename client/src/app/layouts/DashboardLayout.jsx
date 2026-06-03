@@ -13,7 +13,7 @@ import { Logo } from "@/components/shared/Logo";
 export function DashboardLayout() {
   return (
     <div className="min-h-dvh bg-sand-50">
-      <header className="border-b border-ink-100 bg-white">
+      <header className="border-b border-ink-100 bg-surface">
         <Container size="full" className="flex h-16 items-center justify-between">
           <Logo />
           <span className="text-body-sm text-ink-500">Host dashboard</span>

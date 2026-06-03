@@ -54,7 +54,7 @@ export const Switch = forwardRef(function Switch(
             className
           )}
         >
-          <span className="block size-5 translate-x-0.5 translate-y-0.5 rounded-full bg-white shadow-soft transition-transform duration-200" />
+          <span className="block size-5 translate-x-0.5 translate-y-0.5 rounded-full bg-surface shadow-soft transition-transform duration-200" />
         </span>
       </span>
     </label>

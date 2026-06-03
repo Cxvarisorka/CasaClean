@@ -62,7 +62,7 @@ export function Pagination({ page, total, onChange, className }) {
             className={cn(
               btn,
               item === page
-                ? "bg-ink-900 text-white"
+                ? "bg-night text-white"
                 : "text-ink-600 hover:bg-ink-100"
             )}
           >

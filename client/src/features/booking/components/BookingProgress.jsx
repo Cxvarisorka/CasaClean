@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { useTranslation } from "@/i18n";
 import { useBookingNav } from "../store/BookingContext";
 
 /*
@@ -12,6 +13,7 @@ import { useBookingNav } from "../store/BookingContext";
  */
 
 export function BookingProgress() {
+  const { t } = useTranslation();
   const { steps, step, maxReached, goTo } = useBookingNav();
   const progress = (step / (steps.length - 1)) * 100;
 
@@ -41,7 +43,7 @@ export function BookingProgress() {
                 disabled={!isUnlocked}
                 aria-current={isActive ? "step" : undefined}
                 className={cn(
-                  "grid size-10 place-items-center rounded-full border-2 bg-white text-body-sm font-bold transition-colors",
+                  "grid size-10 place-items-center rounded-full border-2 bg-surface text-body-sm font-bold transition-colors",
                   isComplete && "border-brand-600 bg-brand-600 text-white",
                   isActive && "border-brand-600 text-brand-700 ring-4 ring-brand-500/15",
                   !isComplete && !isActive && "border-ink-200 text-ink-400",
@@ -56,7 +58,7 @@ export function BookingProgress() {
                   isActive ? "text-ink-900" : "text-ink-400"
                 )}
               >
-                {s.title}
+                {t(`booking.steps.${s.id}.title`)}
               </span>
             </li>
           );

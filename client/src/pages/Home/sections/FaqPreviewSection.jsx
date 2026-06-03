@@ -5,6 +5,7 @@ import { Accordion } from "@/components/ui/Accordion";
 import { SectionHeading } from "@/components/shared/SectionHeading";
 import { Reveal } from "@/components/shared/Reveal";
 import { ALL_FAQS } from "@/data/faq";
+import { useTranslation } from "@/i18n";
 import { ROUTES } from "@/constants/routes";
 
 /*
@@ -15,22 +16,27 @@ import { ROUTES } from "@/constants/routes";
  */
 
 export function FaqPreviewSection() {
+  const { t } = useTranslation();
   const preview = ALL_FAQS.slice(0, 5);
 
   return (
     <section className="py-20 lg:py-28">
       <Container size="md">
         <SectionHeading
-          eyebrow="Questions, answered"
-          title="The things hosts ask us most"
-          subtitle="Can't find what you need? Our team is one message away."
+          eyebrow={t("faqSection.eyebrow")}
+          title={t("faqSection.title")}
+          subtitle={t("faqSection.subtitle")}
         />
 
         <Reveal className="mt-12">
           <Accordion type="single" defaultValue={preview[0].id}>
             {preview.map((faq) => (
-              <Accordion.Item key={faq.id} value={faq.id} question={faq.question}>
-                {faq.answer}
+              <Accordion.Item
+                key={faq.id}
+                value={faq.id}
+                question={t(`faq.items.${faq.id}.question`)}
+              >
+                {t(`faq.items.${faq.id}.answer`)}
               </Accordion.Item>
             ))}
           </Accordion>
@@ -38,7 +44,7 @@ export function FaqPreviewSection() {
 
         <div className="mt-10 flex justify-center">
           <Button to={ROUTES.faq} variant="outline" rightIcon={ArrowRight}>
-            Read all FAQs
+            {t("faqSection.readAll")}
           </Button>
         </div>
       </Container>

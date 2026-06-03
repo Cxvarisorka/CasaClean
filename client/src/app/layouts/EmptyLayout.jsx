@@ -13,7 +13,7 @@ import { Logo } from "@/components/shared/Logo";
 export function EmptyLayout() {
   return (
     <div className="flex min-h-dvh flex-col bg-sand-50">
-      <header className="border-b border-ink-100 bg-white/80 py-4 backdrop-blur">
+      <header className="border-b border-ink-100 bg-surface/80 py-4 backdrop-blur">
         <Container className="flex items-center justify-between">
           <Logo />
           <a

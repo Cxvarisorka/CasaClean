@@ -39,7 +39,7 @@ Skeleton.Card = function SkeletonCard({ className }) {
   return (
     <div
       className={cn(
-        "rounded-2xl border border-ink-100 bg-white p-6 shadow-soft",
+        "rounded-2xl border border-ink-100 bg-surface p-6 shadow-soft",
         className
       )}
     >

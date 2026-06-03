@@ -1,6 +1,7 @@
 import { useFormContext, useWatch } from "react-hook-form";
 import { ShieldCheck } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { useTranslation } from "@/i18n";
 import { computeQuote } from "../utils/pricing";
 
 /*
@@ -11,21 +12,22 @@ import { computeQuote } from "../utils/pricing";
  */
 
 export function BookingSummary() {
+  const { t } = useTranslation();
   const { control } = useFormContext();
   const values = useWatch({ control });
   const quote = computeQuote(values);
 
   return (
-    <aside className="rounded-2xl border border-ink-100 bg-white p-6 shadow-soft lg:sticky lg:top-24">
-      <h3 className="text-heading-sm text-ink-900">Your quote</h3>
+    <aside className="rounded-2xl border border-ink-100 bg-surface p-6 shadow-soft lg:sticky lg:top-24">
+      <h3 className="text-heading-sm text-ink-900">{t("booking.quote.title")}</h3>
       <p className="mt-1 text-body-sm text-ink-500">
-        Updates as you build your booking.
+        {t("booking.quote.subtitle")}
       </p>
 
       <div className="mt-5 space-y-3 border-t border-ink-100 pt-5">
         {quote.lineItems.length === 0 ? (
           <p className="text-body-sm text-ink-400">
-            Select a service to see your estimate.
+            {t("booking.quote.empty")}
           </p>
         ) : (
           quote.lineItems.map((item, i) => (
@@ -40,7 +42,7 @@ export function BookingSummary() {
       </div>
 
       <div className="mt-5 flex items-center justify-between border-t border-ink-100 pt-5">
-        <span className="text-body-md font-semibold text-ink-900">Estimated total</span>
+        <span className="text-body-md font-semibold text-ink-900">{t("booking.quote.total")}</span>
         <span className="text-heading-sm font-bold text-brand-700">
           {formatCurrency(quote.total)}
         </span>
@@ -48,7 +50,7 @@ export function BookingSummary() {
 
       <div className="mt-5 flex items-start gap-2.5 rounded-xl bg-brand-50/60 p-3.5 text-body-sm text-ink-600">
         <ShieldCheck className="mt-0.5 size-4.5 shrink-0 text-brand-600" />
-        Backed by the Guest-Ready Guarantee. Free cancellation up to 24h before.
+        {t("booking.quote.guarantee")}
       </div>
     </aside>
   );

@@ -92,7 +92,7 @@ export function LanguageSwitcher({ variant = "menu", className }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.97 }}
             transition={{ duration: 0.18 }}
-            className="absolute right-0 z-50 mt-2 w-44 overflow-hidden rounded-2xl border border-ink-100 bg-white p-1.5 shadow-large"
+            className="absolute right-0 z-50 mt-2 w-44 overflow-hidden rounded-2xl border border-ink-100 bg-surface p-1.5 shadow-large"
           >
             {languages.map((lang) => (
               <li key={lang.code}>

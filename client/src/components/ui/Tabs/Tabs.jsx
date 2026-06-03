@@ -67,7 +67,7 @@ Tabs.Trigger = function TabsTrigger({ value, className, children }) {
       {selected && (
         <motion.span
           layoutId={`tab-indicator-${groupId}`}
-          className="absolute inset-0 rounded-full bg-white shadow-soft"
+          className="absolute inset-0 rounded-full bg-surface shadow-soft"
           transition={{ type: "spring", stiffness: 380, damping: 32 }}
         />
       )}

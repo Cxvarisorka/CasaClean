@@ -41,7 +41,7 @@ export function Drawer({ open, onClose, side = "right", title, children, classNa
       {open && (
         <div className="fixed inset-0 z-[100]">
           <motion.div
-            className="absolute inset-0 bg-ink-950/50 backdrop-blur-sm"
+            className="absolute inset-0 bg-night-soft/50 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -57,7 +57,7 @@ export function Drawer({ open, onClose, side = "right", title, children, classNa
             exit={initial}
             transition={{ duration: 0.35, ease: EASE_PREMIUM }}
             className={cn(
-              "absolute flex flex-col bg-white shadow-premium",
+              "absolute flex flex-col bg-surface shadow-premium",
               config.class,
               className
             )}

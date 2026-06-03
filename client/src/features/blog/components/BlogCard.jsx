@@ -7,6 +7,7 @@ import { Image } from "@/components/ui/Image";
 import { formatDate } from "@/utils/formatDate";
 import { ROUTES } from "@/constants/routes";
 import { IMAGES } from "@/constants/images";
+import { useTranslation } from "@/i18n";
 import { staggerItemScale } from "@/animations/stagger";
 
 /*
@@ -18,11 +19,13 @@ import { staggerItemScale } from "@/animations/stagger";
  */
 
 export function BlogCard({ post, featured = false }) {
+  const { t } = useTranslation();
+
   return (
     <motion.article
       variants={staggerItemScale}
       className={cn(
-        "group h-full overflow-hidden rounded-2xl border border-ink-100 bg-white shadow-soft transition-shadow hover:shadow-large",
+        "group h-full overflow-hidden rounded-2xl border border-ink-100 bg-surface shadow-soft transition-shadow hover:shadow-large",
         featured && "lg:col-span-2 lg:grid lg:grid-cols-2"
       )}
     >
@@ -39,7 +42,7 @@ export function BlogCard({ post, featured = false }) {
           overlay={
             <>
               <div
-                className="absolute inset-0 bg-gradient-to-t from-ink-950/40 to-transparent"
+                className="absolute inset-0 bg-gradient-to-t from-night-soft/40 to-transparent"
                 aria-hidden="true"
               />
               <Badge variant="dark" className="absolute bottom-4 left-4">
@@ -54,7 +57,7 @@ export function BlogCard({ post, featured = false }) {
             <span>{formatDate(post.publishedAt)}</span>
             <span aria-hidden="true">·</span>
             <span className="inline-flex items-center gap-1">
-              <Clock className="size-3.5" /> {post.readingMinutes} min read
+              <Clock className="size-3.5" /> {post.readingMinutes} {t("pages.blog.minRead")}
             </span>
           </div>
 

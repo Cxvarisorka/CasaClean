@@ -53,7 +53,7 @@ export const Select = forwardRef(function Select(
           aria-invalid={error ? "true" : undefined}
           aria-describedby={describedBy}
           className={cn(
-            "h-11 w-full appearance-none rounded-xl border bg-white pl-4 pr-10 text-body-sm",
+            "h-11 w-full appearance-none rounded-xl border bg-surface pl-4 pr-10 text-body-sm",
             "text-ink-900 transition-colors duration-200 cursor-pointer",
             "focus:outline-none focus:ring-4 focus:ring-brand-500/15",
             error

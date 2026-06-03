@@ -71,8 +71,8 @@ export function NewsletterForm({ tone = "light", className }) {
                   className={cn(
                     "h-11 w-full rounded-xl border px-4 text-body-sm transition-colors focus:outline-none focus:ring-4 focus:ring-brand-500/20",
                     dark
-                      ? "border-ink-700 bg-ink-900 text-white placeholder:text-ink-500 focus:border-brand-500"
-                      : "border-ink-200 bg-white text-ink-900 placeholder:text-ink-400 focus:border-brand-500",
+                      ? "border-ink-700 bg-night text-white placeholder:text-ink-500 focus:border-brand-500"
+                      : "border-ink-200 bg-surface text-ink-900 placeholder:text-ink-400 focus:border-brand-500",
                     errors.email && "border-red-400"
                   )}
                   {...register("email")}

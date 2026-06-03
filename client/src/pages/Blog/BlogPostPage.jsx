@@ -14,6 +14,7 @@ import { Seo, articleSchema, breadcrumbSchema } from "@/seo";
 import { formatDate } from "@/utils/formatDate";
 import { ROUTES } from "@/constants/routes";
 import { IMAGES } from "@/constants/images";
+import { useTranslation } from "@/i18n";
 import { staggerContainer } from "@/animations/stagger";
 import { viewportOnce } from "@/animations/pageTransitions";
 
@@ -55,6 +56,7 @@ function ArticleBlocks({ blocks }) {
 }
 
 const BlogPostPage = () => {
+  const { t } = useTranslation();
   const { slug } = useParams();
   const { data, isLoading, isError } = useBlogPost(slug);
 
@@ -79,11 +81,11 @@ const BlogPostPage = () => {
       <Page>
         <Container size="sm" className="py-32">
           <EmptyState
-            title="Article not found"
-            description="This post may have been moved or removed."
+            title={t("pages.blog.notFoundTitle")}
+            description={t("pages.blog.notFoundBody")}
             action={
               <Button to={ROUTES.blog} leftIcon={ArrowLeft}>
-                Back to blog
+                {t("pages.blog.backToBlog")}
               </Button>
             }
           />
@@ -118,7 +120,7 @@ const BlogPostPage = () => {
             to={ROUTES.blog}
             className="inline-flex items-center gap-1.5 text-body-sm font-semibold text-brand-600 transition-colors hover:text-brand-700"
           >
-            <ArrowLeft className="size-4" /> All articles
+            <ArrowLeft className="size-4" /> {t("pages.blog.allArticles")}
           </Link>
 
           <Badge variant="brand" className="mt-6">
@@ -135,7 +137,7 @@ const BlogPostPage = () => {
               <p className="text-ink-400">
                 {formatDate(post.publishedAt)} ·{" "}
                 <span className="inline-flex items-center gap-1">
-                  <Clock className="size-3.5" /> {post.readingMinutes} min read
+                  <Clock className="size-3.5" /> {post.readingMinutes} {t("pages.blog.minRead")}
                 </span>
               </p>
             </div>
@@ -175,7 +177,11 @@ const BlogPostPage = () => {
       {related.length > 0 && (
         <section className="bg-sand-50 py-20 lg:py-24">
           <Container>
-            <SectionHeading align="left" eyebrow="Keep reading" title="Related articles" />
+            <SectionHeading
+              align="left"
+              eyebrow={t("pages.blog.relatedEyebrow")}
+              title={t("pages.blog.relatedTitle")}
+            />
             <motion.div
               variants={staggerContainer(0.08)}
               initial="hidden"

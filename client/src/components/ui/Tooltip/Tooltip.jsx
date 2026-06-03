@@ -41,7 +41,7 @@ export function Tooltip({ content, side = "top", children, className }) {
             transition={{ duration: 0.15 }}
             className={cn(
               "pointer-events-none absolute z-50 whitespace-nowrap rounded-lg",
-              "bg-ink-900 px-2.5 py-1.5 text-caption font-medium text-white shadow-large",
+              "bg-night px-2.5 py-1.5 text-caption font-medium text-white shadow-large",
               SIDES[side],
               className
             )}

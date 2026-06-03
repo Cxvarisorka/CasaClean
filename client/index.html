@@ -6,6 +6,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0e8b81" />
 
+    <!-- Apply the saved/system theme before first paint to avoid a flash -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem("casaclean:theme");
+          var system = window.matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light";
+          var resolved = stored === "dark" || stored === "light" ? stored : system;
+          if (resolved === "dark") document.documentElement.classList.add("dark");
+          document.documentElement.style.colorScheme = resolved;
+        } catch (e) {}
+      })();
+    </script>
+
     <!-- Preconnect to font CDN for faster first paint -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

@@ -9,6 +9,7 @@ import { Seo, faqSchema } from "@/seo";
 import { PAGE_META } from "@/constants/metadata";
 import { IMAGES } from "@/constants/images";
 import { FAQ_CATEGORIES, ALL_FAQS } from "@/data/faq";
+import { useTranslation } from "@/i18n";
 
 /*
  * FaqPage
@@ -18,6 +19,7 @@ import { FAQ_CATEGORIES, ALL_FAQS } from "@/data/faq";
  */
 
 const FaqPage = () => {
+  const { t } = useTranslation();
   const [category, setCategory] = useState(FAQ_CATEGORIES[0].id);
   const active = FAQ_CATEGORIES.find((c) => c.id === category);
 
@@ -27,9 +29,9 @@ const FaqPage = () => {
 
       <PageHero
         image={IMAGES.pageBackdrop}
-        eyebrow="Help center"
-        title="Frequently asked questions"
-        subtitle="Everything you need to know about working with CasaClean. Still stuck? Reach out anytime."
+        eyebrow={t("pages.faq.heroEyebrow")}
+        title={t("pages.faq.heroTitle")}
+        subtitle={t("pages.faq.heroSubtitle")}
       />
 
       <section className="pb-20 lg:pb-28">
@@ -39,7 +41,7 @@ const FaqPage = () => {
               <Tabs.List className="flex-wrap justify-center">
                 {FAQ_CATEGORIES.map((cat) => (
                   <Tabs.Trigger key={cat.id} value={cat.id}>
-                    {cat.label}
+                    {t(`faq.categories.${cat.id}`)}
                   </Tabs.Trigger>
                 ))}
               </Tabs.List>
@@ -55,8 +57,12 @@ const FaqPage = () => {
           >
             <Accordion type="single" defaultValue={active.items[0].id}>
               {active.items.map((faq) => (
-                <Accordion.Item key={faq.id} value={faq.id} question={faq.question}>
-                  {faq.answer}
+                <Accordion.Item
+                  key={faq.id}
+                  value={faq.id}
+                  question={t(`faq.items.${faq.id}.question`)}
+                >
+                  {t(`faq.items.${faq.id}.answer`)}
                 </Accordion.Item>
               ))}
             </Accordion>
@@ -65,11 +71,11 @@ const FaqPage = () => {
       </section>
 
       <CtaSection
-        eyebrow="Still have questions?"
-        title="We're a message away"
-        subtitle="Our team responds within one business day — usually much sooner."
-        primaryLabel="Book a turnover"
-        secondaryLabel="Contact support"
+        eyebrow={t("pages.faq.ctaEyebrow")}
+        title={t("pages.faq.ctaTitle")}
+        subtitle={t("pages.faq.ctaSubtitle")}
+        primaryLabel={t("common.bookTurnover")}
+        secondaryLabel={t("common.talkToTeam")}
       />
     </Page>
   );

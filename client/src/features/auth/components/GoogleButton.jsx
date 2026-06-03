@@ -40,7 +40,7 @@ export function GoogleButton({ className }) {
       type="button"
       onClick={startGoogleOAuth}
       className={cn(
-        "inline-flex h-12 w-full items-center justify-center gap-3 rounded-full border border-ink-200 bg-white",
+        "inline-flex h-12 w-full items-center justify-center gap-3 rounded-full border border-ink-200 bg-surface",
         "text-body-sm font-semibold text-ink-800 transition-colors hover:bg-ink-50",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2",
         className

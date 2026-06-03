@@ -11,6 +11,7 @@ import { Pagination } from "@/components/ui/Pagination";
 import { PageHero, CtaSection } from "@/components/sections";
 import { BlogCard, useBlogPosts } from "@/features/blog";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useTranslation } from "@/i18n";
 import { Seo } from "@/seo";
 import { PAGE_META } from "@/constants/metadata";
 import { IMAGES } from "@/constants/images";
@@ -28,6 +29,7 @@ import { staggerContainer } from "@/animations/stagger";
 const PAGE_SIZE = 5;
 
 const BlogPage = () => {
+  const { t } = useTranslation();
   const { data: posts, isLoading } = useBlogPosts();
   const [category, setCategory] = useState("All");
   const [query, setQuery] = useState("");
@@ -63,9 +65,9 @@ const BlogPage = () => {
 
       <PageHero
         image={IMAGES.interiorLux}
-        eyebrow="The CasaClean blog"
-        title="Playbooks for flawless rental operations"
-        subtitle="Checklists, data and hard-won lessons to help you run a five-star short-term rental."
+        eyebrow={t("pages.blog.heroEyebrow")}
+        title={t("pages.blog.heroTitle")}
+        subtitle={t("pages.blog.heroSubtitle")}
       />
 
       <section className="pb-20 lg:pb-28">
@@ -76,7 +78,7 @@ const BlogPage = () => {
               <Tabs.List className="flex-wrap">
                 {BLOG_CATEGORIES.map((cat) => (
                   <Tabs.Trigger key={cat} value={cat}>
-                    {cat}
+                    {cat === "All" ? t("pages.blog.allArticles") : cat}
                   </Tabs.Trigger>
                 ))}
               </Tabs.List>
@@ -85,11 +87,11 @@ const BlogPage = () => {
             <div className="w-full lg:max-w-xs">
               <Input
                 type="search"
-                placeholder="Search articles…"
+                placeholder={t("pages.blog.searchPlaceholder")}
                 value={query}
                 onChange={handleSearch}
                 leftIcon={Search}
-                aria-label="Search articles"
+                aria-label={t("pages.blog.searchPlaceholder")}
               />
             </div>
           </div>
@@ -105,8 +107,8 @@ const BlogPage = () => {
             ) : paged.length === 0 ? (
               <EmptyState
                 icon={Search}
-                title="No articles found"
-                description="Try a different category or search term."
+                title={t("pages.blog.noResultsTitle")}
+                description={t("pages.blog.noResultsBody")}
               />
             ) : (
               <motion.div
@@ -139,9 +141,9 @@ const BlogPage = () => {
       </section>
 
       <CtaSection
-        eyebrow="Put it into practice"
-        title="Stop reading about great turnovers. Book one."
-        subtitle="See the CasaClean standard on your own listing."
+        eyebrow={t("pages.blog.ctaEyebrow")}
+        title={t("pages.blog.ctaTitle")}
+        subtitle={t("pages.blog.ctaSubtitle")}
       />
     </Page>
   );

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Image } from "@/components/ui/Image";
 import { ROUTES } from "@/constants/routes";
 import { IMAGES } from "@/constants/images";
+import { useTranslation } from "@/i18n";
 import { viewportOnce } from "@/animations/pageTransitions";
 
 /*
@@ -16,13 +17,20 @@ import { viewportOnce } from "@/animations/pageTransitions";
  */
 
 export function CtaSection({
-  eyebrow = "Ready when you are",
-  title = "Your next guest deserves a flawless space.",
-  subtitle = "Book a turnover in under two minutes — no contracts, no commitments, just a guest-ready home.",
-  primaryLabel = "Book a turnover",
+  eyebrow,
+  title,
+  subtitle,
+  primaryLabel,
   primaryTo = ROUTES.booking,
-  secondaryLabel = "Talk to our team",
+  secondaryLabel,
 }) {
+  const { t } = useTranslation();
+  const resolvedEyebrow = eyebrow ?? t("cta.eyebrow");
+  const resolvedTitle = title ?? t("cta.title");
+  const resolvedSubtitle = subtitle ?? t("cta.subtitle");
+  const resolvedPrimary = primaryLabel ?? t("cta.primary");
+  const resolvedSecondary = secondaryLabel ?? t("cta.secondary");
+
   return (
     <section className="px-5 py-16 lg:py-24">
       <Container>
@@ -31,7 +39,7 @@ export function CtaSection({
           whileInView={{ opacity: 1, y: 0 }}
           viewport={viewportOnce}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="relative overflow-hidden rounded-3xl bg-ink-950 px-7 py-14 text-center shadow-premium sm:px-12 lg:py-20"
+          className="relative overflow-hidden rounded-3xl bg-night-soft px-7 py-14 text-center shadow-premium sm:px-12 lg:py-20"
         >
           {/* Photographic backdrop */}
           <Image
@@ -41,10 +49,10 @@ export function CtaSection({
             rounded="rounded-none"
             className="absolute inset-0 size-full"
             imgClassName="opacity-25"
-            gradient="from-ink-800 to-ink-950"
+            gradient="from-ink-800 to-night-soft"
           />
           <div
-            className="absolute inset-0 bg-gradient-to-t from-ink-950 via-ink-950/85 to-ink-950/70"
+            className="absolute inset-0 bg-gradient-to-t from-night-soft via-night-soft/85 to-night-soft/70"
             aria-hidden="true"
           />
 
@@ -59,24 +67,24 @@ export function CtaSection({
           />
 
           <div className="relative mx-auto max-w-2xl">
-            <span className="text-eyebrow text-brand-300">{eyebrow}</span>
-            <h2 className="mt-4 text-heading-xl text-balance text-white">{title}</h2>
+            <span className="text-eyebrow text-brand-300">{resolvedEyebrow}</span>
+            <h2 className="mt-4 text-heading-xl text-balance text-white">{resolvedTitle}</h2>
             <p className="mx-auto mt-5 max-w-xl text-body-lg text-ink-300">
-              {subtitle}
+              {resolvedSubtitle}
             </p>
 
             <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Button to={primaryTo} size="lg" rightIcon={ArrowRight}>
-                {primaryLabel}
+                {resolvedPrimary}
               </Button>
               <Button
                 to={ROUTES.contact}
                 size="lg"
                 variant="outline"
                 leftIcon={Phone}
-                className="border-ink-700 bg-transparent text-white hover:border-brand-400 hover:bg-ink-900"
+                className="border-ink-700 bg-transparent text-white hover:border-brand-400 hover:bg-night"
               >
-                {secondaryLabel}
+                {resolvedSecondary}
               </Button>
             </div>
           </div>

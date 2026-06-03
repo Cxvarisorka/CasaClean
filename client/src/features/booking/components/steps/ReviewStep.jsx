@@ -28,7 +28,7 @@ function Row({ label, value }) {
 function Group({ title, stepIndex, children }) {
   const { goTo } = useBookingNav();
   return (
-    <div className="rounded-2xl border border-ink-100 bg-white p-5">
+    <div className="rounded-2xl border border-ink-100 bg-surface p-5">
       <div className="flex items-center justify-between">
         <h3 className="text-body-md font-semibold text-ink-900">{title}</h3>
         <button

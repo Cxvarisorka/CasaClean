@@ -17,13 +17,13 @@ const VARIANTS = {
   primary:
     "bg-brand-600 text-white shadow-soft hover:bg-brand-700 hover:shadow-medium",
   secondary:
-    "bg-ink-900 text-white shadow-soft hover:bg-ink-800 hover:shadow-medium",
+    "bg-night text-white shadow-soft hover:bg-night-soft hover:shadow-medium",
   outline:
-    "border border-ink-200 bg-white text-ink-900 hover:border-brand-300 hover:bg-brand-50",
+    "border border-ink-200 bg-surface text-ink-900 hover:border-brand-300 hover:bg-brand-50 dark:hover:bg-night-soft",
   ghost: "text-ink-700 hover:bg-ink-100 hover:text-ink-900",
   subtle: "bg-brand-50 text-brand-700 hover:bg-brand-100",
   accent:
-    "bg-accent-500 text-ink-950 shadow-soft hover:bg-accent-400 hover:shadow-medium",
+    "bg-accent-500 text-night-soft shadow-soft hover:bg-accent-400 hover:shadow-medium",
   link: "text-brand-600 underline-offset-4 hover:underline px-0",
 };
 

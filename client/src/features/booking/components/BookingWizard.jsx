@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { useTranslation } from "@/i18n";
 import { bookingSchema, bookingDefaults } from "../validation/bookingSchema";
 import { BookingProvider, useBookingNav } from "../store/BookingContext";
 import { useCreateBooking } from "../hooks/useCreateBooking";
@@ -46,6 +47,7 @@ const stepVariants = {
 };
 
 function WizardBody({ onConfirmed }) {
+  const { t } = useTranslation();
   const { step, direction, isFirst, isLast, next, prev, steps } = useBookingNav();
   const { trigger, handleSubmit } = useFormContext();
   const { mutateAsync, isPending, error } = useCreateBooking();
@@ -73,8 +75,12 @@ function WizardBody({ onConfirmed }) {
 
         <div className="mt-10">
           <div className="mb-6">
-            <h2 className="text-heading-md text-ink-900">{activeStep.title}</h2>
-            <p className="mt-1 text-body-md text-ink-500">{activeStep.subtitle}</p>
+            <h2 className="text-heading-md text-ink-900">
+              {t(`booking.steps.${activeStep.id}.title`)}
+            </h2>
+            <p className="mt-1 text-body-md text-ink-500">
+              {t(`booking.steps.${activeStep.id}.subtitle`)}
+            </p>
           </div>
 
           <div className="relative overflow-hidden">
@@ -106,7 +112,7 @@ function WizardBody({ onConfirmed }) {
               leftIcon={ArrowLeft}
               className={isFirst ? "invisible" : ""}
             >
-              Back
+              {t("booking.back")}
             </Button>
 
             {isLast ? (
@@ -117,11 +123,11 @@ function WizardBody({ onConfirmed }) {
                 loading={isPending}
                 rightIcon={Check}
               >
-                Confirm booking
+                {t("booking.confirm")}
               </Button>
             ) : (
               <Button type="button" size="lg" onClick={handleNext} rightIcon={ArrowRight}>
-                Continue
+                {t("booking.continue")}
               </Button>
             )}
           </div>

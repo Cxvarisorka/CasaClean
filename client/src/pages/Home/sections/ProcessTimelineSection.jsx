@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Container } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/shared/SectionHeading";
 import { CLEANING_TIMELINE } from "@/data/process";
+import { useTranslation } from "@/i18n";
 import { staggerContainer } from "@/animations/stagger";
 import { viewportOnce } from "@/animations/pageTransitions";
 import { EASE_PREMIUM } from "@/animations/tokens";
@@ -20,13 +21,15 @@ const itemVariant = {
 };
 
 export function ProcessTimelineSection() {
+  const { t } = useTranslation();
+
   return (
-    <section className="bg-ink-950 py-20 text-white lg:py-28">
+    <section className="bg-night-soft py-20 text-white lg:py-28">
       <Container>
         <SectionHeading
-          eyebrow="On-site process"
-          title="A documented timeline, every visit"
-          subtitle="No guesswork about what gets done. Here's exactly how a CasaClean turnover unfolds."
+          eyebrow={t("timeline.eyebrow")}
+          title={t("timeline.title")}
+          subtitle={t("timeline.subtitle")}
           titleClassName="text-white"
           className="[&_p]:text-ink-300"
         />
@@ -48,17 +51,21 @@ export function ProcessTimelineSection() {
             <motion.li key={step.id} variants={itemVariant} className="relative mb-9 last:mb-0">
               {/* Node */}
               <span
-                className="absolute -left-8 top-1.5 size-[0.875rem] rounded-full border-2 border-brand-400 bg-ink-950 ring-4 ring-brand-500/10"
+                className="absolute -left-8 top-1.5 size-[0.875rem] rounded-full border-2 border-brand-400 bg-night-soft ring-4 ring-brand-500/10"
                 aria-hidden="true"
               />
-              <div className="rounded-2xl border border-ink-800 bg-ink-900/60 p-5">
+              <div className="rounded-2xl border border-ink-800 bg-night/60 p-5">
                 <div className="flex items-center gap-3">
                   <span className="rounded-full bg-brand-500/15 px-2.5 py-1 text-caption font-bold text-brand-300">
                     {step.time}
                   </span>
-                  <h3 className="text-heading-sm text-white">{step.title}</h3>
+                  <h3 className="text-heading-sm text-white">
+                    {t(`timeline.items.${step.id}.title`)}
+                  </h3>
                 </div>
-                <p className="mt-2 text-body-sm text-ink-400">{step.description}</p>
+                <p className="mt-2 text-body-sm text-ink-400">
+                  {t(`timeline.items.${step.id}.description`)}
+                </p>
               </div>
             </motion.li>
           ))}

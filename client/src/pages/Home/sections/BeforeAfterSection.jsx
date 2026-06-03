@@ -6,6 +6,7 @@ import { SectionHeading } from "@/components/shared/SectionHeading";
 import { Badge } from "@/components/ui/Badge";
 import { Image } from "@/components/ui/Image";
 import { IMAGES } from "@/constants/images";
+import { useTranslation } from "@/i18n";
 import { viewportOnce } from "@/animations/pageTransitions";
 
 /*
@@ -17,6 +18,7 @@ import { viewportOnce } from "@/animations/pageTransitions";
  */
 
 function ComparisonSlider() {
+  const { t } = useTranslation();
   const containerRef = useRef(null);
   const [position, setPosition] = useState(50);
 
@@ -63,7 +65,7 @@ function ComparisonSlider() {
         draggable={false}
         overlay={
           <Badge variant="dark" className="absolute right-4 top-4">
-            After
+            {t("beforeAfter.after")}
           </Badge>
         }
       />
@@ -83,9 +85,9 @@ function ComparisonSlider() {
           draggable={false}
           overlay={
             <>
-              <div className="absolute inset-0 bg-ink-950/20" aria-hidden="true" />
+              <div className="absolute inset-0 bg-night-soft/20" aria-hidden="true" />
               <Badge variant="neutral" className="absolute left-4 top-4">
-                Before
+                {t("beforeAfter.before")}
               </Badge>
             </>
           }
@@ -94,10 +96,10 @@ function ComparisonSlider() {
 
       {/* Handle */}
       <div
-        className="absolute inset-y-0 w-0.5 bg-white shadow-large"
+        className="absolute inset-y-0 w-0.5 bg-surface shadow-large"
         style={{ left: `${position}%` }}
       >
-        <span className="absolute top-1/2 left-1/2 grid size-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-white text-ink-700 shadow-large">
+        <span className="absolute top-1/2 left-1/2 grid size-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-surface text-ink-700 shadow-large">
           <MoveHorizontal className="size-5" />
         </span>
       </div>
@@ -106,13 +108,15 @@ function ComparisonSlider() {
 }
 
 export function BeforeAfterSection() {
+  const { t } = useTranslation();
+
   return (
     <section className="py-20 lg:py-28">
       <Container>
         <SectionHeading
-          eyebrow="The CasaClean difference"
-          title="See the transformation"
-          subtitle="Drag to compare a post-checkout space with a CasaClean guest-ready turnover."
+          eyebrow={t("beforeAfter.eyebrow")}
+          title={t("beforeAfter.title")}
+          subtitle={t("beforeAfter.subtitle")}
         />
 
         <motion.div

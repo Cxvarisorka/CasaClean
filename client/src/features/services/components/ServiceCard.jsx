@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Image } from "@/components/ui/Image";
 import { Icon } from "@/components/shared/Icon";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { useTranslation } from "@/i18n";
 import { ROUTES } from "@/constants/routes";
 import { staggerItemScale } from "@/animations/stagger";
 
@@ -18,6 +19,13 @@ import { staggerItemScale } from "@/animations/stagger";
  */
 
 export function ServiceCard({ service, featured = false }) {
+  const { t } = useTranslation();
+  const name = t(`services.${service.id}.name`);
+  const tagline = t(`services.${service.id}.tagline`);
+  const description = t(`services.${service.id}.description`);
+  const features = t(`services.${service.id}.features`);
+  const featureList = Array.isArray(features) ? features : service.features;
+
   return (
     <motion.div variants={staggerItemScale} className="h-full">
       <Card
@@ -28,19 +36,19 @@ export function ServiceCard({ service, featured = false }) {
         {/* Image header */}
         <Image
           src={service.image}
-          alt={service.name}
+          alt={name}
           aspect="aspect-[16/10]"
           rounded="rounded-none"
           zoomOnHover
           gradient="from-brand-400 to-brand-600"
           overlay={
             <>
-              <span className="absolute left-4 top-4 grid size-11 place-items-center rounded-2xl bg-white/95 text-brand-600 shadow-soft backdrop-blur">
+              <span className="absolute left-4 top-4 grid size-11 place-items-center rounded-2xl bg-surface/95 text-brand-600 shadow-soft backdrop-blur">
                 <Icon name={service.icon} className="size-6" />
               </span>
               {service.popular && (
                 <Badge variant="accent" className="absolute right-4 top-4">
-                  Most booked
+                  {t("servicesSection.mostBooked")}
                 </Badge>
               )}
             </>
@@ -48,14 +56,14 @@ export function ServiceCard({ service, featured = false }) {
         />
 
         <Card.Body className="flex flex-1 flex-col">
-          <h3 className="text-heading-sm text-ink-900">{service.name}</h3>
+          <h3 className="text-heading-sm text-ink-900">{name}</h3>
           <p className="mt-1 text-body-sm font-medium text-brand-600">
-            {service.tagline}
+            {tagline}
           </p>
-          <p className="mt-3 text-body-md text-ink-500">{service.description}</p>
+          <p className="mt-3 text-body-md text-ink-500">{description}</p>
 
           <ul className="mt-5 space-y-2.5">
-            {service.features.slice(0, 4).map((feature) => (
+            {featureList.slice(0, 4).map((feature) => (
               <li key={feature} className="flex items-start gap-2.5 text-body-sm text-ink-700">
                 <Check className="mt-0.5 size-4 shrink-0 text-brand-500" />
                 {feature}
@@ -65,7 +73,7 @@ export function ServiceCard({ service, featured = false }) {
 
           <div className="mt-auto flex items-center justify-between pt-6">
             <p className="text-body-sm text-ink-500">
-              From{" "}
+              {t("common.from")}{" "}
               <span className="text-heading-sm font-bold text-ink-900">
                 {formatCurrency(service.startingAt)}
               </span>
@@ -74,7 +82,7 @@ export function ServiceCard({ service, featured = false }) {
               to={ROUTES.booking}
               className="inline-flex items-center gap-1 text-body-sm font-semibold text-brand-600 transition-colors hover:text-brand-700"
             >
-              Book now
+              {t("servicesSection.bookNow")}
               <ArrowUpRight className="size-4" />
             </Link>
           </div>
