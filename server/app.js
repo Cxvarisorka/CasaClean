@@ -3,9 +3,11 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const cookieParser = require('cookie-parser');
+const passport = require("passport");
 
 // Configs
 const connectDB = require('./config/db.config');
+require("./config/passport.config");
 
 // Custom middlewares
 const globalErrorHandler = require('./controllers/error.controller');
@@ -27,6 +29,8 @@ app.use(cors({
     origin: process.env.CLIENT_URL,
     credentials: true
 }));
+
+app.use(passport.initialize());
 
 // Body & cookie parsing
 app.use(express.json());
