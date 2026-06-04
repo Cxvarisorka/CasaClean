@@ -2,7 +2,8 @@ const User = require("../models/user.model");
 const AppError = require("../utils/appError.util");
 const catchAsync = require("../utils/catchAsync.util");
 const jwt = require("jsonwebtoken");
-
+const sendEmail = require("../utils/email");
+const crypto = require("crypto");
 /**
  * Signs a JWT for a given user.
  * Only non-sensitive, stable claims go into the payload (id + role).
@@ -46,15 +47,47 @@ const createSendToken = (user, res, statusCode = 200) => {
 // POST /api/v1/auth/signup -> creates a new (unverified) user
 const signup = catchAsync(async (req, res, next) => {
     const { fullname, email, phone, password } = req.body;
+    const user = await User.create({
+            fullname,
+            email,
+            phone,
+            password
+            });
 
-    // Whitelist fields explicitly so a client can't inject role/isVerified.
-    const user = await User.create({ fullname, email, phone, password });
+    const verificationToken = user.createVerificationToken();
+    await user.save({ validateBeforeSave: false });
 
-    res.status(201).json({
-        status: "success",
-        message: "User created successfully, please verify your email!"
-    });
+    const verificationUrl = `${process.env.SERVER_URL}/api/v1/auth/verify-email/${verificationToken}`;
+
+    const html = `
+     <div>
+            <h2>welcome, ${user.fullname}!</h2>
+            <p>thanks to register  CASACLEAN please verify your email on click button down:</p>
+             <a href="${verificationUrl}">email verifrication</a>
+            <p">link is valid for 10 minute.</p>
+        </div>
+    `;
+
+ try {
+        await sendEmail({
+        email: user.email,
+        subject: "CASACLEAN - email verifrication",
+        html: html
 });
+
+ res.status(201).json({
+ status: "success",
+ message: "User created successfully. Verification email sent."
+ });
+
+ } catch (err) {
+ user.verificationToken = undefined;
+ user.verificationTokenExpires = undefined;
+ await user.save({ validateBeforeSave: false });
+
+ return next(new AppError("There was an error sending the email. Try again later.", 500));
+ }
+})
 
 // POST /api/v1/auth/signin -> authenticates a user and issues a token
 const signin = catchAsync(async (req, res, next) => {
@@ -74,9 +107,9 @@ const signin = catchAsync(async (req, res, next) => {
         return next(new AppError("Credentials are incorrect!", 401));
     }
 
-    // if (!user.isVerified) {
-    //     return next(new AppError("Please verify your email first!", 403));
-    // }
+     if (!user.isVerified) {
+         return next(new AppError("Please verify your email first!", 403));
+     }
 
     createSendToken(user, res);
 });
@@ -106,8 +139,83 @@ const getMe = (req, res) => {
     });
 };
 
-const googleCallback = catchAsync(async (req, res, next) => {
-    createSendToken(req.user, res);
+const verifyEmail = catchAsync(async (req, res, next) => {
+    const hashedToken = crypto
+        .createHash("sha256")
+        .update(req.params.token)
+        .digest("hex");
+
+    const user = await User.findOne({
+        verificationToken: hashedToken,
+        verificationTokenExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+        return next(new AppError("Invalid or expired token", 400));
+    }
+
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    user.verificationTokenExpires = undefined;
+
+    await user.save({ validateBeforeSave: false });
+
+    res.status(200).json({
+        status: "success",
+        message: "Email verified successfully"
+    });
 });
 
-module.exports = { signup, signin, logout, getMe, googleCallback };
+const resendVerificationEmail = catchAsync(async (req, res, next) => {
+    const { email } = req.body;
+
+    if (!email) {
+        return next(new AppError("please enter email!", 400));
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+        return next(new AppError("user with that email is not found", 404));
+    }
+
+    if (user.isVerified) {
+        return next(new AppError("this email is alredy verified  !", 400));
+    }
+
+    const verificationToken = user.createVerificationToken();
+    await user.save({ validateBeforeSave: false });
+
+    const verificationUrl = `${process.env.SERVER_URL}/api/v1/auth/verify-email/${verificationToken}`;
+
+    const html = `
+        <div>
+            <h2>welcome, ${user.fullname}!</h2>
+            <p>you request  verifrication code again.please confirm your email on click button:</p>
+            <a href="${verificationUrl}">email verifrication</a>
+            <p>link is valid for  10  minute</p>
+        </div>
+    `;
+
+    try {
+        await sendEmail({
+            email: user.email,
+            subject: "CASACLEAN - email resend validation",
+            html: html
+        });
+
+        res.status(200).json({
+            status: "success",
+            message: "Verification email resent successfully!"
+        });
+    } catch (err) {
+        user.verificationToken = undefined;
+        user.verificationTokenExpires = undefined;
+        await user.save({ validateBeforeSave: false });
+        return next(new AppError("email couldn't send try again", 500));
+    }
+});
+
+
+
+module.exports = { signup, signin, logout, getMe,verifyEmail,resendVerificationEmail };
