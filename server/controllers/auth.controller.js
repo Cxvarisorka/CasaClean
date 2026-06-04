@@ -1,7 +1,46 @@
+const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
+
 const User = require("../models/user.model");
+const { VERIFICATION_TOKEN_TTL_HOURS } = require("../models/user.model");
 const AppError = require("../utils/appError.util");
 const catchAsync = require("../utils/catchAsync.util");
-const jwt = require("jsonwebtoken");
+const sendEmail = require("../utils/email.util");
+const { verificationEmail } = require("../utils/emailTemplates.util");
+
+/**
+ * Issue a fresh verification token for a user, persist it and email the link.
+ *
+ * Shared by signup and the "resend" endpoint. If sending fails we roll back the
+ * token fields so a stale, never-delivered token can't linger on the account.
+ *
+ * @param {import("mongoose").Document} user - a local (non-Google) user
+ */
+const sendVerificationEmail = async (user) => {
+    // Raw token goes in the URL; only its hash is stored on the user.
+    const rawToken = user.createVerificationToken();
+    await user.save({ validateBeforeSave: false });
+
+    // The link points at the API, which verifies then redirects to the client.
+    const verificationUrl = `${process.env.SERVER_URL}/api/v1/auth/verify-email/${rawToken}`;
+
+    const { subject, html, text } = verificationEmail({
+        fullname: user.fullname,
+        url: verificationUrl,
+        expiresInHours: VERIFICATION_TOKEN_TTL_HOURS
+    });
+
+    try {
+        await sendEmail({ email: user.email, subject, html, text });
+    } catch (err) {
+        // Undo the token so the user can cleanly request a new one later.
+        user.verificationToken = undefined;
+        user.verificationTokenExpires = undefined;
+        await user.save({ validateBeforeSave: false });
+
+        throw new AppError("We couldn't send the verification email. Please try again later.", 502);
+    }
+};
 
 /**
  * Signs a JWT for a given user.
@@ -43,16 +82,21 @@ const createSendToken = (user, res, statusCode = 200) => {
     });
 };
 
-// POST /api/v1/auth/signup -> creates a new (unverified) user
+// POST /api/v1/auth/signup -> creates a new (unverified) user and emails a
+// verification link. The account stays inactive until the link is clicked.
 const signup = catchAsync(async (req, res, next) => {
     const { fullname, email, phone, password } = req.body;
 
     // Whitelist fields explicitly so a client can't inject role/isVerified.
     const user = await User.create({ fullname, email, phone, password });
 
+    // Generate + email the verification link (throws an AppError on send failure,
+    // which catchAsync forwards to the global error handler).
+    await sendVerificationEmail(user);
+
     res.status(201).json({
         status: "success",
-        message: "User created successfully, please verify your email!"
+        message: "Account created! Please check your email to verify your account."
     });
 });
 
@@ -74,9 +118,11 @@ const signin = catchAsync(async (req, res, next) => {
         return next(new AppError("Credentials are incorrect!", 401));
     }
 
-    // if (!user.isVerified) {
-    //     return next(new AppError("Please verify your email first!", 403));
-    // }
+    // Block local accounts that haven't confirmed their email yet. (Google
+    // users are created with isVerified:true, so they pass straight through.)
+    if (!user.isVerified) {
+        return next(new AppError("Please verify your email before signing in.", 403));
+    }
 
     createSendToken(user, res);
 });
@@ -110,4 +156,62 @@ const googleCallback = catchAsync(async (req, res, next) => {
     createSendToken(req.user, res);
 });
 
-module.exports = { signup, signin, logout, getMe, googleCallback };
+// GET /api/v1/auth/verify-email/:token -> confirms a user's email.
+// This URL is opened directly from the email in a browser, so on completion we
+// REDIRECT to the client sign-in page (with a status flag) instead of returning
+// raw JSON the user would otherwise see.
+const verifyEmail = catchAsync(async (req, res, next) => {
+    // Re-hash the raw token from the URL to match what we stored at signup.
+    const hashedToken = crypto
+        .createHash("sha256")
+        .update(req.params.token)
+        .digest("hex");
+
+    // Must match the hash AND still be within the expiry window.
+    const user = await User.findOne({
+        verificationToken: hashedToken,
+        verificationTokenExpires: { $gt: Date.now() }
+    }).select("+verificationToken +verificationTokenExpires");
+
+    if (!user) {
+        return res.redirect(`${process.env.CLIENT_URL}/signin?verified=failed`);
+    }
+
+    // Flip the account to verified and clear the now-used token.
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    user.verificationTokenExpires = undefined;
+    await user.save({ validateBeforeSave: false });
+
+    res.redirect(`${process.env.CLIENT_URL}/signin?verified=success`);
+});
+
+// POST /api/v1/auth/resend-verification -> re-sends the verification link.
+// Responds with the SAME generic message in every case so the endpoint can't be
+// used to discover which emails are registered (prevents user enumeration).
+const resendVerificationEmail = catchAsync(async (req, res, next) => {
+    const { email } = req.body;
+
+    if (!email) {
+        return next(new AppError("Please provide an email address.", 400));
+    }
+
+    const genericResponse = {
+        status: "success",
+        message: "If an unverified account exists for that email, a new verification link has been sent."
+    };
+
+    const user = await User.findOne({ email });
+
+    // Silently no-op for unknown emails, Google accounts and already-verified
+    // users — but always reply identically.
+    if (!user || user.provider !== "local" || user.isVerified) {
+        return res.status(200).json(genericResponse);
+    }
+
+    await sendVerificationEmail(user);
+
+    res.status(200).json(genericResponse);
+});
+
+module.exports = { signup, signin, logout, getMe, googleCallback, verifyEmail, resendVerificationEmail };

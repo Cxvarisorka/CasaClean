@@ -1,5 +1,9 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
+
+// How long an email-verification link stays valid (in hours).
+const VERIFICATION_TOKEN_TTL_HOURS = 24;
 
 const userSchema = new mongoose.Schema({
     fullname: {
@@ -33,6 +37,17 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    // Only the SHA-256 *hash* of the verification token is stored. The raw token
+    // travels in the email link, so even a DB leak can't be used to verify
+    // accounts. select:false keeps it out of normal query results.
+    verificationToken: {
+        type: String,
+        select: false
+    },
+    verificationTokenExpires: {
+        type: Date,
+        select: false
+    },
     googleId: {
         type: String,
         unique: true,
@@ -60,6 +75,29 @@ userSchema.methods.comparePassword = async function (candidate) {
     return await bcrypt.compare(candidate, this.password);
 };
 
+/**
+ * Generate a one-time email-verification token.
+ *
+ * Returns the RAW token (to be embedded in the email link) while persisting
+ * only its SHA-256 hash on the document, together with an expiry timestamp.
+ * The caller is responsible for saving the document afterwards.
+ *
+ * @returns {string} the raw, un-hashed token for the verification URL
+ */
+userSchema.methods.createVerificationToken = function () {
+    const rawToken = crypto.randomBytes(32).toString("hex");
+
+    this.verificationToken = crypto
+        .createHash("sha256")
+        .update(rawToken)
+        .digest("hex");
+
+    this.verificationTokenExpires = Date.now() + VERIFICATION_TOKEN_TTL_HOURS * 60 * 60 * 1000;
+
+    return rawToken;
+};
+
 const User = mongoose.model('User', userSchema);
 
 module.exports = User;
+module.exports.VERIFICATION_TOKEN_TTL_HOURS = VERIFICATION_TOKEN_TTL_HOURS;

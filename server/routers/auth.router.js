@@ -3,7 +3,7 @@ const express = require("express");
 const passport = require("passport");
 
 // Controllers
-const { signup, signin, logout, getMe, googleCallback } = require("../controllers/auth.controller");
+const { signup, signin, logout, getMe, googleCallback, verifyEmail, resendVerificationEmail } = require("../controllers/auth.controller");
 
 // Middlewares
 const { protect } = require("../middlewares/protect.middleware");
@@ -13,6 +13,10 @@ const authRouter = express.Router();
 // Public routes
 authRouter.post("/signup", signup);
 authRouter.post("/signin", signin);
+
+// Email verification (links opened from the inbox -> must stay public)
+authRouter.get("/verify-email/:token", verifyEmail);
+authRouter.post("/resend-verification", resendVerificationEmail);
 
 // Google OAuth
 authRouter.get("/google", passport.authenticate("google", { scope: ["profile", "email"] }));
