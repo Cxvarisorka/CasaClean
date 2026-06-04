@@ -1,0 +1,426 @@
+{
+  "info": {
+    "name": "CasaClean API",
+    "_postman_id": "casaclean-api-collection",
+    "description": "QA test collection for the CasaClean backend API.\n\nHOW TO USE:\n1. Make sure the server is running (see api-testing/00-setup.md).\n2. This collection has variables. Check the {} icon (top right) to see/edit them:\n   - baseUrl: http://localhost:3000/api/v1  (change if your server runs elsewhere)\n   - email / password: the user you sign in with\n   - cityId / serviceId: filled in for you after you create a city/service\n3. Run requests in order: Auth > Signup, verify email by hand, Signin, then City/Service.\n4. The login cookie (lt) is kept automatically by Postman after Signin, so the\n   admin requests just work as long as your signed-in user is an admin.\n\nNote: requests that create a city or service automatically save the new id into\nthe cityId / serviceId variables, so the Get/Edit/Delete requests reuse them.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000/api/v1" },
+    { "key": "email", "value": "maria@example.com" },
+    { "key": "password", "value": "secret123" },
+    { "key": "cityId", "value": "" },
+    { "key": "serviceId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Signup",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/signup", "host": ["{{baseUrl}}"], "path": ["auth", "signup"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullname\": \"Maria Rossi\",\n  \"email\": \"{{email}}\",\n  \"phone\": \"+39 333 1112233\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "description": "Create a new account. Expect 201. The account is NOT active until you click the verify link in the email (check your Mailtrap inbox)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201 Created', () => pm.response.code === 201);",
+                  "pm.test('Success status', () => pm.response.json().status === 'success');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Signin",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/signin", "host": ["{{baseUrl}}"], "path": ["auth", "signin"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "description": "Log in. Expect 200 and an 'lt' cookie. The user's email must be verified first, otherwise expect 403."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.code === 200);",
+                  "pm.test('Got a user back (no password)', () => {",
+                  "  const u = pm.response.json().data.user;",
+                  "  pm.expect(u).to.be.an('object');",
+                  "  pm.expect(u.password).to.be.undefined;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify Email (paste token)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/verify-email/PASTE_TOKEN_HERE",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "verify-email", "PASTE_TOKEN_HERE"]
+            },
+            "description": "Confirm an email. Normally opened in a browser from the email link. Replace PASTE_TOKEN_HERE with the real token. This REDIRECTS (no JSON) to the client signin page with ?verified=success or ?verified=failed."
+          }
+        },
+        {
+          "name": "Resend Verification",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/resend-verification", "host": ["{{baseUrl}}"], "path": ["auth", "resend-verification"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\"\n}"
+            },
+            "description": "Send the verification email again. Always returns 200 with a generic message (on purpose, so nobody can find which emails exist)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Status is 200 OK', () => pm.response.code === 200);"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Google Login (open in browser)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/auth/google", "host": ["{{baseUrl}}"], "path": ["auth", "google"] },
+            "description": "Start Google login. Test this by hand in a browser (it redirects to Google's sign-in page)."
+          }
+        },
+        {
+          "name": "Get Me",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/auth/me", "host": ["{{baseUrl}}"], "path": ["auth", "me"] },
+            "description": "Get your own profile. Needs the login cookie. Expect 200 with your user. Without a cookie expect 401."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.code === 200);",
+                  "pm.test('Returns a user', () => pm.expect(pm.response.json().data.user).to.be.an('object'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/auth/logout", "host": ["{{baseUrl}}"], "path": ["auth", "logout"] },
+            "description": "Log out. Needs the login cookie. Expect 200 and the 'lt' cookie gets cleared."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Status is 200 OK', () => pm.response.code === 200);"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "City",
+      "item": [
+        {
+          "name": "Get Cities (list)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/city?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["city"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            },
+            "description": "Public. List cities with paging. Expect 200 with data.cities (a list), cityCount and length."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.code === 200);",
+                  "pm.test('cities is a list', () => pm.expect(pm.response.json().data.cities).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Add City (admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/city", "host": ["{{baseUrl}}"], "path": ["city"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Rome\",\n  \"workingHourStarts\": \"09:00\",\n  \"workingHourEnds\": \"17:30\"\n}"
+            },
+            "description": "Admin only. Create a city. Expect 201. Name capital letter is fixed automatically. The new id is saved to the cityId variable for the other city requests."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201 Created', () => pm.response.code === 201);",
+                  "const city = pm.response.json().data.city;",
+                  "if (city && city._id) { pm.collectionVariables.set('cityId', city._id); }",
+                  "pm.test('Name was capitalized', () => pm.expect(city.name).to.eql('Rome'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get City by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/city/{{cityId}}", "host": ["{{baseUrl}}"], "path": ["city", "{{cityId}}"] },
+            "description": "Public. Get one city. Uses the cityId variable (set by Add City). Expect 200. Unknown id = 404, broken id = 400."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Status is 200 OK', () => pm.response.code === 200);"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Edit City (admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/city/{{cityId}}", "host": ["{{baseUrl}}"], "path": ["city", "{{cityId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workingHourEnds\": \"18:00\",\n  \"enabled\": false\n}"
+            },
+            "description": "Admin only. Change only the fields you send. Expect 200. enabled:false should be honoured (off switch)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.code === 200);",
+                  "pm.test('enabled is now false', () => pm.expect(pm.response.json().data.city.enabled).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete City (admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/city/{{cityId}}", "host": ["{{baseUrl}}"], "path": ["city", "{{cityId}}"] },
+            "description": "Admin only. Delete a city. Expect 200. Deleting again = 404."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Status is 200 OK', () => pm.response.code === 200);"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Service",
+      "item": [
+        {
+          "name": "Get Services (list)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/service?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["service"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            },
+            "description": "Public. List services with paging. Expect 200 with data.services and serviceCount. Each service shows its full cities."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.code === 200);",
+                  "pm.test('services is a list', () => pm.expect(pm.response.json().data.services).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Add Service - all cities (admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/service", "host": ["{{baseUrl}}"], "path": ["service"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Deep cleaning\",\n  \"description\": \"Full deep clean\",\n  \"pricePerHour\": 30,\n  \"allCities\": true\n}"
+            },
+            "description": "Admin only. Create a service offered EVERYWHERE. Expect 201, allCities true, cities empty. The new id is saved to serviceId."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201 Created', () => pm.response.code === 201);",
+                  "const s = pm.response.json().data.service;",
+                  "if (s && s._id) { pm.collectionVariables.set('serviceId', s._id); }",
+                  "pm.test('allCities is true', () => pm.expect(s.allCities).to.eql(true));",
+                  "pm.test('cities list is empty', () => pm.expect(s.cities).to.be.an('array').that.is.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Add Service - specific city (admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/service", "host": ["{{baseUrl}}"], "path": ["service"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Regular cleaning\",\n  \"description\": \"Weekly cleaning for homes\",\n  \"pricePerHour\": 19.9,\n  \"cities\": [\"{{cityId}}\"]\n}"
+            },
+            "description": "Admin only. Create a service offered in ONE city. Needs a real cityId (create a city first). Expect 201. A fake city id = 400."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Status is 201 Created', () => pm.response.code === 201);"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Service by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/service/{{serviceId}}", "host": ["{{baseUrl}}"], "path": ["service", "{{serviceId}}"] },
+            "description": "Public. Get one service. Uses the serviceId variable. Expect 200. Unknown id = 404, broken id = 400."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Status is 200 OK', () => pm.response.code === 200);"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Edit Service (admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/service/{{serviceId}}", "host": ["{{baseUrl}}"], "path": ["service", "{{serviceId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pricePerHour\": 25,\n  \"enabled\": false\n}"
+            },
+            "description": "Admin only. Change only the fields you send. Expect 200. If you don't send coverage fields, the cities stay the same."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.code === 200);",
+                  "pm.test('enabled is now false', () => pm.expect(pm.response.json().data.service.enabled).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Service (admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/service/{{serviceId}}", "host": ["{{baseUrl}}"], "path": ["service", "{{serviceId}}"] },
+            "description": "Admin only. Delete a service. Expect 200. Deleting again = 404."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Status is 200 OK', () => pm.response.code === 200);"]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
