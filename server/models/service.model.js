@@ -1,13 +1,61 @@
+// Reference shape of a service record (from the original seed data).
+// NOTE: the localized name/description fields (name_it/name_ka/name_ru, ...) are
+// not modelled yet — add them here if/when multilingual support is needed.
 //   {
 //     "id": 1,
 //     "name": "Regular Cleaning",
-//     "name_it": "Pulizia Regolare",
-//     "name_ka": "რეგულარული დასუფთავება",
-//     "name_ru": "Регулярная уборка",
 //     "description": "Weekly or bi-weekly cleaning for homes",
-//     "description_it": "Pulizia settimanale o bisettimanale per case",
-//     "description_ka": "კვირაში ან ორჯერ კვირაში დასუფთავება სახლებისთვის",
-//     "description_ru": "Еженедельная или двухнедельная уборка для домов",
 //     "price_per_hour": 19.9,
 //     "enabled": true
-//   },
+//   }
+
+const mongoose = require("mongoose");
+
+const serviceSchema = new mongoose.Schema({
+    name: {
+        type: String,
+        required: [true, "Service name is required!"],
+        unique: true, // DB-level guard; the 11000 handler turns this into a 409
+        trim: true
+    },
+    description: {
+        type: String,
+        required: [true, "Service description is required!"]
+    },
+    pricePerHour: {
+        type: Number,
+        required: [true, "Price is required!"],
+        min: [0, "Price can't be negative!"]
+    },
+    // Coverage model: a service is offered either in every city or in an
+    // explicit subset of cities.
+    //   - allCities: true  -> available everywhere; `cities` is ignored/empty.
+    //   - allCities: false -> available only in the cities listed in `cities`.
+    allCities: {
+        type: Boolean,
+        default: false
+    },
+    // References to City documents the service is offered in. Only meaningful
+    // when allCities is false. Validated in the controller against real cities.
+    cities: [
+        {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "City"
+        }
+    ],
+    enabled: {
+        type: Boolean,
+        default: true // soft on/off switch so a service can be hidden without deleting it
+    }
+}, { timestamps: true });
+
+// Guarantee a consistent coverage state: when allCities is true we never keep a
+// stale city list around, so consumers can rely on the flag alone.
+serviceSchema.pre("save", function (next) {
+    if (this.allCities) this.cities = [];
+    next();
+});
+
+const Service = mongoose.model("Service", serviceSchema);
+
+module.exports = Service;
