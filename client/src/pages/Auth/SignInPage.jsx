@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertCircle, ArrowRight, Lock, Mail } from "lucide-react";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Button } from "@/components/ui/Button";
 import { AuthShell, GoogleButton, useSignIn, makeSignInSchema } from "@/features/auth";
+import { useAuth } from "@/features/admin/context";
 import { Seo } from "@/seo";
 import { useTranslation } from "@/i18n";
 import { ROUTES } from "@/constants/routes";
@@ -22,6 +23,10 @@ import { ROUTES } from "@/constants/routes";
 const SignInPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { refresh } = useAuth();
+  // Return the user to the page they were gated from (e.g. /booking), else home.
+  const from = location.state?.from?.pathname || ROUTES.home;
   const schema = useMemo(() => makeSignInSchema(t), [t]);
 
   const {
@@ -34,7 +39,11 @@ const SignInPage = () => {
   });
 
   const { mutateAsync, isPending, error } = useSignIn({
-    onSuccess: () => setTimeout(() => navigate(ROUTES.home), 600),
+    onSuccess: async () => {
+      // Sync auth state from the freshly-set session cookie, then continue.
+      await refresh();
+      navigate(from, { replace: true });
+    },
   });
 
   const onSubmit = (values) => mutateAsync(values);

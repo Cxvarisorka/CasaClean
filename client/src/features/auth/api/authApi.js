@@ -59,6 +59,18 @@ export function getMe() {
 }
 
 /**
+ * Update the signed-in user's profile. Degrades gracefully when the endpoint
+ * isn't provisioned yet (preview/local), echoing the patch back so the UI flow
+ * stays demonstrable; real validation errors from a live server still surface.
+ */
+export function updateProfile(patch) {
+  return withFallback(
+    () => request({ method: "PATCH", url: ENDPOINTS.auth.me, data: patch }),
+    { user: patch }
+  );
+}
+
+/**
  * Begin the Google OAuth redirect flow. The browser navigates to the API's
  * Google entry point, which (when implemented) redirects back with a session.
  */

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Menu } from "lucide-react";
+import { Menu, User } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Container } from "@/components/ui/Container";
 import { Button } from "@/components/ui/Button";
@@ -10,6 +10,7 @@ import { LanguageSwitcher } from "../LanguageSwitcher";
 import { ThemeToggle } from "../ThemeToggle";
 import { useScrollPosition } from "@/hooks/useScrollPosition";
 import { useTranslation } from "@/i18n";
+import { useAuth } from "@/features/admin/context";
 import { PRIMARY_NAV } from "@/constants/navigation";
 import { ROUTES } from "@/constants/routes";
 import { MobileMenu } from "../MobileMenu";
@@ -26,7 +27,10 @@ import { MobileMenu } from "../MobileMenu";
 export function Navbar() {
   const { scrolled } = useScrollPosition();
   const { t } = useTranslation();
+  const { isAuthenticated, user } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const firstName = user?.fullname?.split(" ")[0] || t("profile.menu");
 
   return (
     <>
@@ -52,7 +56,7 @@ export function Navbar() {
                     to={item.href}
                     className={({ isActive }) =>
                       cn(
-                        "rounded-full px-4 py-2 text-body-sm font-medium transition-colors",
+                        "whitespace-nowrap rounded-full px-4 py-2 text-body-sm font-medium transition-colors",
                         isActive
                           ? "text-brand-700"
                           : "text-ink-600 hover:text-ink-900 hover:bg-ink-100/70"
@@ -68,9 +72,15 @@ export function Navbar() {
             <div className="hidden items-center gap-1.5 lg:flex">
               <ThemeToggle />
               <LanguageSwitcher />
-              <Button variant="ghost" size="sm" to={ROUTES.signin}>
-                {t("common.signIn")}
-              </Button>
+              {isAuthenticated ? (
+                <Button variant="ghost" size="sm" to={ROUTES.profile} leftIcon={User}>
+                  {firstName}
+                </Button>
+              ) : (
+                <Button variant="ghost" size="sm" to={ROUTES.signin}>
+                  {t("common.signIn")}
+                </Button>
+              )}
               <Button to={ROUTES.booking} size="sm">
                 {t("common.bookTurnover")}
               </Button>

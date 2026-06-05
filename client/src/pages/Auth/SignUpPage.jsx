@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertCircle, ArrowRight, CheckCircle2, Lock, Mail, Phone, User } from "lucide-react";
@@ -22,7 +22,6 @@ import { ROUTES } from "@/constants/routes";
 
 const SignUpPage = () => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const schema = useMemo(() => makeSignUpSchema(t), [t]);
 
   const {

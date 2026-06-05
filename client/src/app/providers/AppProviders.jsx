@@ -4,6 +4,7 @@ import { QueryProvider } from "./QueryProvider";
 import { ThemeProvider } from "./ThemeProvider";
 import { MotionProvider } from "./MotionProvider";
 import { I18nProvider } from "@/i18n";
+import { AuthProvider } from "@/features/admin/context";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 
 /*
@@ -23,7 +24,9 @@ export function AppProviders({ children }) {
           <QueryProvider>
             <I18nProvider>
               <ThemeProvider>
-                <MotionProvider>{children}</MotionProvider>
+                <AuthProvider>
+                  <MotionProvider>{children}</MotionProvider>
+                </AuthProvider>
               </ThemeProvider>
             </I18nProvider>
           </QueryProvider>

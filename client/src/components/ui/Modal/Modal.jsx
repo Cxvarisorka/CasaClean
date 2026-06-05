@@ -63,7 +63,8 @@ export function Modal({
             exit={{ opacity: 0, scale: 0.97, y: 8 }}
             transition={{ duration: 0.25, ease: EASE_PREMIUM }}
             className={cn(
-              "relative z-10 w-full rounded-2xl bg-surface shadow-premium",
+              "relative z-10 flex max-h-[calc(100dvh-2rem)] w-full flex-col",
+              "rounded-2xl bg-surface shadow-premium",
               SIZES[size]
             )}
           >
@@ -77,7 +78,7 @@ export function Modal({
             </button>
 
             {(title || description) && (
-              <div className="px-6 pt-6 pr-14">
+              <div className="shrink-0 px-6 pt-6 pr-14">
                 {title && (
                   <h2 className="text-heading-sm text-ink-900">{title}</h2>
                 )}
@@ -87,10 +88,12 @@ export function Modal({
               </div>
             )}
 
-            <div className="px-6 py-5">{children}</div>
+            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+              {children}
+            </div>
 
             {footer && (
-              <div className="flex justify-end gap-3 border-t border-ink-100 px-6 py-4">
+              <div className="flex shrink-0 justify-end gap-3 border-t border-ink-100 px-6 py-4">
                 {footer}
               </div>
             )}
