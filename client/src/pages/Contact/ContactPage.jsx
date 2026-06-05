@@ -92,15 +92,15 @@ const ContactPage = () => {
                 );
               })}
 
-              <div className="flex items-start gap-4 rounded-2xl border border-brand-100 bg-brand-50/60 p-5">
-                <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-surface text-brand-600 shadow-soft">
+              <div className="flex items-start gap-4 rounded-2xl border border-ink-200 bg-white p-5">
+                <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-surface text-black shadow-soft">
                   <MessageSquare className="size-6" />
                 </span>
                 <div>
-                  <p className="text-body-sm font-semibold text-ink-900">
+                  <p className="text-body-sm font-semibold text-black">
                     {t("pages.contact.pmTitle")}
                   </p>
-                  <p className="text-body-sm text-ink-600">
+                  <p className="text-body-sm text-black">
                     {t("pages.contact.pmNote")}
                   </p>
                 </div>

@@ -51,6 +51,11 @@ export default {
     saved: "Il tuo profilo è stato aggiornato.",
     adminConsole: "Pannello admin",
     dangerZone: "Esci dal tuo account",
+    bookingHistory: "Storico prenotazioni",
+    bookingHistorySubtitle: "Le tue pulizie passate e future.",
+    noBookings: "Nessuna prenotazione",
+    noBookingsHint: "Quando prenoti una pulizia, apparirà qui.",
+    bookNow: "Prenota una pulizia",
   },
 
   nav: {
@@ -123,6 +128,8 @@ export default {
       terms:
         "Creando un account accetti i nostri Termini e l'Informativa sulla privacy.",
       success: "Account creato! Controlla la tua email per la verifica.",
+      verifyNote:
+        "Abbiamo inviato un link di verifica alla tua email. Aprilo per attivare l'account: verrai connesso e portato alla home automaticamente.",
     },
     fields: {
       fullName: "Nome completo",

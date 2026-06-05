@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertCircle, ArrowRight, CheckCircle2, Lock, Mail, Phone, User } from "lucide-react";
+import { AlertCircle, ArrowRight, CheckCircle2, Lock, Mail, MailCheck, Phone, User } from "lucide-react";
 import { motion } from "framer-motion";
 import { Page } from "@/components/shared/Page";
 import { Input } from "@/components/ui/Input";
@@ -52,9 +52,10 @@ const SignUpPage = () => {
             </span>
             <h1 className="mt-6 text-heading-lg text-ink-900">{t("auth.signup.title")}</h1>
             <p className="mt-3 text-body-md text-ink-500">{t("auth.signup.success")}</p>
-            <Button to={ROUTES.signin} size="lg" className="mt-8" rightIcon={ArrowRight}>
-              {t("auth.signin.submit")}
-            </Button>
+            <div className="mt-8 flex items-start gap-3 rounded-2xl border border-ink-200 bg-white p-4 text-left">
+              <MailCheck className="mt-0.5 size-5 shrink-0 text-black" />
+              <p className="text-body-sm text-black">{t("auth.signup.verifyNote")}</p>
+            </div>
           </motion.div>
         </AuthShell>
       </Page>

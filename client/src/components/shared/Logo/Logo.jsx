@@ -2,45 +2,27 @@ import { Link } from "react-router-dom";
 import { cn } from "@/lib/cn";
 import { ROUTES } from "@/constants/routes";
 import { SITE } from "@/constants/metadata";
+import logoMark from "@/assets/logo.png";
 
 /*
  * Logo
  * ----
- * The brand mark: a custom inline SVG (no asset request) plus the wordmark.
- * `tone` flips it for dark surfaces like the footer. Links home unless `as`
+ * The brand mark: the CasaClean image asset plus the wordmark. `tone` flips
+ * the wordmark for dark surfaces like the footer. Links home unless `as`
  * is overridden (e.g. a plain mark in the footer).
  */
 
 function Mark({ className }) {
   return (
-    <span
+    <img
+      src={logoMark}
+      alt=""
+      aria-hidden="true"
       className={cn(
-        "grid size-9 place-items-center rounded-xl bg-brand-600 text-white shadow-soft",
+        "size-9 rounded-full object-cover shadow-soft",
         className
       )}
-    >
-      <svg viewBox="0 0 24 24" className="size-5" fill="none" aria-hidden="true">
-        {/* A stylized house + sparkle — clean home, premium service. */}
-        <path
-          d="M4 11.5 12 5l8 6.5"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M6 10.5V18a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-7.5"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M12 12.2l.7 1.6 1.6.7-1.6.7-.7 1.6-.7-1.6-1.6-.7 1.6-.7.7-1.6Z"
-          fill="currentColor"
-        />
-      </svg>
-    </span>
+    />
   );
 }
 

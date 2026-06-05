@@ -21,6 +21,7 @@ export const ENDPOINTS = {
   },
   bookings: {
     create: "/bookings",
+    mine: "/bookings/me",
     detail: (id) => `/bookings/${id}`,
     availability: "/bookings/availability",
   },

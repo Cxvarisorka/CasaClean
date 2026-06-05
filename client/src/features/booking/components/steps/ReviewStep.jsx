@@ -87,18 +87,18 @@ export function ReviewStep({ submitError }) {
       </Group>
 
       {/* Total */}
-      <div className="rounded-2xl border border-brand-200 bg-brand-50/60 p-5">
+      <div className="rounded-2xl border border-ink-200 bg-white p-5">
         <div className="space-y-2">
           {quote.lineItems.map((item, i) => (
-            <div key={i} className="flex justify-between text-body-sm text-ink-600">
+            <div key={i} className="flex justify-between text-body-sm text-black">
               <span>{item.label}</span>
               <span className="font-medium">{formatCurrency(item.amount)}</span>
             </div>
           ))}
         </div>
-        <div className="mt-3 flex items-center justify-between border-t border-brand-200/70 pt-3">
-          <span className="text-body-md font-semibold text-ink-900">Total due</span>
-          <span className="text-heading-sm font-bold text-brand-700">
+        <div className="mt-3 flex items-center justify-between border-t border-ink-200 pt-3">
+          <span className="text-body-md font-semibold text-black">Total due</span>
+          <span className="text-heading-sm font-bold text-black">
             {formatCurrency(quote.total)}
           </span>
         </div>

@@ -48,8 +48,8 @@ export function BookingSummary() {
         </span>
       </div>
 
-      <div className="mt-5 flex items-start gap-2.5 rounded-xl bg-brand-50/60 p-3.5 text-body-sm text-ink-600">
-        <ShieldCheck className="mt-0.5 size-4.5 shrink-0 text-brand-600" />
+      <div className="mt-5 flex items-start gap-2.5 rounded-xl border border-ink-200 bg-white p-3.5 text-body-sm text-black">
+        <ShieldCheck className="mt-0.5 size-4.5 shrink-0 text-black" />
         {t("booking.quote.guarantee")}
       </div>
     </aside>

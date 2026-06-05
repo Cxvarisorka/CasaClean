@@ -53,6 +53,11 @@ export default {
     saved: "Your profile has been updated.",
     adminConsole: "Admin console",
     dangerZone: "Sign out of your account",
+    bookingHistory: "Booking history",
+    bookingHistorySubtitle: "Your past and upcoming cleanings.",
+    noBookings: "No bookings yet",
+    noBookingsHint: "When you book a cleaning, it will show up here.",
+    bookNow: "Book a cleaning",
   },
 
   nav: {
@@ -124,6 +129,8 @@ export default {
       signInInstead: "Sign in",
       terms: "By creating an account you agree to our Terms and Privacy Policy.",
       success: "Account created! Please check your email to verify.",
+      verifyNote:
+        "We sent a verification link to your inbox. Open it to activate your account — you'll be signed in and taken home automatically.",
     },
     fields: {
       fullName: "Full name",
