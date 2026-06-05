@@ -37,6 +37,22 @@ export default {
 
   theme: { label: "Tema", light: "Chiaro", dark: "Scuro" },
 
+  profile: {
+    title: "Il mio profilo",
+    subtitle: "Gestisci i dati e le preferenze del tuo account.",
+    menu: "Profilo",
+    account: "Account",
+    personalInfo: "Informazioni personali",
+    memberSince: "Membro dal",
+    role: "Ruolo",
+    verified: "Verificato",
+    unverified: "Non verificato",
+    save: "Salva modifiche",
+    saved: "Il tuo profilo è stato aggiornato.",
+    adminConsole: "Pannello admin",
+    dangerZone: "Esci dal tuo account",
+  },
+
   nav: {
     services: "Servizi",
     pricing: "Prezzi",

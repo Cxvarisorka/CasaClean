@@ -17,9 +17,18 @@ export const ROUTES = {
   booking: "/booking",
   signin: "/signin",
   signup: "/signup",
+  profile: "/profile",
   blog: "/blog",
   blogPost: (slug = ":slug") => `/blog/${slug}`,
   privacy: "/privacy",
   terms: "/terms",
+  admin: {
+    root: "/admin",
+    dashboard: "/admin",
+    bookings: "/admin/bookings",
+    services: "/admin/services",
+    cities: "/admin/cities",
+    users: "/admin/users",
+  },
   notFound: "*",
 };

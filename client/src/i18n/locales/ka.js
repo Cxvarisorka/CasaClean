@@ -37,6 +37,22 @@ export default {
 
   theme: { label: "თემა", light: "ნათელი", dark: "ბნელი" },
 
+  profile: {
+    title: "ჩემი პროფილი",
+    subtitle: "მართე შენი ანგარიშის მონაცემები და პარამეტრები.",
+    menu: "პროფილი",
+    account: "ანგარიში",
+    personalInfo: "პირადი ინფორმაცია",
+    memberSince: "წევრი",
+    role: "როლი",
+    verified: "ვერიფიცირებული",
+    unverified: "არავერიფიცირებული",
+    save: "შენახვა",
+    saved: "შენი პროფილი განახლდა.",
+    adminConsole: "ადმინ პანელი",
+    dangerZone: "ანგარიშიდან გასვლა",
+  },
+
   nav: {
     services: "სერვისები",
     pricing: "ფასები",

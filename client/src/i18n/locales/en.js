@@ -39,6 +39,22 @@ export default {
 
   theme: { label: "Theme", light: "Light", dark: "Dark" },
 
+  profile: {
+    title: "My profile",
+    subtitle: "Manage your account details and preferences.",
+    menu: "Profile",
+    account: "Account",
+    personalInfo: "Personal information",
+    memberSince: "Member since",
+    role: "Role",
+    verified: "Verified",
+    unverified: "Unverified",
+    save: "Save changes",
+    saved: "Your profile has been updated.",
+    adminConsole: "Admin console",
+    dangerZone: "Sign out of your account",
+  },
+
   nav: {
     services: "Services",
     pricing: "Pricing",

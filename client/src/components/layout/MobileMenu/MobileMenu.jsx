@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { LanguageSwitcher } from "../LanguageSwitcher";
 import { ThemeToggle } from "../ThemeToggle";
 import { useTranslation } from "@/i18n";
+import { useAuth } from "@/features/admin/context";
 import { PRIMARY_NAV } from "@/constants/navigation";
 import { ROUTES } from "@/constants/routes";
 import { staggerContainer, staggerItem } from "@/animations/stagger";
@@ -22,6 +23,7 @@ import { staggerContainer, staggerItem } from "@/animations/stagger";
 export function MobileMenu({ open, onClose }) {
   const { pathname } = useLocation();
   const { t } = useTranslation();
+  const { isAuthenticated } = useAuth();
 
   // Auto-close when navigation completes.
   useEffect(() => {
@@ -66,9 +68,15 @@ export function MobileMenu({ open, onClose }) {
         <Button to={ROUTES.booking} fullWidth size="lg">
           {t("common.bookTurnover")}
         </Button>
-        <Button to={ROUTES.signin} variant="outline" fullWidth size="lg">
-          {t("common.signIn")}
-        </Button>
+        {isAuthenticated ? (
+          <Button to={ROUTES.profile} variant="outline" fullWidth size="lg">
+            {t("profile.menu")}
+          </Button>
+        ) : (
+          <Button to={ROUTES.signin} variant="outline" fullWidth size="lg">
+            {t("common.signIn")}
+          </Button>
+        )}
       </div>
     </Drawer>
   );

@@ -15,6 +15,7 @@ import {
   StatsSection,
   FaqPreviewSection,
 } from "./sections";
+import { useEffect } from "react";
 
 /*
  * HomePage
@@ -25,6 +26,28 @@ import {
  */
 
 const HomePage = () => {
+
+  useEffect(() => {
+
+    const authMe = async () => {
+
+      const req = await fetch(`${import.meta.env.VITE_API_BASE_URL}/auth/me`, {
+        credentials: "include"
+      })
+
+      const res = await req.json();
+
+      if (!req.ok) {
+        throw new Error(res.message || "Failed to authenticate");
+      }
+
+    };
+
+    authMe();
+
+
+  }, [])
+
   return (
     <Page>
       <Seo

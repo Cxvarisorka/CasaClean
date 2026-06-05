@@ -24,7 +24,18 @@ const BlogPostPage = lazy(() => import("@/pages/Blog/BlogPostPage"));
 const BookingPage = lazy(() => import("@/pages/Booking/BookingPage"));
 const SignInPage = lazy(() => import("@/pages/Auth/SignInPage"));
 const SignUpPage = lazy(() => import("@/pages/Auth/SignUpPage"));
+const ProfilePage = lazy(() => import("@/pages/Profile/ProfilePage"));
 const NotFoundPage = lazy(() => import("@/pages/NotFound/NotFoundPage"));
+
+// Admin console — its own bundle, only loaded when /admin is visited.
+const AdminLayout = lazy(() =>
+  import("@/features/admin/components/AdminLayout").then((m) => ({ default: m.AdminLayout }))
+);
+const AdminDashboardPage = lazy(() => import("@/pages/Admin/DashboardPage"));
+const AdminBookingsPage = lazy(() => import("@/pages/Admin/BookingsPage"));
+const AdminServicesPage = lazy(() => import("@/pages/Admin/ServicesPage"));
+const AdminCitiesPage = lazy(() => import("@/pages/Admin/CitiesPage"));
+const AdminUsersPage = lazy(() => import("@/pages/Admin/UsersPage"));
 
 /** Routes hosted by the marketing MainLayout (Navbar + Footer). */
 export const MAIN_ROUTES = [
@@ -37,15 +48,30 @@ export const MAIN_ROUTES = [
   { path: ROUTES.careers, element: CareersPage },
   { path: ROUTES.blog, element: BlogPage },
   { path: ROUTES.blogPost(), element: BlogPostPage },
+  // Account area — requires a registered, signed-in user.
+  { path: ROUTES.profile, element: ProfilePage, protected: true },
 ];
 
 /** Routes hosted by the focused EmptyLayout (minimal branded header). */
-export const FOCUSED_ROUTES = [{ path: ROUTES.booking, element: BookingPage }];
+export const FOCUSED_ROUTES = [
+  // Booking requires a registered, signed-in user.
+  { path: ROUTES.booking, element: BookingPage, protected: true },
+];
 
 /** Standalone routes that own their full-screen chrome (auth split-screen). */
 export const BARE_ROUTES = [
   { path: ROUTES.signin, element: SignInPage },
   { path: ROUTES.signup, element: SignUpPage },
+];
+
+/** The admin shell + its child pages (nested under /admin, guarded inside). */
+export const ADMIN_LAYOUT = AdminLayout;
+export const ADMIN_ROUTES = [
+  { path: "", element: AdminDashboardPage, index: true },
+  { path: "bookings", element: AdminBookingsPage },
+  { path: "services", element: AdminServicesPage },
+  { path: "cities", element: AdminCitiesPage },
+  { path: "users", element: AdminUsersPage },
 ];
 
 export const FALLBACK_ROUTE = { path: ROUTES.notFound, element: NotFoundPage };
