@@ -3,6 +3,9 @@
 // environment (Mailtrap in dev) — never hard-code secrets in source.
 const nodemailer = require("nodemailer");
 
+// Env config (load before anything reads process.env)
+require("dotenv").config();
+
 /**
  * Build the SMTP transport from environment variables.
  *

@@ -6,6 +6,10 @@ const { getCities, getCity, addCity, deleteCity, editCity } = require('../contro
 
 // Middlewares
 const { protect, restrictTo } = require('../middlewares/protect.middleware');
+const validate = require('../middlewares/validate.middleware');
+
+// Validations
+const { addCitySchema, editCitySchema } = require('../validations/city.validation');
 
 const cityRouter = express.Router();
 
@@ -16,8 +20,8 @@ cityRouter.get('/:id', getCity);
 // Admin routes — everything below requires a valid auth cookie AND the admin role.
 // protect populates req.user; restrictTo("admin") then gates on the role.
 cityRouter.use(protect, restrictTo('admin'));
-cityRouter.post('/', addCity);
+cityRouter.post('/', validate(addCitySchema), addCity);
 cityRouter.delete('/:id', deleteCity);
-cityRouter.patch('/:id', editCity);
+cityRouter.patch('/:id', validate(editCitySchema), editCity);
 
 module.exports = cityRouter;

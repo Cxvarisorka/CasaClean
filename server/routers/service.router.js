@@ -6,6 +6,10 @@ const { getServices, getServiceById, createService, deleteService, editService }
 
 // Middlewares
 const { protect, restrictTo } = require('../middlewares/protect.middleware');
+const validate = require('../middlewares/validate.middleware');
+
+// Validations
+const { createServiceSchema, editServiceSchema } = require('../validations/service.validation');
 
 const serviceRouter = express.Router();
 
@@ -16,7 +20,7 @@ serviceRouter.get('/:id', getServiceById);
 // Admin routes — everything below requires a valid auth cookie AND the admin role.
 // protect populates req.user; restrictTo("admin") then gates on the role.
 serviceRouter.use(protect, restrictTo('admin'));
-serviceRouter.post('/', createService);
-serviceRouter.route('/:id').delete(deleteService).patch(editService);
+serviceRouter.post('/', validate(createServiceSchema), createService);
+serviceRouter.route('/:id').delete(deleteService).patch(validate(editServiceSchema), editService);
 
 module.exports = serviceRouter;

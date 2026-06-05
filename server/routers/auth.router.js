@@ -7,16 +7,20 @@ const { signup, signin, logout, getMe, googleCallback, verifyEmail, resendVerifi
 
 // Middlewares
 const { protect } = require("../middlewares/protect.middleware");
+const validate = require("../middlewares/validate.middleware");
+
+// Validations
+const { signupSchema, signinSchema, resendEmailVerificationSchema } = require("../validations/auth.validation");
 
 const authRouter = express.Router();
 
 // Public routes
-authRouter.post("/signup", signup);
-authRouter.post("/signin", signin);
+authRouter.post("/signup", validate(signupSchema), signup);
+authRouter.post("/signin", validate(signinSchema), signin);
 
 // Email verification (links opened from the inbox -> must stay public)
 authRouter.get("/verify-email/:token", verifyEmail);
-authRouter.post("/resend-verification", resendVerificationEmail);
+authRouter.post("/resend-verification", validate(resendEmailVerificationSchema), resendVerificationEmail);
 
 // Google OAuth
 authRouter.get("/google", passport.authenticate("google", { scope: ["profile", "email"] }));

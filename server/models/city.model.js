@@ -44,6 +44,8 @@ const citySchema = new mongoose.Schema({
     timestamps: true
 });
 
+citySchema.index({ enabled: 1 });
+
 const City = mongoose.model('City', citySchema);
 
 module.exports = City;
