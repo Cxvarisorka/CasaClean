@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { MapPin, Plus, Pencil, Trash2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Switch } from "@/components/ui/Switch";
@@ -9,6 +9,7 @@ import {
   ConfirmDialog,
   useCollection,
 } from "@/features/admin";
+import { useTranslation } from "@/i18n";
 
 /*
  * Cities management
@@ -17,35 +18,40 @@ import {
  * an availability toggle that controls whether the city appears in booking.
  */
 
-const DAY_LABELS = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
-const formatDays = (csv = "") =>
-  csv
-    .split(",")
-    .map((d) => DAY_LABELS[Number(d.trim())])
-    .filter(Boolean)
-    .join(", ");
-
-const FIELDS = [
-  { name: "name", label: "Name (English)", required: true },
-  { name: "name_it", label: "Name (Italian)" },
-  { name: "name_ka", label: "Name (Georgian)" },
-  {
-    name: "working_days",
-    label: "Working days",
-    placeholder: "1,2,3,4,5,6",
-    hint: "Comma-separated, 1 = Monday … 7 = Sunday",
-    full: true,
-  },
-  { name: "working_hours_start", label: "Opens at", placeholder: "09:00" },
-  { name: "working_hours_end", label: "Closes at", placeholder: "18:00" },
-  { name: "enabled", label: "Available for booking", type: "switch" },
-];
-
 export default function CitiesPage() {
   const { items, create, update, remove } = useCollection("cities");
+  const { t } = useTranslation();
   const [editing, setEditing] = useState(undefined);
   const [deleting, setDeleting] = useState(null);
+
+  const formatDays = (csv = "") =>
+    csv
+      .split(",")
+      .map((d) => {
+        const n = Number(d.trim());
+        return n >= 1 && n <= 7 ? t(`admin.cities.days.${n}`) : "";
+      })
+      .filter(Boolean)
+      .join(", ");
+
+  const fields = useMemo(
+    () => [
+      { name: "name", label: t("admin.cities.field.name"), required: true },
+      { name: "name_it", label: t("admin.cities.field.nameIt") },
+      { name: "name_ka", label: t("admin.cities.field.nameKa") },
+      {
+        name: "working_days",
+        label: t("admin.cities.field.workingDays"),
+        placeholder: "1,2,3,4,5,6",
+        hint: t("admin.cities.field.workingDaysHint"),
+        full: true,
+      },
+      { name: "working_hours_start", label: t("admin.cities.field.opensAt"), placeholder: "09:00" },
+      { name: "working_hours_end", label: t("admin.cities.field.closesAt"), placeholder: "18:00" },
+      { name: "enabled", label: t("admin.cities.field.enabled"), type: "switch" },
+    ],
+    [t]
+  );
 
   const handleSubmit = (values) => {
     if (editing) update(editing._id, values);
@@ -56,7 +62,7 @@ export default function CitiesPage() {
   const columns = [
     {
       key: "name",
-      header: "City",
+      header: t("admin.cities.col.city"),
       render: (c) => (
         <div>
           <p className="font-semibold text-ink-900">{c.name}</p>
@@ -66,12 +72,12 @@ export default function CitiesPage() {
     },
     {
       key: "working_days",
-      header: "Working days",
+      header: t("admin.cities.col.workingDays"),
       render: (c) => <span className="text-ink-600">{formatDays(c.working_days) || "—"}</span>,
     },
     {
       key: "working_hours_start",
-      header: "Hours",
+      header: t("admin.cities.col.hours"),
       render: (c) => (
         <span className="inline-flex items-center gap-1.5 text-ink-600">
           <Clock className="size-4 text-ink-400" />
@@ -81,7 +87,7 @@ export default function CitiesPage() {
     },
     {
       key: "enabled",
-      header: "Status",
+      header: t("admin.cities.col.status"),
       align: "center",
       render: (c) => (
         <Switch
@@ -96,11 +102,11 @@ export default function CitiesPage() {
     <div className="space-y-8">
       <PageHeader
         icon={MapPin}
-        title="Cities"
-        description="Control where CasaClean operates and the hours bookings are accepted."
+        title={t("admin.cities.title")}
+        description={t("admin.cities.description")}
         actions={
           <Button size="sm" leftIcon={Plus} onClick={() => setEditing(null)}>
-            Add city
+            {t("admin.cities.add")}
           </Button>
         }
       />
@@ -109,18 +115,18 @@ export default function CitiesPage() {
         columns={columns}
         data={items}
         searchKeys={["name", "name_it", "name_ka"]}
-        searchPlaceholder="Search cities…"
-        emptyTitle="No cities yet"
-        emptyDescription="Add a city to open it for bookings."
+        searchPlaceholder={t("admin.cities.search")}
+        emptyTitle={t("admin.cities.emptyTitle")}
+        emptyDescription={t("admin.cities.emptyDescription")}
         actions={(c) => (
           <>
-            <Button variant="ghost" size="icon" aria-label="Edit" onClick={() => setEditing(c)}>
+            <Button variant="ghost" size="icon" aria-label={t("admin.action.edit")} onClick={() => setEditing(c)}>
               <Pencil className="size-4.5" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
-              aria-label="Delete"
+              aria-label={t("admin.action.delete")}
               className="text-red-600 hover:bg-red-500/10 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-500/15 dark:hover:text-red-300"
               onClick={() => setDeleting(c)}
             >
@@ -134,8 +140,8 @@ export default function CitiesPage() {
         open={editing !== undefined}
         onClose={() => setEditing(undefined)}
         onSubmit={handleSubmit}
-        title={editing ? "Edit city" : "Add city"}
-        fields={FIELDS}
+        title={editing ? t("admin.cities.editTitle") : t("admin.cities.addTitle")}
+        fields={fields}
         initialValues={
           editing || {
             enabled: true,
@@ -144,7 +150,7 @@ export default function CitiesPage() {
             working_hours_end: "18:00",
           }
         }
-        submitLabel={editing ? "Save changes" : "Create city"}
+        submitLabel={editing ? t("admin.form.saveChanges") : t("admin.form.create")}
       />
 
       <ConfirmDialog
@@ -154,9 +160,9 @@ export default function CitiesPage() {
           remove(deleting._id);
           setDeleting(null);
         }}
-        title="Delete city"
-        description={`Delete "${deleting?.name}"? This can't be undone.`}
-        confirmLabel="Delete"
+        title={t("admin.cities.deleteTitle")}
+        description={t("admin.form.deleteConfirm", { name: deleting?.name })}
+        confirmLabel={t("admin.action.delete")}
         danger
       />
     </div>

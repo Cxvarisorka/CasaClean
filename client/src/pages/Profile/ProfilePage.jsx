@@ -115,9 +115,18 @@ const ProfilePage = () => {
         <Container size="md">
           {/* Identity header */}
           <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
-            <span className="grid size-20 shrink-0 place-items-center rounded-3xl bg-brand-600 text-heading-md font-bold text-white shadow-soft">
-              {initials(user.fullname)}
-            </span>
+            {user.avatar ? (
+              <img
+                src={user.avatar}
+                alt={user.fullname}
+                referrerPolicy="no-referrer"
+                className="size-20 shrink-0 rounded-3xl object-cover shadow-soft"
+              />
+            ) : (
+              <span className="grid size-20 shrink-0 place-items-center rounded-3xl bg-brand-600 text-heading-md font-bold text-white shadow-soft">
+                {initials(user.fullname)}
+              </span>
+            )}
             <div className="min-w-0">
               <h1 className="text-heading-lg text-ink-900">{user.fullname}</h1>
               <p className="mt-1 truncate text-body-md text-ink-500">{user.email}</p>
@@ -307,7 +316,7 @@ const ProfilePage = () => {
                             </p>
                             {meta && (
                               <Badge variant={meta.variant} size="sm">
-                                {meta.label}
+                                {t(meta.labelKey)}
                               </Badge>
                             )}
                           </div>

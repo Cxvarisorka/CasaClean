@@ -3,6 +3,7 @@ import { ArrowLeft, X } from "lucide-react";
 import { Logo } from "@/components/shared/Logo";
 import { ROUTES } from "@/constants/routes";
 import { cn } from "@/lib/cn";
+import { useTranslation } from "@/i18n";
 import { ADMIN_NAV } from "../constants";
 
 /*
@@ -14,6 +15,7 @@ import { ADMIN_NAV } from "../constants";
  */
 
 export function AdminSidebar({ onNavigate }) {
+  const { t } = useTranslation();
   return (
     <div className="flex h-full flex-col bg-surface">
       <div className="flex h-16 items-center justify-between border-b border-ink-100 px-5">
@@ -32,9 +34,9 @@ export function AdminSidebar({ onNavigate }) {
 
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
         <p className="px-3 pb-1 pt-2 text-caption font-semibold uppercase tracking-wider text-ink-400">
-          Manage
+          {t("admin.manage")}
         </p>
-        {ADMIN_NAV.map(({ to, label, icon: Icon, end }) => (
+        {ADMIN_NAV.map(({ to, label, labelKey, icon: Icon, end }) => (
           <NavLink
             key={to}
             to={to}
@@ -50,7 +52,7 @@ export function AdminSidebar({ onNavigate }) {
             }
           >
             <Icon className="size-5 shrink-0" aria-hidden="true" />
-            {label}
+            {labelKey ? t(labelKey) : label}
           </NavLink>
         ))}
       </nav>
@@ -61,7 +63,7 @@ export function AdminSidebar({ onNavigate }) {
           className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-body-sm font-medium text-ink-600 transition-colors hover:bg-ink-100 hover:text-ink-900"
         >
           <ArrowLeft className="size-5 shrink-0" aria-hidden="true" />
-          Back to site
+          {t("admin.backToSite")}
         </NavLink>
       </div>
     </div>

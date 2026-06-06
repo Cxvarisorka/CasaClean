@@ -1,5 +1,6 @@
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
+import { useTranslation } from "@/i18n";
 
 /*
  * ConfirmDialog
@@ -13,23 +14,24 @@ export function ConfirmDialog({
   open,
   onClose,
   onConfirm,
-  title = "Are you sure?",
+  title,
   description,
-  confirmLabel = "Confirm",
-  cancelLabel = "Cancel",
+  confirmLabel,
+  cancelLabel,
   danger = false,
 }) {
+  const { t } = useTranslation();
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title={title}
+      title={title || t("admin.confirm.title")}
       description={description}
       size="sm"
       footer={
         <>
           <Button variant="ghost" size="sm" onClick={onClose}>
-            {cancelLabel}
+            {cancelLabel || t("admin.confirm.cancel")}
           </Button>
           <Button
             size="sm"
@@ -38,13 +40,13 @@ export function ConfirmDialog({
               danger ? "bg-red-600 text-white hover:bg-red-700" : undefined
             }
           >
-            {confirmLabel}
+            {confirmLabel || t("admin.confirm.confirm")}
           </Button>
         </>
       }
     >
       <p className="text-body-sm text-ink-600">
-        {description || "This action cannot be undone."}
+        {description || t("admin.confirm.body")}
       </p>
     </Modal>
   );

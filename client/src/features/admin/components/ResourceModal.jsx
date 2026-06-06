@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Select } from "@/components/ui/Select";
 import { Switch } from "@/components/ui/Switch";
+import { useTranslation } from "@/i18n";
 import { cn } from "@/lib/cn";
 
 /*
@@ -39,9 +40,10 @@ export function ResourceModal({
   description,
   fields,
   initialValues,
-  submitLabel = "Save",
+  submitLabel,
   size = "xl",
 }) {
+  const { t } = useTranslation();
   return (
     <Modal
       open={open}
@@ -52,10 +54,10 @@ export function ResourceModal({
       footer={
         <>
           <Button variant="ghost" size="sm" onClick={onClose} type="button">
-            Cancel
+            {t("admin.form.cancel")}
           </Button>
           <Button size="sm" type="submit" form="resource-form">
-            {submitLabel}
+            {submitLabel || t("admin.form.create")}
           </Button>
         </>
       }
@@ -76,6 +78,7 @@ export function ResourceModal({
 
 /* The actual form — its initial state is derived once at mount from props. */
 function ResourceForm({ fields, initialValues, onSubmit }) {
+  const { t } = useTranslation();
   const [values, setValues] = useState(() =>
     buildInitialState(fields, initialValues)
   );
@@ -97,7 +100,7 @@ function ResourceForm({ fields, initialValues, onSubmit }) {
         f.type === "multiselect"
           ? !Array.isArray(val) || val.length === 0
           : val === "" || val === undefined || val === null;
-      if (empty) nextErrors[f.name] = `${f.label} is required`;
+      if (empty) nextErrors[f.name] = t("admin.form.required", { label: f.label });
     }
     if (Object.keys(nextErrors).length) {
       setErrors(nextErrors);
@@ -147,7 +150,7 @@ function ResourceForm({ fields, initialValues, onSubmit }) {
                 </span>
                 {(f.options || []).length === 0 ? (
                   <p className="rounded-xl border border-dashed border-ink-200 px-4 py-3 text-body-sm text-ink-500">
-                    No options available yet.
+                    {t("admin.form.noOptions")}
                   </p>
                 ) : (
                   <div className="flex flex-wrap gap-2">

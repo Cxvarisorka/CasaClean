@@ -10,6 +10,7 @@ import {
   ConfirmDialog,
   useCollection,
 } from "@/features/admin";
+import { useTranslation } from "@/i18n";
 
 /*
  * Services management
@@ -29,6 +30,7 @@ const API = import.meta.env.VITE_API_BASE_URL;
 export default function ServicesPage() {
   const { items, create, update, remove } = useCollection("services");
   const { items: cities } = useCollection("cities");
+  const { t } = useTranslation();
   const [editing, setEditing] = useState(undefined); // undefined=closed, null=create, obj=edit
   const [deleting, setDeleting] = useState(null);
 
@@ -44,25 +46,25 @@ export default function ServicesPage() {
 
   const fields = useMemo(
     () => [
-      { name: "name", label: "Name (English)", required: true },
-      { name: "price_per_hour", label: "Price per hour (€)", type: "number", required: true },
-      { name: "description", label: "Description (English)", type: "textarea", required: true, full: true },
-      { name: "name_it", label: "Name (Italian)" },
-      { name: "name_ka", label: "Name (Georgian)" },
-      { name: "description_it", label: "Description (Italian)", type: "textarea", full: true },
-      { name: "description_ka", label: "Description (Georgian)", type: "textarea", full: true },
+      { name: "name", label: t("admin.services.field.name"), required: true },
+      { name: "price_per_hour", label: t("admin.services.field.pricePerHour"), type: "number", required: true },
+      { name: "description", label: t("admin.services.field.description"), type: "textarea", required: true, full: true },
+      { name: "name_it", label: t("admin.services.field.nameIt") },
+      { name: "name_ka", label: t("admin.services.field.nameKa") },
+      { name: "description_it", label: t("admin.services.field.descriptionIt"), type: "textarea", full: true },
+      { name: "description_ka", label: t("admin.services.field.descriptionKa"), type: "textarea", full: true },
       {
         name: "cities",
-        label: "Available in cities",
+        label: t("admin.services.field.cities"),
         type: "multiselect",
         options: cityOptions,
-        hint: "Select the cities where this service is offered.",
+        hint: t("admin.services.field.citiesHint"),
         full: true,
       },
-      { name: "popular", label: "Mark as popular", type: "switch" },
-      { name: "enabled", label: "Enabled (visible on site)", type: "switch" },
+      { name: "popular", label: t("admin.services.field.popular"), type: "switch" },
+      { name: "enabled", label: t("admin.services.field.enabled"), type: "switch" },
     ],
-    [cityOptions]
+    [cityOptions, t]
   );
 
   const handleSubmit = async (values) => {
@@ -97,7 +99,7 @@ export default function ServicesPage() {
   const columns = [
     {
       key: "name",
-      header: "Service",
+      header: t("admin.services.col.service"),
       render: (s) => (
         <div>
           <p className="font-semibold text-ink-900">{s.name}</p>
@@ -107,12 +109,12 @@ export default function ServicesPage() {
     },
     {
       key: "price_per_hour",
-      header: "Price / hr",
+      header: t("admin.services.col.pricePerHr"),
       render: (s) => <span className="font-medium">{eur(s.price_per_hour)}</span>,
     },
     {
       key: "cities",
-      header: "Cities",
+      header: t("admin.services.col.cities"),
       render: (s) => {
         const ids = Array.isArray(s.cities) ? s.cities : [];
         if (ids.length === 0) return <span className="text-ink-300">—</span>;
@@ -130,14 +132,20 @@ export default function ServicesPage() {
     },
     {
       key: "popular",
-      header: "Popular",
+      header: t("admin.services.col.popular"),
       align: "center",
       render: (s) =>
-        s.popular ? <Badge variant="accent" size="sm">Popular</Badge> : <span className="text-ink-300">—</span>,
+        s.popular ? (
+          <Badge variant="accent" size="sm">
+            {t("admin.services.popular")}
+          </Badge>
+        ) : (
+          <span className="text-ink-300">—</span>
+        ),
     },
     {
       key: "enabled",
-      header: "Status",
+      header: t("admin.services.col.status"),
       align: "center",
       render: (s) => (
         <Switch
@@ -152,11 +160,11 @@ export default function ServicesPage() {
     <div className="space-y-8">
       <PageHeader
         icon={Sparkles}
-        title="Services"
-        description="Manage the cleaning services, pricing and translations shown across the site."
+        title={t("admin.services.title")}
+        description={t("admin.services.description")}
         actions={
           <Button size="sm" leftIcon={Plus} onClick={() => setEditing(null)}>
-            Add service
+            {t("admin.services.add")}
           </Button>
         }
       />
@@ -165,18 +173,18 @@ export default function ServicesPage() {
         columns={columns}
         data={items}
         searchKeys={["name", "name_it", "name_ka"]}
-        searchPlaceholder="Search services…"
-        emptyTitle="No services yet"
-        emptyDescription="Add your first service to get started."
+        searchPlaceholder={t("admin.services.search")}
+        emptyTitle={t("admin.services.emptyTitle")}
+        emptyDescription={t("admin.services.emptyDescription")}
         actions={(s) => (
           <>
-            <Button variant="ghost" size="icon" aria-label="Edit" onClick={() => setEditing(s)}>
+            <Button variant="ghost" size="icon" aria-label={t("admin.action.edit")} onClick={() => setEditing(s)}>
               <Pencil className="size-4.5" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
-              aria-label="Delete"
+              aria-label={t("admin.action.delete")}
               className="text-red-600 hover:bg-red-500/10 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-500/15 dark:hover:text-red-300"
               onClick={() => setDeleting(s)}
             >
@@ -190,11 +198,11 @@ export default function ServicesPage() {
         open={editing !== undefined}
         onClose={() => setEditing(undefined)}
         onSubmit={handleSubmit}
-        title={editing ? "Edit service" : "Add service"}
-        description="Translations fall back to English when left blank."
+        title={editing ? t("admin.services.editTitle") : t("admin.services.addTitle")}
+        description={t("admin.form.translationsFallback")}
         fields={fields}
         initialValues={editing || { enabled: true, cities: [] }}
-        submitLabel={editing ? "Save changes" : "Create service"}
+        submitLabel={editing ? t("admin.form.saveChanges") : t("admin.form.create")}
       />
 
       <ConfirmDialog
@@ -204,9 +212,9 @@ export default function ServicesPage() {
           remove(deleting._id);
           setDeleting(null);
         }}
-        title="Delete service"
-        description={`Delete "${deleting?.name}"? This can't be undone.`}
-        confirmLabel="Delete"
+        title={t("admin.services.deleteTitle")}
+        description={t("admin.form.deleteConfirm", { name: deleting?.name })}
+        confirmLabel={t("admin.action.delete")}
         danger
       />
     </div>

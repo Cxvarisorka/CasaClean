@@ -11,6 +11,7 @@ export const LANGUAGES = [
   { code: "ka", label: "Georgian", native: "ქართული", flag: "🇬🇪", dir: "ltr" },
   { code: "it", label: "Italian", native: "Italiano", flag: "🇮🇹", dir: "ltr" },
   { code: "el", label: "Greek", native: "Ελληνικά", flag: "🇬🇷", dir: "ltr" },
+  { code: "ru", label: "Russian", native: "Русский", flag: "🇷🇺", dir: "ltr" },
 ];
 
 export const DEFAULT_LOCALE = "en";

@@ -3,6 +3,7 @@ import en from "./locales/en";
 import ka from "./locales/ka";
 import it from "./locales/it";
 import el from "./locales/el";
+import ru from "./locales/ru";
 import { FALLBACK_LOCALE } from "./config";
 
 /*
@@ -14,7 +15,7 @@ import { FALLBACK_LOCALE } from "./config";
  * returning the raw value (string OR array) so feature lists work too.
  */
 
-export const MESSAGES = { en, ka, it, el };
+export const MESSAGES = { en, ka, it, el, ru };
 
 export const I18nContext = createContext(null);
 

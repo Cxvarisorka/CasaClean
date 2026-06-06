@@ -3,6 +3,7 @@ import { Search } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Pagination } from "@/components/ui/Pagination";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { useTranslation } from "@/i18n";
 import { cn } from "@/lib/cn";
 
 /*
@@ -28,13 +29,14 @@ export function DataTable({
   actions,
   searchable = true,
   searchKeys,
-  searchPlaceholder = "Search…",
+  searchPlaceholder,
   filters,
   pageSize = 10,
-  emptyTitle = "Nothing here yet",
+  emptyTitle,
   emptyDescription,
   onRowClick,
 }) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
 
@@ -61,7 +63,7 @@ export function DataTable({
           {searchable ? (
             <Input
               leftIcon={Search}
-              placeholder={searchPlaceholder}
+              placeholder={searchPlaceholder || t("admin.table.search")}
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
@@ -96,7 +98,7 @@ export function DataTable({
                 ))}
                 {actions && (
                   <th scope="col" className="px-4 py-3 text-right text-caption font-semibold uppercase tracking-wide text-ink-500">
-                    Actions
+                    {t("admin.table.actions")}
                   </th>
                 )}
               </tr>
@@ -106,8 +108,8 @@ export function DataTable({
                 <tr>
                   <td colSpan={colCount} className="p-0">
                     <EmptyState
-                      title={query ? "No matches" : emptyTitle}
-                      description={query ? "Try a different search term." : emptyDescription}
+                      title={query ? t("admin.table.noMatches") : emptyTitle || t("admin.table.empty")}
+                      description={query ? t("admin.table.tryDifferent") : emptyDescription}
                       className="border-0 bg-transparent"
                     />
                   </td>
@@ -152,9 +154,10 @@ export function DataTable({
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-body-sm text-ink-500">
-          {filtered.length} {filtered.length === 1 ? "result" : "results"}
+          {filtered.length}{" "}
+          {filtered.length === 1 ? t("admin.table.result") : t("admin.table.results")}
         </p>
         <Pagination page={safePage} total={totalPages} onChange={setPage} />
       </div>

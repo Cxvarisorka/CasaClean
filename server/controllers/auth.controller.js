@@ -177,7 +177,8 @@ const getMe = (req, res) => {
 };
 
 const googleCallback = catchAsync(async (req, res, next) => {
-    createSendToken(req.user, res);
+    setTokenCookie(req.user, res);
+    res.redirect(`${process.env.CLIENT_URL}/`);
 });
 
 // GET /api/v1/auth/verify-email/:token -> confirms a user's email.

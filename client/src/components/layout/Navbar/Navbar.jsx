@@ -47,9 +47,12 @@ export function Navbar() {
       >
         <Container>
           <nav className="flex items-center justify-between gap-6">
-            <Logo />
+            <Logo className="shrink-0" />
 
-            <ul className="hidden items-center gap-1 lg:flex">
+            {/* flex-1 + center keeps the links in the middle of the bar so they
+                never crowd the logo — important for wider locales (e.g. Georgian),
+                where labels are longer than English. */}
+            <ul className="hidden flex-1 items-center justify-center gap-1 lg:flex">
               {PRIMARY_NAV.map((item) => (
                 <li key={item.href}>
                   <NavLink

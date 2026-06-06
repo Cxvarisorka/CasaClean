@@ -28,6 +28,7 @@ export const ROUTES = {
     bookings: "/admin/bookings",
     services: "/admin/services",
     cities: "/admin/cities",
+    coverage: "/admin/coverage",
     users: "/admin/users",
   },
   notFound: "*",
