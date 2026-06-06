@@ -20,7 +20,8 @@ const userSchema = new mongoose.Schema({
     phone: {
         type: String,
         required: [function () { return this.provider === "local" }, "Phone number is required!"],
-        trim: true
+        trim: true,
+        unique: true
     },
     password: {
         type: String,

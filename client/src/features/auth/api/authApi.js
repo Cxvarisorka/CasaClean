@@ -26,13 +26,15 @@ async function withFallback(fn, simulated) {
   }
 }
 
-export function signIn({ email, password }) {
+export function signIn({ email, password, remember = false }) {
   return withFallback(
     () =>
       request({
         method: "POST",
         url: ENDPOINTS.auth.signin,
-        data: { email, password },
+        // `remember` tells the server whether to set a persistent or a
+        // session-only cookie (dropped on browser close when unchecked).
+        data: { email, password, remember },
       }),
     { user: { email, fullname: email.split("@")[0] } }
   );

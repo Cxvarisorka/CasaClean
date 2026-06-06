@@ -53,24 +53,39 @@ const signToken = (user) => {
 };
 
 /**
- * Creates a JWT, sets it as a secure http-only cookie and sends the response.
- * Centralised so signup/signin/refresh all behave identically.
+ * Signs a JWT for the user and sets it as the secure http-only auth cookie.
+ * Shared by signin (JSON response) and email verification (redirect response),
+ * so both establish a session identically.
+ *
+ * `remember` controls cookie persistence: when true (default) we set a maxAge
+ * so the session survives a browser restart; when false we omit it, making it a
+ * session cookie the browser drops on close so the user isn't kept signed in.
  */
-const createSendToken = (user, res, statusCode = 200) => {
-    // FIX: this used to call signToken(users) -> "users" was undefined and
-    // crashed every login. Pass the actual user object.
+const setTokenCookie = (user, res, remember = true) => {
     const token = signToken(user);
 
     const isProd = process.env.NODE_ENV === "prod";
 
     res.cookie("lt", token, {
-        maxAge: process.env.COOKIE_EXPIRES * 24 * 60 * 60 * 1000,
+        // Persistent cookie only when "Remember me" is checked; otherwise a
+        // session cookie (no maxAge) that's cleared when the browser closes.
+        ...(remember
+            ? { maxAge: process.env.COOKIE_EXPIRES * 24 * 60 * 60 * 1000 }
+            : {}),
         // Cross-site cookies must be SameSite=None AND Secure, so we only
         // relax to "None" in prod where HTTPS (secure) is guaranteed.
         sameSite: isProd ? "None" : "Lax",
         httpOnly: true,        // not readable from JS -> mitigates XSS token theft
         secure: isProd         // only sent over HTTPS in production
     });
+};
+
+/**
+ * Sets the auth cookie and sends the signed-in JSON response.
+ * Centralised so signup/signin/refresh all behave identically.
+ */
+const createSendToken = (user, res, statusCode = 200, remember = true) => {
+    setTokenCookie(user, res, remember);
 
     // Never leak the password hash, even though it's select:false by default.
     user.password = undefined;
@@ -87,6 +102,14 @@ const createSendToken = (user, res, statusCode = 200) => {
 const signup = catchAsync(async (req, res, next) => {
     const { fullname, email, phone, password } = req.body;
 
+    if (await User.findOne({email})) {
+        return next(new AppError("An account with that email already exists.", 400));
+    }
+
+    if (await User.findOne({phone})) {
+        return next(new AppError("An account with that phone number already exists.", 400));
+    }
+
     // Whitelist fields explicitly so a client can't inject role/isVerified.
     const user = await User.create({ fullname, email, phone, password });
 
@@ -102,7 +125,7 @@ const signup = catchAsync(async (req, res, next) => {
 
 // POST /api/v1/auth/signin -> authenticates a user and issues a token
 const signin = catchAsync(async (req, res, next) => {
-    const { email, password } = req.body;
+    const { email, password, remember } = req.body;
 
     // Guard against missing credentials before hitting the DB.
     if (!email || !password) {
@@ -124,7 +147,8 @@ const signin = catchAsync(async (req, res, next) => {
         return next(new AppError("Please verify your email before signing in.", 403));
     }
 
-    createSendToken(user, res);
+    // Persist the session only when the user opted into "Remember me".
+    createSendToken(user, res, 200, Boolean(remember));
 });
 
 // POST /api/v1/auth/logout -> clears the auth cookie
@@ -153,13 +177,14 @@ const getMe = (req, res) => {
 };
 
 const googleCallback = catchAsync(async (req, res, next) => {
-    createSendToken(req.user, res);
+    setTokenCookie(req.user, res);
+    res.redirect(`${process.env.CLIENT_URL}/`);
 });
 
 // GET /api/v1/auth/verify-email/:token -> confirms a user's email.
 // This URL is opened directly from the email in a browser, so on completion we
-// REDIRECT to the client sign-in page (with a status flag) instead of returning
-// raw JSON the user would otherwise see.
+// sign the user in (set the auth cookie) and REDIRECT them straight to the
+// client home page — no separate sign-in step needed.
 const verifyEmail = catchAsync(async (req, res, next) => {
     // Re-hash the raw token from the URL to match what we stored at signup.
     const hashedToken = crypto
@@ -183,7 +208,10 @@ const verifyEmail = catchAsync(async (req, res, next) => {
     user.verificationTokenExpires = undefined;
     await user.save({ validateBeforeSave: false });
 
-    res.redirect(`${process.env.CLIENT_URL}/signin?verified=success`);
+    // Auto-login: set the session cookie, then drop the user on the home page
+    // already authenticated (the client reads the cookie via GET /auth/me).
+    setTokenCookie(user, res);
+    res.redirect(`${process.env.CLIENT_URL}/`);
 });
 
 // POST /api/v1/auth/resend-verification -> re-sends the verification link.

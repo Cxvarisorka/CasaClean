@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { Seo } from "@/seo";
+import { useTranslation } from "@/i18n";
 import { AdminDataProvider } from "../context";
 import { ADMIN_NAV } from "../constants";
 import { AdminRoute } from "./AdminRoute";
@@ -23,10 +24,13 @@ import { AdminTopbar } from "./AdminTopbar";
 export function AdminLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { pathname } = useLocation();
+  const { t } = useTranslation();
 
   // Tab title reflects the active section, e.g. "Bookings · Admin".
   const active = ADMIN_NAV.find((n) => n.to === pathname);
-  const pageTitle = active ? `${active.label} · Admin` : "Admin";
+  const pageTitle = active
+    ? `${active.labelKey ? t(active.labelKey) : active.label} · Admin`
+    : "Admin";
 
   return (
     <AdminRoute>

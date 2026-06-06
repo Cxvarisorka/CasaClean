@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Menu, LogOut, ChevronDown } from "lucide-react";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
+import { useTranslation } from "@/i18n";
 import { cn } from "@/lib/cn";
 import { useAuth } from "../context";
 
@@ -25,6 +26,7 @@ const initials = (name = "") =>
 
 export function AdminTopbar({ onOpenSidebar }) {
   const { user, logout } = useAuth();
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -47,14 +49,14 @@ export function AdminTopbar({ onOpenSidebar }) {
       <button
         type="button"
         onClick={onOpenSidebar}
-        aria-label="Open navigation"
+        aria-label={t("admin.topbar.openNav")}
         className="grid size-10 place-items-center rounded-xl text-ink-600 hover:bg-ink-100 lg:hidden"
       >
         <Menu className="size-5.5" />
       </button>
 
       <div className="hidden text-body-sm font-medium text-ink-400 lg:block">
-        Admin console
+        {t("admin.topbar.console")}
       </div>
 
       <div className="ml-auto flex items-center gap-1.5">
@@ -74,10 +76,10 @@ export function AdminTopbar({ onOpenSidebar }) {
             </span>
             <span className="hidden text-left sm:block">
               <span className="block text-body-sm font-semibold leading-tight text-ink-900">
-                {user?.fullname || "Admin"}
+                {user?.fullname || t("admin.topbar.adminFallback")}
               </span>
               <span className="block text-caption leading-tight text-ink-400">
-                Administrator
+                {t("admin.topbar.administrator")}
               </span>
             </span>
             <ChevronDown className="hidden size-4 text-ink-400 sm:block" />
@@ -95,7 +97,7 @@ export function AdminTopbar({ onOpenSidebar }) {
               >
                 <div className="border-b border-ink-100 px-3 py-3">
                   <p className="text-body-sm font-semibold text-ink-900">
-                    {user?.fullname || "Admin"}
+                    {user?.fullname || t("admin.topbar.adminFallback")}
                   </p>
                   <p className="truncate text-caption text-ink-400">
                     {user?.email}
@@ -110,11 +112,12 @@ export function AdminTopbar({ onOpenSidebar }) {
                   }}
                   className={cn(
                     "mt-1 flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-body-sm font-medium",
-                    "text-red-600 transition-colors hover:bg-red-50"
+                    "text-red-600 transition-colors hover:bg-red-500/10 hover:text-red-700",
+                    "dark:text-red-400 dark:hover:bg-red-500/15 dark:hover:text-red-300"
                   )}
                 >
                   <LogOut className="size-4.5" />
-                  Sign out
+                  {t("admin.topbar.signOut")}
                 </button>
               </motion.div>
             )}

@@ -64,7 +64,7 @@ export function AuthShell({ children }) {
               {proof.map((line, i) => {
                 const Icon = PROOF_ICONS[i];
                 return (
-                  <li key={line} className="flex items-center gap-3 text-body-md text-ink-200">
+                  <li key={line} className="flex items-center gap-3 text-body-md text-white/90">
                     <span className="grid size-9 place-items-center rounded-xl bg-surface/10 text-brand-300">
                       <Icon className="size-5" />
                     </span>

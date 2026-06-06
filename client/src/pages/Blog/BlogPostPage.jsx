@@ -40,7 +40,7 @@ function ArticleBlocks({ blocks }) {
           return (
             <blockquote
               key={i}
-              className="border-l-4 border-brand-500 bg-brand-50/50 py-4 pl-6 pr-4 text-heading-sm font-medium italic text-ink-800"
+              className="border-l-4 border-ink-300 bg-white py-4 pl-6 pr-4 text-heading-sm font-medium italic text-black"
             >
               {block.text}
             </blockquote>

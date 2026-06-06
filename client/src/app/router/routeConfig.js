@@ -35,6 +35,7 @@ const AdminDashboardPage = lazy(() => import("@/pages/Admin/DashboardPage"));
 const AdminBookingsPage = lazy(() => import("@/pages/Admin/BookingsPage"));
 const AdminServicesPage = lazy(() => import("@/pages/Admin/ServicesPage"));
 const AdminCitiesPage = lazy(() => import("@/pages/Admin/CitiesPage"));
+const AdminCoverageMapPage = lazy(() => import("@/pages/Admin/CoverageMapPage"));
 const AdminUsersPage = lazy(() => import("@/pages/Admin/UsersPage"));
 
 /** Routes hosted by the marketing MainLayout (Navbar + Footer). */
@@ -71,6 +72,7 @@ export const ADMIN_ROUTES = [
   { path: "bookings", element: AdminBookingsPage },
   { path: "services", element: AdminServicesPage },
   { path: "cities", element: AdminCitiesPage },
+  { path: "coverage", element: AdminCoverageMapPage },
   { path: "users", element: AdminUsersPage },
 ];
 

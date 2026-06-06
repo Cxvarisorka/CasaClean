@@ -12,10 +12,12 @@ passport.use(
             clientID: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
 
-            callbackURL: "/api/v1/auth/google/callback"
+            callbackURL: process.env.GOOGLE_CALLBACK_URL
         },
         async (accessToken, refreshToken, profile, done) => {
             try {
+                const photo = profile.photos?.[0]?.value;
+
                 let user = await User.findOne({ googleId: profile.id });
 
                 if (!user) {
@@ -26,15 +28,19 @@ passport.use(
                             googleId: profile.id,
                             email: profile.emails[0].value,
                             fullname: profile.displayName,
-                            avatar: profile.photos[0]?.value,
+                            avatar: photo,
                             provider: "google",
                             isVerified: true
                         });
                     } else {
                         user.googleId = profile.id;
+                        if (photo && !user.avatar) user.avatar = photo;
 
-                        await user.save();
+                        await user.save({ validateBeforeSave: false });
                     };
+                } else if (photo && user.avatar !== photo) {
+                    user.avatar = photo;
+                    await user.save({ validateBeforeSave: false });
                 };
 
                 done(null, user);

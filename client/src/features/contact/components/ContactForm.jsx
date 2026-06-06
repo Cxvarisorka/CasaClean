@@ -44,15 +44,15 @@ export function ContactForm() {
       <motion.div
         initial={{ opacity: 0, scale: 0.97 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="flex flex-col items-center rounded-2xl border border-brand-100 bg-brand-50/60 px-6 py-14 text-center"
+        className="flex flex-col items-center rounded-2xl border border-ink-200 bg-white px-6 py-14 text-center"
       >
         <span className="grid size-14 place-items-center rounded-2xl bg-surface shadow-soft">
-          <CheckCircle2 className="size-7 text-brand-600" />
+          <CheckCircle2 className="size-7 text-black" />
         </span>
-        <h3 className="mt-5 text-heading-md text-ink-900">
+        <h3 className="mt-5 text-heading-md text-black">
           {t("pages.contact.successTitle")}
         </h3>
-        <p className="mt-2 max-w-sm text-body-md text-ink-500">
+        <p className="mt-2 max-w-sm text-body-md text-black">
           {t("pages.contact.successBody")}
         </p>
       </motion.div>

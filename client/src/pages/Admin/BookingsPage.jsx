@@ -12,6 +12,7 @@ import {
   BOOKING_STATUS_META,
   useCollection,
 } from "@/features/admin";
+import { useTranslation } from "@/i18n";
 
 /*
  * Bookings management
@@ -25,28 +26,6 @@ const eur = (n) =>
     n || 0
   );
 
-const STATUS_OPTIONS = Object.entries(BOOKING_STATUS_META).map(([value, m]) => ({
-  value,
-  label: m.label,
-}));
-
-const FIELDS = [
-  { name: "customer_name", label: "Customer name", required: true },
-  { name: "customer_email", label: "Email", type: "email" },
-  { name: "customer_phone", label: "Phone" },
-  { name: "service_name", label: "Service", required: true },
-  { name: "city_name", label: "City", required: true },
-  { name: "booking_date", label: "Date", placeholder: "2026-06-12" },
-  { name: "booking_time", label: "Time", placeholder: "14:00" },
-  { name: "street_name", label: "Street" },
-  { name: "house_number", label: "House no." },
-  { name: "hours", label: "Hours", type: "number" },
-  { name: "cleaners", label: "Cleaners", type: "number" },
-  { name: "total_amount", label: "Total (€)", type: "number", required: true },
-  { name: "status", label: "Status", type: "select", options: STATUS_OPTIONS, required: true },
-  { name: "notes", label: "Notes", type: "textarea", full: true },
-];
-
 function DetailRow({ label, value }) {
   return (
     <div className="flex justify-between gap-6 border-b border-ink-100 py-2.5 last:border-0">
@@ -58,10 +37,40 @@ function DetailRow({ label, value }) {
 
 export default function BookingsPage() {
   const { items, create, update, remove } = useCollection("bookings");
+  const { t } = useTranslation();
   const [statusFilter, setStatusFilter] = useState("");
   const [editing, setEditing] = useState(undefined);
   const [viewing, setViewing] = useState(null);
   const [deleting, setDeleting] = useState(null);
+
+  const statusOptions = useMemo(
+    () =>
+      Object.keys(BOOKING_STATUS_META).map((value) => ({
+        value,
+        label: t(BOOKING_STATUS_META[value].labelKey),
+      })),
+    [t]
+  );
+
+  const fields = useMemo(
+    () => [
+      { name: "customer_name", label: t("admin.bookings.field.customerName"), required: true },
+      { name: "customer_email", label: t("admin.bookings.field.email"), type: "email" },
+      { name: "customer_phone", label: t("admin.bookings.field.phone") },
+      { name: "service_name", label: t("admin.bookings.field.service"), required: true },
+      { name: "city_name", label: t("admin.bookings.field.city"), required: true },
+      { name: "booking_date", label: t("admin.bookings.field.date"), placeholder: "2026-06-12" },
+      { name: "booking_time", label: t("admin.bookings.field.time"), placeholder: "14:00" },
+      { name: "street_name", label: t("admin.bookings.field.street") },
+      { name: "house_number", label: t("admin.bookings.field.houseNo") },
+      { name: "hours", label: t("admin.bookings.field.hours"), type: "number" },
+      { name: "cleaners", label: t("admin.bookings.field.cleaners"), type: "number" },
+      { name: "total_amount", label: t("admin.bookings.field.total"), type: "number", required: true },
+      { name: "status", label: t("admin.bookings.field.status"), type: "select", options: statusOptions, required: true },
+      { name: "notes", label: t("admin.bookings.field.notes"), type: "textarea", full: true },
+    ],
+    [t, statusOptions]
+  );
 
   const data = useMemo(
     () => (statusFilter ? items.filter((b) => b.status === statusFilter) : items),
@@ -77,7 +86,7 @@ export default function BookingsPage() {
   const columns = [
     {
       key: "customer_name",
-      header: "Customer",
+      header: t("admin.bookings.col.customer"),
       render: (b) => (
         <div>
           <p className="font-semibold text-ink-900">{b.customer_name}</p>
@@ -87,7 +96,7 @@ export default function BookingsPage() {
     },
     {
       key: "service_name",
-      header: "Service / City",
+      header: t("admin.bookings.col.serviceCity"),
       render: (b) => (
         <div>
           <p className="text-ink-800">{b.service_name}</p>
@@ -97,7 +106,7 @@ export default function BookingsPage() {
     },
     {
       key: "booking_date",
-      header: "Schedule",
+      header: t("admin.bookings.col.schedule"),
       render: (b) => (
         <span className="whitespace-nowrap text-ink-600">
           {b.booking_date} · {b.booking_time}
@@ -106,15 +115,15 @@ export default function BookingsPage() {
     },
     {
       key: "total_amount",
-      header: "Total",
+      header: t("admin.bookings.col.total"),
       render: (b) => <span className="font-semibold">{eur(b.total_amount)}</span>,
     },
     {
       key: "status",
-      header: "Status",
+      header: t("admin.bookings.col.status"),
       render: (b) => (
         <Select
-          options={STATUS_OPTIONS}
+          options={statusOptions}
           value={b.status}
           onChange={(e) => update(b._id, { status: e.target.value })}
           className="h-9 min-w-[8.5rem]"
@@ -127,11 +136,11 @@ export default function BookingsPage() {
     <div className="space-y-8">
       <PageHeader
         icon={CalendarCheck}
-        title="Bookings"
-        description="Track and manage every booking from request to completion."
+        title={t("admin.bookings.title")}
+        description={t("admin.bookings.description")}
         actions={
           <Button size="sm" leftIcon={Plus} onClick={() => setEditing(null)}>
-            Add booking
+            {t("admin.bookings.add")}
           </Button>
         }
       />
@@ -140,30 +149,30 @@ export default function BookingsPage() {
         columns={columns}
         data={data}
         searchKeys={["customer_name", "customer_email", "service_name", "city_name"]}
-        searchPlaceholder="Search bookings…"
-        emptyTitle="No bookings"
-        emptyDescription="Bookings from the site will appear here."
+        searchPlaceholder={t("admin.bookings.search")}
+        emptyTitle={t("admin.bookings.emptyTitle")}
+        emptyDescription={t("admin.bookings.emptyDescription")}
         filters={
           <Select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            options={[{ value: "", label: "All statuses" }, ...STATUS_OPTIONS]}
+            options={[{ value: "", label: t("admin.bookings.allStatuses") }, ...statusOptions]}
             className="h-11 min-w-[10rem]"
           />
         }
         actions={(b) => (
           <>
-            <Button variant="ghost" size="icon" aria-label="View" onClick={() => setViewing(b)}>
+            <Button variant="ghost" size="icon" aria-label={t("admin.action.view")} onClick={() => setViewing(b)}>
               <Eye className="size-4.5" />
             </Button>
-            <Button variant="ghost" size="icon" aria-label="Edit" onClick={() => setEditing(b)}>
+            <Button variant="ghost" size="icon" aria-label={t("admin.action.edit")} onClick={() => setEditing(b)}>
               <Pencil className="size-4.5" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
-              aria-label="Delete"
-              className="text-red-600 hover:bg-red-50"
+              aria-label={t("admin.action.delete")}
+              className="text-red-600 hover:bg-red-500/10 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-500/15 dark:hover:text-red-300"
               onClick={() => setDeleting(b)}
             >
               <Trash2 className="size-4.5" />
@@ -176,7 +185,7 @@ export default function BookingsPage() {
       <Modal
         open={Boolean(viewing)}
         onClose={() => setViewing(null)}
-        title="Booking details"
+        title={t("admin.bookings.detailsTitle")}
         description={viewing?.reference}
         size="lg"
       >
@@ -184,25 +193,26 @@ export default function BookingsPage() {
           <div className="space-y-1">
             <div className="mb-4 flex items-center justify-between">
               <Badge variant={BOOKING_STATUS_META[viewing.status]?.variant}>
-                {BOOKING_STATUS_META[viewing.status]?.label}
+                {BOOKING_STATUS_META[viewing.status] &&
+                  t(BOOKING_STATUS_META[viewing.status].labelKey)}
               </Badge>
               <span className="text-heading-sm font-bold text-ink-900">
                 {eur(viewing.total_amount)}
               </span>
             </div>
-            <DetailRow label="Customer" value={viewing.customer_name} />
-            <DetailRow label="Email" value={viewing.customer_email} />
-            <DetailRow label="Phone" value={viewing.customer_phone} />
-            <DetailRow label="Service" value={viewing.service_name} />
-            <DetailRow label="City" value={viewing.city_name} />
+            <DetailRow label={t("admin.bookings.detail.customer")} value={viewing.customer_name} />
+            <DetailRow label={t("admin.bookings.detail.email")} value={viewing.customer_email} />
+            <DetailRow label={t("admin.bookings.detail.phone")} value={viewing.customer_phone} />
+            <DetailRow label={t("admin.bookings.detail.service")} value={viewing.service_name} />
+            <DetailRow label={t("admin.bookings.detail.city")} value={viewing.city_name} />
             <DetailRow
-              label="Address"
+              label={t("admin.bookings.detail.address")}
               value={[viewing.street_name, viewing.house_number].filter(Boolean).join(" ")}
             />
-            <DetailRow label="Date & time" value={`${viewing.booking_date} · ${viewing.booking_time}`} />
-            <DetailRow label="Hours / cleaners" value={`${viewing.hours || "—"} h · ${viewing.cleaners || "—"}`} />
-            <DetailRow label="Property size" value={viewing.property_size ? `${viewing.property_size} m²` : "—"} />
-            <DetailRow label="Notes" value={viewing.notes} />
+            <DetailRow label={t("admin.bookings.detail.dateTime")} value={`${viewing.booking_date} · ${viewing.booking_time}`} />
+            <DetailRow label={t("admin.bookings.detail.hoursCleaners")} value={`${viewing.hours || "—"} h · ${viewing.cleaners || "—"}`} />
+            <DetailRow label={t("admin.bookings.detail.propertySize")} value={viewing.property_size ? `${viewing.property_size} m²` : "—"} />
+            <DetailRow label={t("admin.bookings.detail.notes")} value={viewing.notes} />
           </div>
         )}
       </Modal>
@@ -211,10 +221,10 @@ export default function BookingsPage() {
         open={editing !== undefined}
         onClose={() => setEditing(undefined)}
         onSubmit={handleSubmit}
-        title={editing ? "Edit booking" : "Add booking"}
-        fields={FIELDS}
+        title={editing ? t("admin.bookings.editTitle") : t("admin.bookings.addTitle")}
+        fields={fields}
         initialValues={editing || { status: "pending" }}
-        submitLabel={editing ? "Save changes" : "Create booking"}
+        submitLabel={editing ? t("admin.form.saveChanges") : t("admin.form.create")}
       />
 
       <ConfirmDialog
@@ -224,9 +234,9 @@ export default function BookingsPage() {
           remove(deleting._id);
           setDeleting(null);
         }}
-        title="Delete booking"
-        description={`Delete the booking for "${deleting?.customer_name}"? This can't be undone.`}
-        confirmLabel="Delete"
+        title={t("admin.bookings.deleteTitle")}
+        description={t("admin.form.deleteConfirm", { name: deleting?.customer_name })}
+        confirmLabel={t("admin.action.delete")}
         danger
       />
     </div>

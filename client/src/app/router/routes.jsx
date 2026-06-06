@@ -29,7 +29,11 @@ export function AppRoutes() {
 
   return (
     <Suspense fallback={<PageLoader />}>
-      <AnimatePresence mode="wait" initial={false}>
+      {/* No `initial={false}`: it would propagate through AnimatePresence's
+          context and suppress every nested entrance animation on first load
+          (hero stagger, section reveals). We WANT those to play on first visit,
+          so we let the initial mount animate. */}
+      <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
           {/* Marketing surfaces */}
           <Route element={<MainLayout />}>

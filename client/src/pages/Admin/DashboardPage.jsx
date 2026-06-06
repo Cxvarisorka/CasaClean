@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { PageHeader, StatCard, useAdminData, useAuth } from "@/features/admin";
 import { BOOKING_STATUS_META } from "@/features/admin";
+import { useTranslation } from "@/i18n";
 
 /*
  * Admin Dashboard
@@ -29,6 +30,7 @@ const eur = (n) =>
 export default function DashboardPage() {
   const { stats, bookings } = useAdminData();
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   const recent = useMemo(
     () =>
@@ -45,37 +47,39 @@ export default function DashboardPage() {
     <div className="space-y-8">
       <PageHeader
         icon={TrendingUp}
-        title={`Welcome back, ${user?.fullname?.split(" ")[0] || "Admin"}`}
-        description="Here's what's happening across CasaClean today."
+        title={t("admin.dashboard.welcome", {
+          name: user?.fullname?.split(" ")[0] || t("admin.topbar.adminFallback"),
+        })}
+        description={t("admin.dashboard.subtitle")}
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           icon={CalendarCheck}
-          label="Bookings"
+          label={t("admin.dashboard.bookings")}
           value={stats.bookings}
-          hint={`${stats.byStatus.pending || 0} pending`}
+          hint={t("admin.dashboard.pendingHint", { count: stats.byStatus.pending || 0 })}
           accent="brand"
         />
         <StatCard
           icon={Euro}
-          label="Revenue"
+          label={t("admin.dashboard.revenue")}
           value={eur(stats.revenue)}
-          hint="Confirmed + completed"
+          hint={t("admin.dashboard.revenueHint")}
           accent="success"
         />
         <StatCard
           icon={Sparkles}
-          label="Services"
+          label={t("admin.dashboard.services")}
           value={stats.services}
-          hint={`${stats.activeServices} active`}
+          hint={t("admin.dashboard.servicesHint", { count: stats.activeServices })}
           accent="accent"
         />
         <StatCard
           icon={MapPin}
-          label="Cities"
+          label={t("admin.dashboard.cities")}
           value={stats.cities}
-          hint={`${stats.activeCities} active`}
+          hint={t("admin.dashboard.citiesHint", { count: stats.activeCities })}
           accent="neutral"
         />
       </div>
@@ -83,15 +87,15 @@ export default function DashboardPage() {
       <div className="grid gap-6 lg:grid-cols-5">
         {/* Pipeline */}
         <Card className="p-6 lg:col-span-2">
-          <h2 className="text-heading-sm text-ink-900">Booking pipeline</h2>
-          <p className="mt-1 text-body-sm text-ink-500">By current status</p>
+          <h2 className="text-heading-sm text-ink-900">{t("admin.dashboard.pipeline")}</h2>
+          <p className="mt-1 text-body-sm text-ink-500">{t("admin.dashboard.pipelineSub")}</p>
           <ul className="mt-6 space-y-4">
             {statusEntries.map(([key, meta]) => {
               const count = stats.byStatus[key] || 0;
               return (
                 <li key={key}>
                   <div className="mb-1.5 flex items-center justify-between text-body-sm">
-                    <span className="font-medium text-ink-700">{meta.label}</span>
+                    <span className="font-medium text-ink-700">{t(meta.labelKey)}</span>
                     <span className="font-semibold text-ink-900">{count}</span>
                   </div>
                   <div className="h-2 overflow-hidden rounded-full bg-ink-100">
@@ -109,7 +113,7 @@ export default function DashboardPage() {
         {/* Recent bookings */}
         <Card className="p-6 lg:col-span-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-heading-sm text-ink-900">Recent bookings</h2>
+            <h2 className="text-heading-sm text-ink-900">{t("admin.dashboard.recent")}</h2>
             <Users className="size-5 text-ink-300" />
           </div>
           <div className="mt-4 divide-y divide-ink-100">
@@ -130,7 +134,7 @@ export default function DashboardPage() {
                       {eur(b.total_amount)}
                     </span>
                     <Badge variant={meta?.variant} size="sm">
-                      {meta?.label}
+                      {meta && t(meta.labelKey)}
                     </Badge>
                   </div>
                 </div>

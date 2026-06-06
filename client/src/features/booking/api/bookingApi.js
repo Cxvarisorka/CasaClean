@@ -51,3 +51,39 @@ export async function createBooking(payload) {
     throw err;
   }
 }
+
+// A small, deterministic sample so the profile booking history is always
+// demonstrable in preview/local environments where the list endpoint isn't
+// provisioned yet. Dates are relative to "now" so it always reads as recent.
+const demoBookings = () => {
+  const day = (offset) => {
+    const d = new Date();
+    d.setDate(d.getDate() + offset);
+    return d.toISOString().slice(0, 10);
+  };
+  return [
+    { reference: "CC-2048", service_name: "Deep Cleaning", city_name: "Milan", booking_date: day(6), booking_time: "11:30", total_amount: 196, status: "confirmed" },
+    { reference: "CC-2031", service_name: "Turnover Cleaning", city_name: "Rome", booking_date: day(-9), booking_time: "09:00", total_amount: 89, status: "completed" },
+    { reference: "CC-2017", service_name: "Guest-Ready Prep", city_name: "Florence", booking_date: day(-23), booking_time: "14:00", total_amount: 70, status: "completed" },
+    { reference: "CC-1994", service_name: "Linen Management", city_name: "Venice", booking_date: day(-41), booking_time: "16:30", total_amount: 95, status: "cancelled" },
+  ].map((b, i) => ({ _id: `demo-${i}`, simulated: true, ...b }));
+};
+
+/**
+ * Fetch the signed-in user's bookings for the profile history. Degrades
+ * gracefully to demo data when the endpoint isn't reachable (preview/local),
+ * mirroring createBooking; genuine errors from a live API still surface.
+ */
+export async function getMyBookings() {
+  try {
+    const res = await request({ method: "GET", url: ENDPOINTS.bookings.mine });
+    // Tolerate a few common response envelopes from the backend.
+    return res?.data?.bookings ?? res?.bookings ?? res?.data ?? res ?? [];
+  } catch (err) {
+    if (err?.status === 404 || err?.status === 0) {
+      await new Promise((r) => setTimeout(r, 600));
+      return demoBookings();
+    }
+    throw err;
+  }
+}

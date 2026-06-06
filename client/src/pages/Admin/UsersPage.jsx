@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Users, Plus, Pencil, Trash2, BadgeCheck } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -9,6 +9,7 @@ import {
   ConfirmDialog,
   useCollection,
 } from "@/features/admin";
+import { useTranslation } from "@/i18n";
 
 /*
  * Users management
@@ -17,26 +18,39 @@ import {
  * verification and remove accounts.
  */
 
-const ROLE_OPTIONS = [
-  { value: "user", label: "User" },
-  { value: "admin", label: "Admin" },
-];
-
-const FIELDS = [
-  { name: "fullname", label: "Full name", required: true },
-  { name: "email", label: "Email", type: "email", required: true },
-  { name: "phone", label: "Phone" },
-  { name: "role", label: "Role", type: "select", options: ROLE_OPTIONS, required: true },
-  { name: "isVerified", label: "Email verified", type: "switch" },
-];
-
-const fmtDate = (iso) =>
-  iso ? new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—";
-
 export default function UsersPage() {
   const { items, create, update, remove } = useCollection("users");
+  const { t, locale } = useTranslation();
   const [editing, setEditing] = useState(undefined);
   const [deleting, setDeleting] = useState(null);
+
+  const roleOptions = useMemo(
+    () => [
+      { value: "user", label: t("admin.users.role.user") },
+      { value: "admin", label: t("admin.users.role.admin") },
+    ],
+    [t]
+  );
+
+  const fields = useMemo(
+    () => [
+      { name: "fullname", label: t("admin.users.field.fullname"), required: true },
+      { name: "email", label: t("admin.users.field.email"), type: "email", required: true },
+      { name: "phone", label: t("admin.users.field.phone") },
+      { name: "role", label: t("admin.users.field.role"), type: "select", options: roleOptions, required: true },
+      { name: "isVerified", label: t("admin.users.field.verified"), type: "switch" },
+    ],
+    [t, roleOptions]
+  );
+
+  const fmtDate = (iso) =>
+    iso
+      ? new Date(iso).toLocaleDateString(locale === "ka" ? "ka-GE" : locale, {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        })
+      : "—";
 
   const handleSubmit = (values) => {
     if (editing) update(editing._id, values);
@@ -47,7 +61,7 @@ export default function UsersPage() {
   const columns = [
     {
       key: "fullname",
-      header: "User",
+      header: t("admin.users.col.user"),
       render: (u) => (
         <div className="flex items-center gap-3">
           <span className="grid size-9 shrink-0 place-items-center rounded-full bg-ink-100 text-caption font-bold text-ink-600">
@@ -60,19 +74,19 @@ export default function UsersPage() {
         </div>
       ),
     },
-    { key: "phone", header: "Phone", render: (u) => u.phone || "—" },
+    { key: "phone", header: t("admin.users.col.phone"), render: (u) => u.phone || "—" },
     {
       key: "role",
-      header: "Role",
+      header: t("admin.users.col.role"),
       render: (u) => (
         <Badge variant={u.role === "admin" ? "dark" : "neutral"} size="sm">
-          {u.role}
+          {t(`admin.users.role.${u.role}`)}
         </Badge>
       ),
     },
     {
       key: "isVerified",
-      header: "Verified",
+      header: t("admin.users.col.verified"),
       align: "center",
       render: (u) =>
         u.isVerified ? (
@@ -81,18 +95,18 @@ export default function UsersPage() {
           <span className="text-ink-300">—</span>
         ),
     },
-    { key: "createdAt", header: "Joined", render: (u) => fmtDate(u.createdAt) },
+    { key: "createdAt", header: t("admin.users.col.joined"), render: (u) => fmtDate(u.createdAt) },
   ];
 
   return (
     <div className="space-y-8">
       <PageHeader
         icon={Users}
-        title="Users"
-        description="Manage accounts, roles and verification status."
+        title={t("admin.users.title")}
+        description={t("admin.users.description")}
         actions={
           <Button size="sm" leftIcon={Plus} onClick={() => setEditing(null)}>
-            Add user
+            {t("admin.users.add")}
           </Button>
         }
       />
@@ -101,19 +115,19 @@ export default function UsersPage() {
         columns={columns}
         data={items}
         searchKeys={["fullname", "email", "phone"]}
-        searchPlaceholder="Search users…"
-        emptyTitle="No users"
-        emptyDescription="Add a user account to manage it here."
+        searchPlaceholder={t("admin.users.search")}
+        emptyTitle={t("admin.users.emptyTitle")}
+        emptyDescription={t("admin.users.emptyDescription")}
         actions={(u) => (
           <>
-            <Button variant="ghost" size="icon" aria-label="Edit" onClick={() => setEditing(u)}>
+            <Button variant="ghost" size="icon" aria-label={t("admin.action.edit")} onClick={() => setEditing(u)}>
               <Pencil className="size-4.5" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
-              aria-label="Delete"
-              className="text-red-600 hover:bg-red-50"
+              aria-label={t("admin.action.delete")}
+              className="text-red-600 hover:bg-red-500/10 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-500/15 dark:hover:text-red-300"
               onClick={() => setDeleting(u)}
             >
               <Trash2 className="size-4.5" />
@@ -126,10 +140,10 @@ export default function UsersPage() {
         open={editing !== undefined}
         onClose={() => setEditing(undefined)}
         onSubmit={handleSubmit}
-        title={editing ? "Edit user" : "Add user"}
-        fields={FIELDS}
+        title={editing ? t("admin.users.editTitle") : t("admin.users.addTitle")}
+        fields={fields}
         initialValues={editing || { role: "user", isVerified: false }}
-        submitLabel={editing ? "Save changes" : "Create user"}
+        submitLabel={editing ? t("admin.form.saveChanges") : t("admin.form.create")}
       />
 
       <ConfirmDialog
@@ -139,9 +153,9 @@ export default function UsersPage() {
           remove(deleting._id);
           setDeleting(null);
         }}
-        title="Delete user"
-        description={`Delete "${deleting?.fullname}"? This can't be undone.`}
-        confirmLabel="Delete"
+        title={t("admin.users.deleteTitle")}
+        description={t("admin.form.deleteConfirm", { name: deleting?.fullname })}
+        confirmLabel={t("admin.action.delete")}
         danger
       />
     </div>
