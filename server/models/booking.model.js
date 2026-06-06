@@ -1,3 +1,99 @@
+const mongoose = require('mongoose');
+
+const bookingSchema = new mongoose.Schema({
+  service_id: {
+    type: Number,
+    required: true
+  },
+  city_id: {
+    type: Number,
+    required: true
+  },
+  customer_name: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  customer_email: {
+    type: String,
+    required: true,
+    trim: true,
+    lowercase: true
+  },
+  customer_phone: {
+    type: String,
+    required: true
+  },
+  street_name: {
+    type: String,
+    required: true
+  },
+  house_number: {
+    type: String,
+    required: true 
+  },
+  property_size: {
+    type: String, 
+    required: true
+  },
+  doorbell_name: {
+    type: String,
+    required: true
+  },
+  booking_date: {
+    type: String,
+    required: true
+  },
+  booking_time: {
+    type: String, 
+    required: true
+  },
+  hours: {
+    type: Number,
+    required: true
+  },
+  cleaners: {
+    type: Number,
+    required: true
+  },
+  total_amount: {
+    type: Number,
+    required: true
+  },
+  payment_intent_id: {
+    type: String,
+    required: true
+  },
+  notes: {
+    type: String,
+    default: null
+  },
+  additional_services: {
+    type: [String],
+    default: []
+  },
+  supplies: {
+    type: [String],
+    default: []
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'confirmed', 'cancelled', 'completed'],
+    default: 'confirmed'
+  },
+  stripe_status: {
+    type: String,
+    default: ''
+  }
+}, { timestamps: true,collection: 'bookings' });
+
+const Booking = mongoose.model('Booking', bookingSchema);
+module.exports = Booking;
+
+
+
+
+
 // {
 //     "id": 1,
 //     "service_id": 2,
