@@ -14,8 +14,10 @@ const getCities = catchAsync(async (req, res) => {
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 10));
 
     const cities = await City.find()
+        .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
-        .limit(limit);
+        .limit(limit)
+        .lean();
 
     const cityCount = await City.countDocuments();
 
@@ -34,7 +36,7 @@ const getCities = catchAsync(async (req, res) => {
 const getCity = catchAsync(async (req, res, next) => {
     const { id } = req.params;
 
-    const city = await City.findById(id);
+    const city = await City.findById(id).lean();
 
     if (!city) {
         return next(new AppError("City can't be found!", 404));

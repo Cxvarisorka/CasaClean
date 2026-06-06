@@ -56,6 +56,10 @@ serviceSchema.pre("save", function (next) {
     next();
 });
 
+serviceSchema.index({ allCities: 1, enabled: 1 });
+
+serviceSchema.index({ cities: 1, enabled: 1 });
+
 const Service = mongoose.model("Service", serviceSchema);
 
 module.exports = Service;

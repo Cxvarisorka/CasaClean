@@ -59,8 +59,10 @@ const getServices = catchAsync(async (req, res, next) => {
 
     const services = await Service.find()
         .populate("cities")
+        .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
-        .limit(limit);
+        .limit(limit)
+        .lean();
 
     const serviceCount = await Service.countDocuments();
 
