@@ -12,8 +12,12 @@ api-testing/
 │   └── auth-tests.md
 ├── city/                <- create / read / update / delete cities
 │   └── city-tests.md
-└── service/             <- create / read / update / delete services
-    └── service-tests.md
+├── service/             <- create / read / update / delete services
+│   └── service-tests.md
+├── special-request/     <- booking add-ons (fridge, oven, windows...)
+│   └── special-request-tests.md
+└── booking/             <- create / read / update / delete bookings
+    └── booking-tests.md
 ```
 
 ## The base address
@@ -101,3 +105,5 @@ Good to know:
 2. Then open [auth/auth-tests.md](auth/auth-tests.md).
 3. Then [city/city-tests.md](city/city-tests.md).
 4. Then [service/service-tests.md](service/service-tests.md).
+5. Then [special-request/special-request-tests.md](special-request/special-request-tests.md).
+6. Then [booking/booking-tests.md](booking/booking-tests.md).
