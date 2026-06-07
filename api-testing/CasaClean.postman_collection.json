@@ -2,7 +2,7 @@
   "info": {
     "name": "CasaClean API",
     "_postman_id": "casaclean-api-collection",
-    "description": "QA test collection for the CasaClean backend API.\n\nHOW TO USE:\n1. Make sure the server is running (see api-testing/00-setup.md).\n2. This collection has variables. Check the {} icon (top right) to see/edit them:\n   - baseUrl: http://localhost:3000/api/v1  (change if your server runs elsewhere)\n   - email / password: the user you sign in with\n   - cityId / serviceId: filled in for you after you create a city/service\n3. Run requests in order: Auth > Signup, verify email by hand, Signin, then City/Service.\n4. The login cookie (lt) is kept automatically by Postman after Signin, so the\n   admin requests just work as long as your signed-in user is an admin.\n\nNote: requests that create a city or service automatically save the new id into\nthe cityId / serviceId variables, so the Get/Edit/Delete requests reuse them.",
+    "description": "QA test collection for the CasaClean backend API.\n\nHOW TO USE:\n1. Make sure the server is running (see api-testing/00-setup.md).\n2. This collection has variables. Check the {} icon (top right) to see/edit them:\n   - baseUrl: http://localhost:3000/api/v1  (change if your server runs elsewhere)\n   - email / password: the user you sign in with\n   - cityId / serviceId / specialRequestId / bookingId: filled in for you after you create each thing\n3. Run requests in order: Auth > Signup, verify email by hand, Signin, then City/Service, Special Request, Booking.\n4. The login cookie (lt) is kept automatically by Postman after Signin, so the\n   admin requests just work as long as your signed-in user is an admin.\n\nNote: requests that create a city, service, special request or booking automatically\nsave the new id into the matching variable, so the Get/Edit/Delete requests reuse them.\nBooking notes: creating a booking needs a logged-in user (admin role not required), but\nlisting all / get-by-id / edit / delete are admin only. Create a special request first if\nyou want to test the specialRequests add-ons on a booking.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -10,7 +10,9 @@
     { "key": "email", "value": "maria@example.com" },
     { "key": "password", "value": "secret123" },
     { "key": "cityId", "value": "" },
-    { "key": "serviceId", "value": "" }
+    { "key": "serviceId", "value": "" },
+    { "key": "specialRequestId", "value": "" },
+    { "key": "bookingId", "value": "" }
   ],
   "item": [
     {
@@ -409,6 +411,281 @@
             "header": [],
             "url": { "raw": "{{baseUrl}}/service/{{serviceId}}", "host": ["{{baseUrl}}"], "path": ["service", "{{serviceId}}"] },
             "description": "Admin only. Delete a service. Expect 200. Deleting again = 404."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Status is 200 OK', () => pm.response.code === 200);"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Special Request",
+      "item": [
+        {
+          "name": "Get Special Requests (list)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/special-request?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["special-request"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            },
+            "description": "Public. List the booking add-ons with paging, newest first. Expect 200 with data.specialRequests (a list) and specialRequestCount."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.code === 200);",
+                  "pm.test('specialRequests is a list', () => pm.expect(pm.response.json().data.specialRequests).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Add Special Request (admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/special-request", "host": ["{{baseUrl}}"], "path": ["special-request"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Fridge cleaning\",\n  \"description\": \"Clean the inside of the fridge\",\n  \"price\": 15\n}"
+            },
+            "description": "Admin only. Create an add-on. Expect 201. Name capital letter is fixed automatically. Enabled is true by default. The new id is saved to specialRequestId for the other requests (and the Booking requests)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201 Created', () => pm.response.code === 201);",
+                  "const sr = pm.response.json().data.specialRequest;",
+                  "if (sr && sr._id) { pm.collectionVariables.set('specialRequestId', sr._id); }",
+                  "pm.test('Name was capitalized', () => pm.expect(sr.name).to.eql('Fridge cleaning'));",
+                  "pm.test('Enabled by default', () => pm.expect(sr.enabled).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Special Request by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/special-request/{{specialRequestId}}", "host": ["{{baseUrl}}"], "path": ["special-request", "{{specialRequestId}}"] },
+            "description": "Public. Get one add-on. Uses the specialRequestId variable (set by Add Special Request). Expect 200. Unknown id = 404, broken id = 400."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Status is 200 OK', () => pm.response.code === 200);"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Edit Special Request (admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/special-request/{{specialRequestId}}", "host": ["{{baseUrl}}"], "path": ["special-request", "{{specialRequestId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 20,\n  \"enabled\": false\n}"
+            },
+            "description": "Admin only. Change only the fields you send. Expect 200. enabled:false should be honoured (a disabled add-on can't be picked on a new booking)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.code === 200);",
+                  "pm.test('enabled is now false', () => pm.expect(pm.response.json().data.specialRequest.enabled).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Special Request (admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/special-request/{{specialRequestId}}", "host": ["{{baseUrl}}"], "path": ["special-request", "{{specialRequestId}}"] },
+            "description": "Admin only. Delete an add-on. Expect 200. Deleting again = 404. Note: if you want to test bookings with special requests, run the Booking requests BEFORE deleting (or re-create and re-enable the add-on)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Status is 200 OK', () => pm.response.code === 200);"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Booking",
+      "item": [
+        {
+          "name": "Create Booking (logged-in user)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/booking", "host": ["{{baseUrl}}"], "path": ["booking"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceId\": 1,\n  \"cityId\": 1,\n  \"streetName\": \"Rustaveli Ave\",\n  \"houseNumber\": \"12\",\n  \"propertySize\": \"80m2\",\n  \"doorbellName\": \"Smith\",\n  \"bookingDate\": \"2026-07-01\",\n  \"bookingTime\": \"14:00\",\n  \"hours\": 3,\n  \"cleaners\": 2,\n  \"totalAmount\": 120,\n  \"notes\": \"Please bring eco products\",\n  \"supplies\": [\"vacuum\", \"mop\"]\n}"
+            },
+            "description": "Any logged-in user. Create a booking. Contact name/email come from your account (not the body). serviceId/cityId are NUMBERS. Status defaults to 'confirmed'. Expect 201. The new id is saved to bookingId.\n\nTo test add-ons, add a valid enabled id to specialRequests, e.g.: \"specialRequests\": [\"{{specialRequestId}}\"] (create one in the Special Request group first)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201 Created', () => pm.response.code === 201);",
+                  "const b = pm.response.json().data.booking;",
+                  "if (b && b._id) { pm.collectionVariables.set('bookingId', b._id); }",
+                  "pm.test('Status defaults to confirmed', () => pm.expect(b.status).to.eql('confirmed'));",
+                  "pm.test('Contact email comes from account', () => pm.expect(b.customerEmail).to.be.a('string'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get My Bookings (logged-in user)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/booking/my?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["booking", "my"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            },
+            "description": "Any logged-in user. List ONLY your own bookings, newest first. Expect 200 with data.bookings (a list) and bookingCount. Without a cookie = 401."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.code === 200);",
+                  "pm.test('bookings is a list', () => pm.expect(pm.response.json().data.bookings).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get All Bookings (admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/booking?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["booking"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            },
+            "description": "Admin only. List ALL bookings (everyone's), newest first. Expect 200 with data.bookings and bookingCount. A normal user = 403, no cookie = 401."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.code === 200);",
+                  "pm.test('bookings is a list', () => pm.expect(pm.response.json().data.bookings).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Booking by id (admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/booking/{{bookingId}}", "host": ["{{baseUrl}}"], "path": ["booking", "{{bookingId}}"] },
+            "description": "Admin only. Get one booking. Uses the bookingId variable (set by Create Booking). Expect 200. Unknown id = 404, broken id = 400, normal user = 403."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Status is 200 OK', () => pm.response.code === 200);"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Edit Booking (admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/booking/{{bookingId}}", "host": ["{{baseUrl}}"], "path": ["booking", "{{bookingId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"completed\",\n  \"totalAmount\": 130\n}"
+            },
+            "description": "Admin only. Change only allowed fields (status, dates, hours, cleaners, totalAmount, address, notes, supplies, specialRequests). status must be one of pending/confirmed/cancelled/completed. Fields like user/customerEmail are ignored. Expect 200."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.code === 200);",
+                  "pm.test('status is now completed', () => pm.expect(pm.response.json().data.booking.status).to.eql('completed'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Booking (admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/booking/{{bookingId}}", "host": ["{{baseUrl}}"], "path": ["booking", "{{bookingId}}"] },
+            "description": "Admin only. Delete a booking. Expect 200. Deleting again = 404. Normal user = 403, no cookie = 401."
           },
           "event": [
             {
