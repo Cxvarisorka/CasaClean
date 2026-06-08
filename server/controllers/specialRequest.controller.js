@@ -53,7 +53,7 @@ const getSpecialRequestById = catchAsync(async (req, res, next) => {
 
 // POST /api/v1/special-request -> create an add-on (admin only)
 const addSpecialRequest = catchAsync(async (req, res, next) => {
-    const { name, description, price } = req.body;
+    const { name, description, price, services } = req.body;
 
     // Guard required fields up-front so we never hit `name[0]` on undefined and
     // the client gets a clear 400. Price is compared against undefined so a
@@ -73,7 +73,8 @@ const addSpecialRequest = catchAsync(async (req, res, next) => {
     const specialRequest = await SpecialRequest.create({
         name: formattedName,
         description,
-        price
+        price,
+        services
     });
 
     res.status(201).json({
@@ -86,7 +87,7 @@ const addSpecialRequest = catchAsync(async (req, res, next) => {
 // PATCH /api/v1/special-request/:id -> partial update (admin only)
 const editSpecialRequest = catchAsync(async (req, res, next) => {
     const { id } = req.params;
-    const { name, description, price, enabled } = req.body;
+    const { name, description, price, enabled, services = [] } = req.body;
 
     const specialRequest = await SpecialRequest.findById(id);
 
@@ -112,6 +113,7 @@ const editSpecialRequest = catchAsync(async (req, res, next) => {
     if (price !== undefined) specialRequest.price = price;
     // Compared against undefined (not truthiness) so `enabled: false` is honoured.
     if (enabled === true || enabled === false) specialRequest.enabled = enabled;
+    if (services.length > 0) specialRequest.services = services;
 
     await specialRequest.save();
 

@@ -51,9 +51,8 @@ const serviceSchema = new mongoose.Schema({
 
 // Guarantee a consistent coverage state: when allCities is true we never keep a
 // stale city list around, so consumers can rely on the flag alone.
-serviceSchema.pre("save", function (next) {
+serviceSchema.pre("save", function () {
     if (this.allCities) this.cities = [];
-    next();
 });
 
 serviceSchema.index({ allCities: 1, enabled: 1 });

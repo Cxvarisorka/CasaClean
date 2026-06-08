@@ -1,7 +1,13 @@
+// Modules
 const mongoose = require('mongoose');
 
+// Models
 const Booking = require('../models/booking.model');
 const SpecialRequest = require('../models/specialRequest.model');
+const City = require('../models/city.model');
+const Service = require('../models/service.model');
+
+// Utils
 const catchAsync = require('../utils/catchAsync.util');
 const AppError = require('../utils/appError.util');
 const sendEmail = require('../utils/email.util');
@@ -127,6 +133,19 @@ const createBooking = catchAsync(async (req, res, next) => {
     doorbellName, bookingDate, bookingTime, hours, cleaners,
     totalAmount, notes, specialRequests, supplies
   } = req.body;
+
+  const city = await City.findById(cityId);
+  const service = await Service.findById(serviceId);
+
+  // Check if exist service and city
+  if (!city || !service) {
+    return next(new AppError("City or service not found!", 404));
+  }
+
+  // Check if city or service is disabled
+  if (!city.enabled || !service.enabled) {
+    return next(new AppError("City or service is disabled!", 400));
+  }
 
   // Phone is collected at registration for local accounts, but OAuth (Google)
   // accounts may not have one — let those users supply it for this booking.
