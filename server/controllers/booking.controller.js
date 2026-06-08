@@ -115,11 +115,15 @@ const getBookingById = catchAsync(async (req, res, next) => {
 
 // POST /api/v1/booking — create a booking (requires a signed-in user)
 const createBooking = catchAsync(async (req, res, next) => {
-  // Contact details come from the authenticated user's stored profile, so the
-  // customer never re-enters what they already gave at registration. The booking
-  // keeps its own snapshot of these so the record stays accurate even if the
-  // user later edits their profile.
-  const { fullname, email, phone } = req.user;
+  // Customer contact details default to the authenticated user's stored profile
+  // (the public booking wizard doesn't re-collect what was given at
+  // registration). When the caller DOES provide them — e.g. an admin entering a
+  // booking on a customer's behalf — the body values win, so the booking is
+  // attributed to the real customer rather than the operator. The booking keeps
+  // its own snapshot of these regardless.
+  const customerName = req.body.customerName || req.user.fullname;
+  const customerEmail = req.body.customerEmail || req.user.email;
+  const customerPhone = req.body.customerPhone || req.user.phone;
 
   // Booking-specific fields — the only things the wizard actually collects.
   const {
@@ -127,10 +131,6 @@ const createBooking = catchAsync(async (req, res, next) => {
     doorbellName, bookingDate, bookingTime, hours, cleaners,
     totalAmount, notes, specialRequests, supplies
   } = req.body;
-
-  // Phone is collected at registration for local accounts, but OAuth (Google)
-  // accounts may not have one — let those users supply it for this booking.
-  const customerPhone = phone || req.body.customerPhone;
 
   // Required-field guard. Numeric fields are compared against undefined (not
   // truthiness) so a legitimate 0 isn't rejected.
@@ -141,6 +141,10 @@ const createBooking = catchAsync(async (req, res, next) => {
     totalAmount === undefined
   ) {
     return next(new AppError("Please provide all required fields for booking!", 400));
+  }
+
+  if (!customerName || !customerEmail) {
+    return next(new AppError("Please provide the customer's name and email!", 400));
   }
 
   if (!customerPhone) {
@@ -156,8 +160,8 @@ const createBooking = catchAsync(async (req, res, next) => {
     user: req.user._id,
     serviceId,
     cityId,
-    customerName: fullname,
-    customerEmail: email,
+    customerName,
+    customerEmail,
     customerPhone,
     streetName,
     houseNumber,
@@ -177,9 +181,9 @@ const createBooking = catchAsync(async (req, res, next) => {
   // that was already saved.
   try {
     await sendEmail({
-      email,
+      email: customerEmail,
       subject: 'CASACLEAN - Your booking is confirmed! 🎉',
-      text: `Hello ${fullname},\n\n` +
+      text: `Hello ${customerName},\n\n` +
             `Your reservation has been successfully confirmed!\n\n` +
             `📌 Booking Details:\n` +
             `----------------------------------\n` +

@@ -20,21 +20,36 @@ import { staggerItemScale } from "@/animations/stagger";
 
 export function ServiceCard({ service, featured = false }) {
   const { t } = useTranslation();
-  const name = t(`services.${service.id}.name`);
-  const tagline = t(`services.${service.id}.tagline`);
-  const description = t(`services.${service.id}.description`);
+
+  // Static services have i18n entries keyed by their numeric id; database
+  // services (string ids) don't, so `t` returns the key unchanged — in that
+  // case fall back to the service object's own fields.
+  const tr = (key, fallback) => {
+    const value = t(key);
+    return value === key || value == null ? fallback : value;
+  };
+
+  const name = tr(`services.${service.id}.name`, service.name);
+  const tagline = tr(`services.${service.id}.tagline`, service.tagline);
+  const description = tr(`services.${service.id}.description`, service.description);
   const features = t(`services.${service.id}.features`);
-  const featureList = Array.isArray(features) ? features : service.features;
+  const featureList = Array.isArray(features) ? features : service.features || [];
+  const startingAt = service.startingAt ?? service.pricePerHour;
+
+  // Clicking anywhere on the card opens the booking wizard with this service
+  // already selected (the wizard reads the `service` query param).
+  const bookHref = `${ROUTES.booking}?service=${encodeURIComponent(service.id)}`;
 
   return (
     <motion.div variants={staggerItemScale} className="h-full">
-      <Card
-        interactive
-        variant={featured ? "elevated" : "default"}
-        className="flex h-full flex-col overflow-hidden"
-      >
-        {/* Image header */}
-        <Image
+      <Link to={bookHref} className="block h-full" aria-label={name}>
+        <Card
+          interactive
+          variant={featured ? "elevated" : "default"}
+          className="flex h-full flex-col overflow-hidden"
+        >
+          {/* Image header */}
+          <Image
           src={service.image}
           alt={name}
           aspect="aspect-[16/10]"
@@ -57,37 +72,39 @@ export function ServiceCard({ service, featured = false }) {
 
         <Card.Body className="flex flex-1 flex-col">
           <h3 className="text-heading-sm text-ink-900">{name}</h3>
-          <p className="mt-1 text-body-sm font-medium text-brand-600">
-            {tagline}
-          </p>
+          {tagline && (
+            <p className="mt-1 text-body-sm font-medium text-brand-600">
+              {tagline}
+            </p>
+          )}
           <p className="mt-3 text-body-md text-ink-500">{description}</p>
 
-          <ul className="mt-5 space-y-2.5">
-            {featureList.slice(0, 4).map((feature) => (
-              <li key={feature} className="flex items-start gap-2.5 text-body-sm text-ink-700">
-                <Check className="mt-0.5 size-4 shrink-0 text-brand-500" />
-                {feature}
-              </li>
-            ))}
-          </ul>
+          {featureList.length > 0 && (
+            <ul className="mt-5 space-y-2.5">
+              {featureList.slice(0, 4).map((feature) => (
+                <li key={feature} className="flex items-start gap-2.5 text-body-sm text-ink-700">
+                  <Check className="mt-0.5 size-4 shrink-0 text-brand-500" />
+                  {feature}
+                </li>
+              ))}
+            </ul>
+          )}
 
           <div className="mt-auto flex items-center justify-between pt-6">
             <p className="text-body-sm text-ink-500">
               {t("common.from")}{" "}
               <span className="text-heading-sm font-bold text-ink-900">
-                {formatCurrency(service.startingAt)}
+                {formatCurrency(startingAt)}
               </span>
             </p>
-            <Link
-              to={ROUTES.booking}
-              className="inline-flex items-center gap-1 text-body-sm font-semibold text-brand-600 transition-colors hover:text-brand-700"
-            >
+            <span className="inline-flex items-center gap-1 text-body-sm font-semibold text-brand-600 transition-colors group-hover:text-brand-700">
               {t("servicesSection.bookNow")}
               <ArrowUpRight className="size-4" />
-            </Link>
+            </span>
           </div>
         </Card.Body>
-      </Card>
+        </Card>
+      </Link>
     </motion.div>
   );
 }

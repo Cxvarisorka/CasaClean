@@ -26,6 +26,7 @@ const PHOTOS = [
   img("photo-1583774248251-1d3f5b4d2f4a", { w: 320, h: 200 }), // Palermo
   img("photo-1597692493647-7d8b1a9f6f1f", { w: 320, h: 200 }), // Bari
   img("photo-1591287083773-9a4e3d4f5c5b", { w: 320, h: 200 }), // Catania
+  img("photo-1531572753322-ad063cecc140", { w: 320, h: 200 }), // Vatican — St. Peter's
 ];
 
 /**
@@ -45,7 +46,23 @@ export const CITY_GEO = {
   Palermo: { lat: 38.1157, lng: 13.3615, image: PHOTOS[9] },
   Bari: { lat: 41.1171, lng: 16.8719, image: PHOTOS[10] },
   Catania: { lat: 37.5079, lng: 15.083, image: PHOTOS[11] },
+  // Vatican City is its own enclave inside Rome, but gets its own St. Peter's
+  // photo (PHOTOS[12]) so it never visually duplicates Rome on the map.
+  "Vatican City": { lat: 41.9029, lng: 12.4534, image: PHOTOS[12] },
+  Vatican: { lat: 41.9029, lng: 12.4534, image: PHOTOS[12] },
 };
+
+/**
+ * Case-insensitive geo lookup: admin-entered city names are stored with a
+ * single leading capital ("Vatican city"), which won't strict-match the keys
+ * above, so resolve by a lowercased comparison.
+ */
+const GEO_BY_LOWER = Object.fromEntries(
+  Object.entries(CITY_GEO).map(([name, geo]) => [name.toLowerCase(), geo])
+);
+
+export const geoForCity = (name) =>
+  name ? GEO_BY_LOWER[String(name).toLowerCase()] : undefined;
 
 // Geographic centre used to frame the map on first paint (central Italy).
 export const ITALY_CENTER = { lat: 42.5, lng: 12.5 };

@@ -25,11 +25,13 @@ export function StatCard({ icon: Icon, label, value, hint, accent = "brand" }) {
     >
       <Card className="h-full p-5">
         <div className="flex items-start justify-between gap-3">
-          <div>
+          <div className="min-w-0 flex-1">
             <p className="text-caption font-semibold uppercase tracking-wide text-ink-400">
               {label}
             </p>
-            <p className="mt-2 text-heading-lg font-bold text-ink-900">{value}</p>
+            <p className="mt-2 overflow-x-auto whitespace-nowrap text-heading-lg font-bold leading-tight text-ink-900 tabular-nums [scrollbar-width:thin]">
+              {value}
+            </p>
             {hint && <p className="mt-1 text-body-sm text-ink-500">{hint}</p>}
           </div>
           {Icon && (

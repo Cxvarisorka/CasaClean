@@ -18,14 +18,14 @@ import { getMe, signOut } from "@/features/auth/api/authApi";
  * `isAuthenticated` is the gate real, registered users must pass (e.g. to reach
  * the booking flow). It is true only for a genuine session.
  *
- * Separately, so the admin panel stays explorable before an admin auth flow
- * exists, a *guest* falls back to a local "demo admin" (flagged `demo: true`).
- * That fallback only powers admin-panel access — it is intentionally excluded
- * from `isAuthenticated`, so a guest still can't book. Set DEMO_FALLBACK to
- * false to disable it entirely and enforce hard auth everywhere.
+ * A now-retired demo mode used to fall back to a local "demo admin" so the panel
+ * stayed explorable before a real admin auth flow existed. Now that the
+ * dedicated admin login (/admin/login) is in place and a real admin account
+ * exists, the fallback is OFF: access is strictly gated on the DB role. Flip
+ * DEMO_FALLBACK back to true only to re-open the panel without authentication.
  */
 
-const DEMO_FALLBACK = true;
+const DEMO_FALLBACK = false;
 
 const DEMO_ADMIN = {
   _id: "demo-admin",

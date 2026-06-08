@@ -3,10 +3,10 @@ const express = require("express");
 const passport = require("passport");
 
 // Controllers
-const { signup, signin, logout, getMe, googleCallback, verifyEmail, resendVerificationEmail } = require("../controllers/auth.controller");
+const { signup, signin, logout, getMe, getAllUsers, createUser, updateUser, deleteUser, googleCallback, verifyEmail, resendVerificationEmail } = require("../controllers/auth.controller");
 
 // Middlewares
-const { protect } = require("../middlewares/protect.middleware");
+const { protect, restrictTo } = require("../middlewares/protect.middleware");
 const validate = require("../middlewares/validate.middleware");
 
 // Validations
@@ -30,5 +30,12 @@ authRouter.get("/google/callback", passport.authenticate("google", { session: fa
 authRouter.use(protect); // everything below this line is guarded
 authRouter.post("/logout", logout);
 authRouter.get("/me", getMe);
+
+// Admin-only: account management for the admin panel's Users page.
+authRouter.use("/users", restrictTo("admin"));
+authRouter.get("/users", getAllUsers);
+authRouter.post("/users", createUser);
+authRouter.patch("/users/:id", updateUser);
+authRouter.delete("/users/:id", deleteUser);
 
 module.exports = authRouter;

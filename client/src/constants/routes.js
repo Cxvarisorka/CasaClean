@@ -24,9 +24,11 @@ export const ROUTES = {
   terms: "/terms",
   admin: {
     root: "/admin",
+    login: "/admin/login",
     dashboard: "/admin",
     bookings: "/admin/bookings",
     services: "/admin/services",
+    specialRequests: "/admin/special-requests",
     cities: "/admin/cities",
     coverage: "/admin/coverage",
     users: "/admin/users",

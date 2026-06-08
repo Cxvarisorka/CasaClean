@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { PageHero, CtaSection } from "@/components/sections";
 import { SectionHeading } from "@/components/shared/SectionHeading";
 import { Icon } from "@/components/shared/Icon";
-import { ServiceCard } from "@/features/services";
+import { ServiceCard, useServices } from "@/features/services";
 import { IMAGES } from "@/constants/images";
 import { useTranslation } from "@/i18n";
 import { Seo, serviceSchema } from "@/seo";
@@ -26,6 +26,7 @@ import { viewportOnce } from "@/animations/pageTransitions";
 
 const ServicesPage = () => {
   const { t } = useTranslation();
+  const { services } = useServices();
 
   return (
     <Page>
@@ -52,7 +53,7 @@ const ServicesPage = () => {
             viewport={viewportOnce}
             className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
           >
-            {SERVICES.map((service) => (
+            {services.map((service) => (
               <ServiceCard key={service.id} service={service} featured={service.popular} />
             ))}
           </motion.div>

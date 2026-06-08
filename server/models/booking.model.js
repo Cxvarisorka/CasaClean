@@ -8,13 +8,12 @@ const mongoose = require('mongoose');
 // the Zod schema in validations/booking.validation.js, so the controller never
 // trusts raw req.body for writes.
 //
-// NOTE (legacy reference shape): `serviceId` and `cityId` are stored as plain
-// Numbers because that's the contract the client currently sends and the seed
-// data used. The actual Service/City documents in this codebase are keyed by
-// ObjectId, so these numbers do NOT reference real documents and cannot be
-// populated. Migrating them to `ObjectId` refs (+ a coordinated client change)
-// is the correct long-term fix — tracked here intentionally rather than changed
-// silently, since it would break the existing API contract.
+// `serviceId` and `cityId` are stored as Strings so they can hold either a real
+// Service/City ObjectId (the booking wizard now selects database-backed cities
+// and services) or a legacy numeric catalogue id (kept as its string form).
+// They are intentionally NOT ref-typed: a booking may reference a static
+// (non-DB) service id, so callers resolve the display name from the live
+// catalogues rather than relying on populate().
 const bookingSchema = new mongoose.Schema({
   // Owner of the booking. Bookings now require authentication, so every booking
   // is tied to the user who created it (used for "my bookings" and auditing).
@@ -24,12 +23,14 @@ const bookingSchema = new mongoose.Schema({
     required: true
   },
   serviceId: {
-    type: Number,
-    required: true
+    type: String,
+    required: true,
+    trim: true
   },
   cityId: {
-    type: Number,
-    required: true
+    type: String,
+    required: true,
+    trim: true
   },
   customerName: {
     type: String,
@@ -121,9 +122,13 @@ const bookingSchema = new mongoose.Schema({
   // payment integration can populate them without another migration. When/if a
   // payment intent id is set it must be unique (one booking per payment) — see
   // the sparse unique index below.
+  // No `default: null`: the sparse unique index below only ignores documents
+  // where this field is ABSENT, not where it's null. Defaulting to null would
+  // put every payment-less booking into the index as null and collide on the
+  // second one — so we leave the field unset until a payment id actually exists.
   paymentIntentId: {
-    type: String,
-    default: null
+    type: String
+    
   },
   stripeStatus: {
     type: String,

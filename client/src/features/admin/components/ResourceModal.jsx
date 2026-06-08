@@ -89,11 +89,17 @@ function ResourceForm({ fields, initialValues, onSubmit }) {
     setErrors((e) => (e[name] ? { ...e, [name]: undefined } : e));
   };
 
+  // A field may declare `show: (values) => boolean` to render conditionally
+  // (e.g. hide the cities picker while "all cities" is enabled). Hidden fields
+  // are neither rendered nor validated.
+  const isVisible = (f) => typeof f.show !== "function" || f.show(values);
+  const visibleFields = fields.filter(isVisible);
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
     const nextErrors = {};
-    for (const f of fields) {
+    for (const f of visibleFields) {
       if (!f.required || f.type === "switch") continue;
       const val = values[f.name];
       const empty =
@@ -124,7 +130,7 @@ function ResourceForm({ fields, initialValues, onSubmit }) {
       onSubmit={handleSubmit}
       className="grid grid-cols-1 gap-4 sm:grid-cols-2"
     >
-      {fields.map((f) => {
+      {visibleFields.map((f) => {
           const common = {
             label: f.label,
             required: f.required,

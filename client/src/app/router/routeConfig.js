@@ -24,6 +24,7 @@ const BlogPostPage = lazy(() => import("@/pages/Blog/BlogPostPage"));
 const BookingPage = lazy(() => import("@/pages/Booking/BookingPage"));
 const SignInPage = lazy(() => import("@/pages/Auth/SignInPage"));
 const SignUpPage = lazy(() => import("@/pages/Auth/SignUpPage"));
+const AdminLoginPage = lazy(() => import("@/pages/Auth/AdminLoginPage"));
 const ProfilePage = lazy(() => import("@/pages/Profile/ProfilePage"));
 const NotFoundPage = lazy(() => import("@/pages/NotFound/NotFoundPage"));
 
@@ -34,6 +35,7 @@ const AdminLayout = lazy(() =>
 const AdminDashboardPage = lazy(() => import("@/pages/Admin/DashboardPage"));
 const AdminBookingsPage = lazy(() => import("@/pages/Admin/BookingsPage"));
 const AdminServicesPage = lazy(() => import("@/pages/Admin/ServicesPage"));
+const AdminSpecialRequestsPage = lazy(() => import("@/pages/Admin/SpecialRequestsPage"));
 const AdminCitiesPage = lazy(() => import("@/pages/Admin/CitiesPage"));
 const AdminCoverageMapPage = lazy(() => import("@/pages/Admin/CoverageMapPage"));
 const AdminUsersPage = lazy(() => import("@/pages/Admin/UsersPage"));
@@ -63,6 +65,10 @@ export const FOCUSED_ROUTES = [
 export const BARE_ROUTES = [
   { path: ROUTES.signin, element: SignInPage },
   { path: ROUTES.signup, element: SignUpPage },
+  // Dedicated admin login. Declared as a standalone full-path route (not a child
+  // of the guarded /admin shell) so it stays reachable when AdminRoute redirects
+  // an unauthenticated visitor here — otherwise the guard would loop.
+  { path: ROUTES.admin.login, element: AdminLoginPage },
 ];
 
 /** The admin shell + its child pages (nested under /admin, guarded inside). */
@@ -71,6 +77,7 @@ export const ADMIN_ROUTES = [
   { path: "", element: AdminDashboardPage, index: true },
   { path: "bookings", element: AdminBookingsPage },
   { path: "services", element: AdminServicesPage },
+  { path: "special-requests", element: AdminSpecialRequestsPage },
   { path: "cities", element: AdminCitiesPage },
   { path: "coverage", element: AdminCoverageMapPage },
   { path: "users", element: AdminUsersPage },

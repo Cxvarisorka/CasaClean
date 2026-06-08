@@ -23,8 +23,16 @@ const createServiceSchema = z.object({
         .boolean(),
 
     cities: z
+        .array(z.string()),
+
+    allSpecialRequests: z
+        .boolean()
+        .optional(),
+
+    specialRequests: z
         .array(z.string())
-    
+        .optional()
+
 }).strict({ message: "Unknown fields are not allowed!" });
 
 // Schema for validate edit service request body
@@ -53,6 +61,14 @@ const editServiceSchema = z.object({
         .optional(),
 
     cities: z
+        .array(z.string())
+        .optional(),
+
+    allSpecialRequests: z
+        .boolean()
+        .optional(),
+
+    specialRequests: z
         .array(z.string())
         .optional()
 
