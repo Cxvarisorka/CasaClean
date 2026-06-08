@@ -21,75 +21,77 @@ const bookingSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: [true, "User ID is required!"]
   },
   serviceId: {
-    type: Number,
-    required: true
+    type: mongoose.Types.ObjectId,
+    ref: "Service",
+    required: [true, "Service ID is required!"]
   },
   cityId: {
-    type: Number,
-    required: true
+    type: mongoose.Types.ObjectId,
+    ref: "City",
+    required: [true, "City ID is required!"]
   },
   customerName: {
     type: String,
     required: true,
-    trim: true
+    trim: [true, "Customer Name is required!"]
   },
   customerEmail: {
     type: String,
-    required: true,
+    required: [true, "Customer email is required!"],
     trim: true,
     lowercase: true
   },
   customerPhone: {
     type: String,
-    required: true,
+    required: [true, "Customer phone number is required!"],
     trim: true
   },
   streetName: {
     type: String,
-    required: true,
+    required: [true, "Street name is required!"],
     trim: true
   },
   houseNumber: {
     type: String,
-    required: true,
+    required: [true, "House number is required!"],
     trim: true
   },
   propertySize: {
     type: String,
-    required: true,
+    required: [true, "House property size is required!"],
     trim: true
   },
   doorbellName: {
     type: String,
-    required: true,
+    required: [true, "Doorbell name is required!"],
     trim: true
   },
   // Stored as strings ("2026-02-04" / "14:00"). Format is enforced by the Zod
   // validation layer; kept as strings to match the client contract.
   bookingDate: {
     type: String,
-    required: true
+    required: [true, "Booking date is required!"]
   },
   bookingTime: {
     type: String,
-    required: true
+    required: [true, "Booking time is required!"]
   },
   hours: {
     type: Number,
-    required: true,
+    required: [true, "Working hours is required!"],
     min: [1, "A booking must be at least 1 hour."]
   },
   cleaners: {
     type: Number,
-    required: true,
+    required: [true, "Cleaners count is required!"],
     min: [1, "A booking must have at least 1 cleaner."]
   },
   totalAmount: {
     type: Number,
-    required: true,
+    required: [true, "Total amount is required!"],
     min: [0, "Total amount can't be negative."]
   },
   notes: {
