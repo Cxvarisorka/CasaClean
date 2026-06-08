@@ -7,7 +7,7 @@ const objectId = z
     .trim()
     .refine((id) => mongoose.Types.ObjectId.isValid(id), { message: "Invalid ID" })
 
-// Schema for valdiate create booking request body
+// Schema for validate create booking request body
 const createBookingSchema = z.object({
     serviceId: objectId,
 
@@ -58,7 +58,8 @@ const createBookingSchema = z.object({
         .optional(),
     
     specialRequests: z
-        .array(objectId),
+        .array(objectId)
+        .optional(),
 
     supplies: z
         .array(
@@ -66,6 +67,7 @@ const createBookingSchema = z.object({
             .trim()
             .min(1, { message: "Supply name can't be empty!" })
         )
+        .optional()
     
 }).strict({ message: "Unknown fields are not allowed!" });
 
@@ -88,13 +90,14 @@ const editBookingSchema = z.object({
         .optional(),
 
     propertySize: z
-        .number()
+        .string()
+        .trim()
         .min(1, { message: "The property size must be greater then 0!" })
         .optional(),
     
     bookingDate: z
         .string()
-        .datetime()
+        .trim()
         .optional(),
     
     bookingTime: z

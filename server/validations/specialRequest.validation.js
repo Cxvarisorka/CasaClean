@@ -7,7 +7,7 @@ const objectId = z
     .trim()
     .refine((id) => mongoose.Types.ObjectId.isValid(id), { message: "Invalid ID" });
 
-// Schema for valdiate add special request body
+// Schema for validate add special request body
 const addSpecialRequestSchema = z.object({
     name: z
         .string()
