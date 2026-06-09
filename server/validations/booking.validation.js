@@ -12,7 +12,28 @@ const createBookingSchema = z.object({
     serviceId: objectId,
 
     cityId: objectId,
-    
+
+    // Customer contact details. Optional because the controller falls back to the
+    // signed-in user's profile when absent; allowed because the wizard always
+    // sends them and an admin may book on a customer's behalf.
+    customerName: z
+        .string()
+        .trim()
+        .min(1, { message: "Customer name can't be empty!" })
+        .optional(),
+
+    customerEmail: z
+        .string()
+        .trim()
+        .email({ message: "Invalid customer email!" })
+        .optional(),
+
+    customerPhone: z
+        .string()
+        .trim()
+        .min(1, { message: "Customer phone can't be empty!" })
+        .optional(),
+
     streetName: z
         .string()
         .trim()
@@ -55,7 +76,8 @@ const createBookingSchema = z.object({
     notes: z
         .string()
         .trim()
-        .optional(),
+        .optional()
+        .nullable(),
     
     specialRequests: z
         .array(objectId)
@@ -76,7 +98,25 @@ const editBookingSchema = z.object({
     serviceId: objectId.optional(),
 
     cityId: objectId.optional(),
-    
+
+    customerName: z
+        .string()
+        .trim()
+        .min(1, { message: "Customer name can't be empty!" })
+        .optional(),
+
+    customerEmail: z
+        .string()
+        .trim()
+        .email({ message: "Invalid customer email!" })
+        .optional(),
+
+    customerPhone: z
+        .string()
+        .trim()
+        .min(1, { message: "Customer phone can't be empty!" })
+        .optional(),
+
     streetName: z
         .string()
         .trim()
@@ -133,7 +173,8 @@ const editBookingSchema = z.object({
     notes: z
         .string()
         .trim()
-        .optional(),
+        .optional()
+        .nullable(),
     
     specialRequests: z
         .array(objectId)

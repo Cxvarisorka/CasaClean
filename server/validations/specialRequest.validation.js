@@ -19,9 +19,6 @@ const addSpecialRequestSchema = z.object({
         .string()
         .trim()
         .optional(),
-    
-    services: z
-        .array(objectId),
 
     price: z
         .number()
