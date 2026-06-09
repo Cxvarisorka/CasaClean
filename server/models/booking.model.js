@@ -135,6 +135,9 @@ const bookingSchema = new mongoose.Schema({
 }, { timestamps: true, collection: 'bookings' });
 
 // --- Indexes ----------------------------------------------------------------
+// Admin booking list — the whole collection sorted newest-first (no filter),
+// so a standalone createdAt index backs the sort instead of an in-memory sort.
+bookingSchema.index({ createdAt: -1 });
 // "My bookings" — list a user's bookings, newest first.
 bookingSchema.index({ user: 1, createdAt: -1 });
 // Admin filtering by status and/or date.

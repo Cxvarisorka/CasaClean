@@ -21,7 +21,10 @@ const protect = catchAsync(async (req, res, next) => {
     // (JsonWebTokenError / TokenExpiredError).
     const payload = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
 
-    const user = await User.findById(payload.id);
+    // This runs on every authenticated request. .lean() returns a plain object
+    // (no Mongoose hydration) — req.user is only ever read (never .save()'d or
+    // used to call instance methods), so the lighter object is all we need.
+    const user = await User.findById(payload.id).lean();
 
     if (!user) {
         return next(new AppError("The user for this token no longer exists!", 401));

@@ -4,10 +4,7 @@ const SpecialRequest = require("../models/specialRequest.model");
 // Utils
 const AppError = require("../utils/appError.util");
 const catchAsync = require("../utils/catchAsync.util");
-
-// "fRIDGE cleaning" -> "Fridge cleaning". Capitalise the first letter and
-// lowercase the rest so the same item can't be stored under different casings.
-const formatName = (name) => name[0].toUpperCase() + name.slice(1).toLowerCase();
+const formatName = require("../utils/formatName.util");
 
 // GET /api/v1/special-request -> paginated list (public, so the booking wizard
 // can show the available add-ons).

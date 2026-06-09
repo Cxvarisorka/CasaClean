@@ -1,10 +1,7 @@
 const City = require("../models/city.model");
 const AppError = require("../utils/appError.util");
 const catchAsync = require("../utils/catchAsync.util");
-
-// "rOme" / "ROME" -> "Rome". Capitalise first letter, lowercase the rest,
-// so the same city can't be stored under different casings.
-const formatName = (name) => name[0].toUpperCase() + name.slice(1).toLowerCase();
+const formatName = require("../utils/formatName.util");
 
 // GET /api/v1/city -> paginated list of cities
 const getCities = catchAsync(async (req, res) => {
@@ -13,13 +10,15 @@ const getCities = catchAsync(async (req, res) => {
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 10));
 
-    const cities = await City.find()
-        .sort({ createdAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .lean();
-
-    const cityCount = await City.countDocuments();
+    // Run the page query and the total count in parallel (independent reads).
+    const [cities, cityCount] = await Promise.all([
+        City.find()
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit)
+            .lean(),
+        City.countDocuments()
+    ]);
 
     res.status(200).json({
         status: "success",

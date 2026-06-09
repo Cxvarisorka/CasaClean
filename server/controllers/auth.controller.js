@@ -102,11 +102,16 @@ const createSendToken = (user, res, statusCode = 200, remember = true) => {
 const signup = catchAsync(async (req, res, next) => {
     const { fullname, email, phone, password } = req.body;
 
-    if (await User.findOne({email})) {
-        return next(new AppError("An account with that email already exists.", 400));
-    }
+    // One lookup covers both uniqueness checks (email OR phone) instead of two
+    // sequential round-trips; the matched field decides which message to return.
+    const existing = await User.findOne({ $or: [{ email }, { phone }] })
+        .select("email phone")
+        .lean();
 
-    if (await User.findOne({phone})) {
+    if (existing) {
+        if (existing.email === email) {
+            return next(new AppError("An account with that email already exists.", 400));
+        }
         return next(new AppError("An account with that phone number already exists.", 400));
     }
 
@@ -180,7 +185,9 @@ const getMe = (req, res) => {
 // is select:false on the schema, so it's never returned. Newest first, so the
 // admin panel shows the most recent sign-ups at the top.
 const getAllUsers = catchAsync(async (req, res, next) => {
-    const users = await User.find().sort({ createdAt: -1 });
+    // .lean() — the list is read-only (serialised straight to JSON), so plain
+    // objects avoid the cost of hydrating a Mongoose document per user.
+    const users = await User.find().sort({ createdAt: -1 }).lean();
 
     res.status(200).json({
         status: "success",
@@ -200,11 +207,16 @@ const createUser = catchAsync(async (req, res, next) => {
         return next(new AppError("Please provide fullname, email, phone and password!", 400));
     }
 
-    if (await User.findOne({ email })) {
-        return next(new AppError("An account with that email already exists.", 409));
-    }
+    // One lookup covers both uniqueness checks (email OR phone) instead of two
+    // sequential round-trips; the matched field decides which message to return.
+    const existing = await User.findOne({ $or: [{ email }, { phone }] })
+        .select("email phone")
+        .lean();
 
-    if (await User.findOne({ phone })) {
+    if (existing) {
+        if (existing.email === email) {
+            return next(new AppError("An account with that email already exists.", 409));
+        }
         return next(new AppError("An account with that phone number already exists.", 409));
     }
 
