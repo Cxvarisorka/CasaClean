@@ -1,12 +1,16 @@
+// Modules
 const mongoose = require('mongoose');
 
+// Models
 const Booking = require('../models/booking.model');
 const SpecialRequest = require('../models/specialRequest.model');
+const City = require('../models/city.model');
+const Service = require('../models/service.model');
+
+// Utils
 const catchAsync = require('../utils/catchAsync.util');
 const AppError = require('../utils/appError.util');
 const sendEmail = require('../utils/email.util');
-const Service = require('../models/service.model');
-const City = require('../models/city.model');
 
 /**
  * Validate the service/city pair selected for a booking.
@@ -321,7 +325,6 @@ const createBooking = catchAsync(async (req, res, next) => {
     totalAmount, notes, specialRequests, supplies
   } = req.body;
 
-
   // Required-field guard. Numeric fields are compared against undefined (not
   // truthiness) so a legitimate 0 isn't rejected.
   if (
@@ -416,7 +419,7 @@ const editBooking = catchAsync(async (req, res, next) => {
 
   // Special requests, if being changed, must still reference real items.
   if (req.body.specialRequests !== undefined) {
-    updates.specialRequests = await resolveSpecialRequests(req.body.specialRequests, service);
+    updates.specialRequests = await resolveSpecialRequests(req.body.specialRequests);
   }
 
   const booking = await Booking.findByIdAndUpdate(id, updates, {

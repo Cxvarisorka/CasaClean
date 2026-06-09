@@ -12,7 +12,7 @@ const createServiceSchema = z.object({
     description: z
         .string()
         .trim()
-        .min(10, "Description must contain at least 5 characters!")
+        .min(10, "Description must contain at least 10 characters!")
         .max(700, "Description is too long!"),
     
     pricePerHour: z
@@ -20,7 +20,8 @@ const createServiceSchema = z.object({
         .min(0, "Price can't be negative!"),
 
     allCities: z
-        .boolean(),
+        .boolean()
+        .optional(),
 
     cities: z
         .array(z.string()),
@@ -32,7 +33,6 @@ const createServiceSchema = z.object({
     specialRequests: z
         .array(z.string())
         .optional()
-
 }).strict({ message: "Unknown fields are not allowed!" });
 
 // Schema for validate edit service request body
@@ -47,7 +47,7 @@ const editServiceSchema = z.object({
     description: z
         .string()
         .trim()
-        .min(10, "Description must contain at least 5 characters!")
+        .min(10, "Description must contain at least 10 characters!")
         .max(700, "Description is too long!")
         .optional(),
     

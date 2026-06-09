@@ -8,87 +8,87 @@ const mongoose = require('mongoose');
 // the Zod schema in validations/booking.validation.js, so the controller never
 // trusts raw req.body for writes.
 //
-// `serviceId` and `cityId` are stored as Strings so they can hold either a real
-// Service/City ObjectId (the booking wizard now selects database-backed cities
-// and services) or a legacy numeric catalogue id (kept as its string form).
-// They are intentionally NOT ref-typed: a booking may reference a static
-// (non-DB) service id, so callers resolve the display name from the live
-// catalogues rather than relying on populate().
+// `serviceId` and `cityId` reference the database-backed Service/City documents
+// the booking wizard selects. They are ObjectId refs and required — a booking
+// must always resolve to a real, enabled service and city (validated in the
+// controller via resolveServiceAndCity before the document is created).
 const bookingSchema = new mongoose.Schema({
   // Owner of the booking. Bookings now require authentication, so every booking
   // is tied to the user who created it (used for "my bookings" and auditing).
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: [true, "User ID is required!"]
   },
   serviceId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Service"
+    ref: "Service",
+    required: [true, "Service ID is required!"]
   },
   cityId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "City"
+    ref: "City",
+    required: [true, "City ID is required!"]
   },
   customerName: {
     type: String,
     required: true,
-    trim: true
+    trim: [true, "Customer Name is required!"]
   },
   customerEmail: {
     type: String,
-    required: true,
+    required: [true, "Customer email is required!"],
     trim: true,
     lowercase: true
   },
   customerPhone: {
     type: String,
-    required: true,
+    required: [true, "Customer phone number is required!"],
     trim: true
   },
   streetName: {
     type: String,
-    required: true,
+    required: [true, "Street name is required!"],
     trim: true
   },
   houseNumber: {
     type: String,
-    required: true,
+    required: [true, "House number is required!"],
     trim: true
   },
   propertySize: {
     type: String,
-    required: true,
+    required: [true, "House property size is required!"],
     trim: true
   },
   doorbellName: {
     type: String,
-    required: true,
+    required: [true, "Doorbell name is required!"],
     trim: true
   },
   // Stored as strings ("2026-02-04" / "14:00"). Format is enforced by the Zod
   // validation layer; kept as strings to match the client contract.
   bookingDate: {
     type: String,
-    required: true
+    required: [true, "Booking date is required!"]
   },
   bookingTime: {
     type: String,
-    required: true
+    required: [true, "Booking time is required!"]
   },
   hours: {
     type: Number,
-    required: true,
+    required: [true, "Working hours is required!"],
     min: [1, "A booking must be at least 1 hour."]
   },
   cleaners: {
     type: Number,
-    required: true,
+    required: [true, "Cleaners count is required!"],
     min: [1, "A booking must have at least 1 cleaner."]
   },
   totalAmount: {
     type: Number,
-    required: true,
+    required: [true, "Total amount is required!"],
     min: [0, "Total amount can't be negative."]
   },
   notes: {

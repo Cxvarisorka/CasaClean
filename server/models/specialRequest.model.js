@@ -24,6 +24,10 @@ const specialRequestSchema = new mongoose.Schema(
             trim: true,
             default: ""
         },
+        services: {
+            type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Service' }],
+            default: []
+        },
         // Flat surcharge added to the booking total when this request is selected.
         // Defaults to 0 so a request can be free / informational if needed.
         price: {
