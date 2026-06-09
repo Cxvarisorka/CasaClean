@@ -6,10 +6,7 @@ const City = require("../models/city.model");
 const AppError = require("../utils/appError.util");
 const catchAsync = require("../utils/catchAsync.util");
 const SpecialRequest = require("../models/specialRequest.model");
-
-// "rEGULAR cleaning" -> "Regular cleaning". Capitalise the first letter and
-// lowercase the rest so the same service can't be stored under different casings.
-const formatName = (name) => name[0].toUpperCase() + name.slice(1).toLowerCase();
+const formatName = require("../utils/formatName.util");
 
 /**
  * Resolve and validate the coverage a service should have ("all cities",
@@ -98,15 +95,17 @@ const getServices = catchAsync(async (req, res, next) => {
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 10));
 
-    const services = await Service.find()
-        .populate("cities")
-        .populate("specialRequests")
-        .sort({ createdAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .lean();
-
-    const serviceCount = await Service.countDocuments();
+    // Run the page query and the total count in parallel (independent reads).
+    const [services, serviceCount] = await Promise.all([
+        Service.find()
+            .populate("cities")
+            .populate("specialRequests")
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit)
+            .lean(),
+        Service.countDocuments()
+    ]);
 
     res.status(200).json({
         status: "success",
@@ -139,7 +138,7 @@ const getServiceById = catchAsync(async (req, res, next) => {
 
 // POST /api/v1/service -> create a service (admin only)
 const createService = catchAsync(async (req, res, next) => {
-    const { name, description, pricePerHour, allCities, cities, allSpecialRequests, specialRequests } = req.body;
+    const { name, subtitle, description, image, includes, pricePerHour, allCities, cities, allSpecialRequests, specialRequests } = req.body;
 
     // Guard required fields up-front so we never hit `name[0]` on undefined and
     // the client gets a clear 400 instead of a generic schema error.
@@ -163,7 +162,11 @@ const createService = catchAsync(async (req, res, next) => {
 
     const service = await Service.create({
         name: formattedName,
+        subtitle,
         description,
+        image,
+        // Drop empty/blank entries so the card never renders an empty bullet.
+        includes: Array.isArray(includes) ? includes.map((i) => i.trim()).filter(Boolean) : undefined,
         pricePerHour,
         ...coverage,
         ...specialRequest
@@ -203,7 +206,15 @@ const editService = catchAsync(async (req, res, next) => {
         service.name = formattedName;
     }
 
+    // Compared against undefined so an explicit "" clears the subtitle/image.
+    if (subtitle !== undefined) service.subtitle = subtitle;
     if (description) service.description = description;
+    if (image !== undefined) service.image = image;
+    if (includes !== undefined) {
+        service.includes = Array.isArray(includes)
+            ? includes.map((i) => i.trim()).filter(Boolean)
+            : [];
+    }
     if (pricePerHour !== undefined) service.pricePerHour = pricePerHour;
     // Compared against undefined (not truthiness) so `enabled: false` is honoured.
     if (enabled === false || enabled === true) service.enabled = enabled;

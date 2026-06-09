@@ -18,9 +18,28 @@ const serviceSchema = new mongoose.Schema({
         unique: true, // DB-level guard; the 11000 handler turns this into a 409
         trim: true
     },
+    // Short marketing sub-title shown under the name on the service card.
+    subtitle: {
+        type: String,
+        trim: true,
+        default: ""
+    },
     description: {
         type: String,
         required: [true, "Service description is required!"]
+    },
+    // Presentation image for the service card. Stored as a string the frontend
+    // can render directly — either a hosted URL or an inline data URL (the admin
+    // upload is visual-only for now, so no external file store is involved).
+    image: {
+        type: String,
+        default: ""
+    },
+    // Bullet list of what the service includes, rendered as ticked features on
+    // the marketing card.
+    includes: {
+        type: [String],
+        default: []
     },
     pricePerHour: {
         type: Number,
