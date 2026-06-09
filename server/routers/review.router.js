@@ -11,8 +11,8 @@ const reviewRouter = express.Router();
 
 
 reviewRouter.get('/:serviceId', getServiceReviews);
+reviewRouter.post('/:serviceId', protect, createReview);
 
-reviewRouter.post('/', protect, createReview);
 reviewRouter.patch('/:id', protect, editReview);
 reviewRouter.delete('/:id', protect, deleteReview);
 

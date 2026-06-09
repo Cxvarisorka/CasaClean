@@ -4,14 +4,16 @@ const catchAsync = require('../utils/catchAsync.util');
 const AppError = require('../utils/appError.util');
 
 
+// POST /api/v1/review/:id
 const createReview = catchAsync(async (req, res, next) => {
-  const { service_id, rating, review_text } = req.body;
-  const userId = req.user._id;      
-  const userEmail = req.user.email; 
+  const { serviceId } = req.params;
+  const { rating, review_text } = req.body; 
+  const userId = req.user._id;
 
+  const userEmail = req.user.email; 
   const hasBooked = await Booking.findOne({
     customerEmail: userEmail,
-    serviceId: Number(service_id) 
+    serviceId: Number(serviceId)
   });
 
   if (!hasBooked) {
@@ -19,7 +21,7 @@ const createReview = catchAsync(async (req, res, next) => {
   }
 
   const review = await Review.create({
-    service_id: Number(service_id),
+    service_id: Number(serviceId),
     user: userId,
     rating,
     review_text
@@ -32,6 +34,7 @@ const createReview = catchAsync(async (req, res, next) => {
   });
 });
 
+// GET /api/v1/review/:id
 const getServiceReviews = catchAsync(async (req, res, next) => {
   const { serviceId } = req.params;
 
