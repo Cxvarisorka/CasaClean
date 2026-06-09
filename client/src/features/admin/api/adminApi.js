@@ -228,8 +228,10 @@ export const bookingApi = {
   async create(v) {
     // Admin-entered booking. The backend reads these exact camelCase keys and
     // attributes the booking to the customer details supplied here (falling back
-    // to the operator's account only when omitted). serviceId/cityId are the
-    // model's legacy numeric references.
+    // to the operator's account only when omitted). serviceId/cityId are stored
+    // as STRINGS server-side (booking.model.js) and may be a real Service/City
+    // ObjectId or a legacy numeric catalogue id — so we pass them through as
+    // trimmed strings. Coercing to Number would turn an ObjectId into NaN.
     const data = await request({
       method: "POST",
       url: "/booking",
@@ -237,8 +239,8 @@ export const bookingApi = {
         customerName: v.customer_name,
         customerEmail: v.customer_email,
         customerPhone: v.customer_phone,
-        serviceId: Number(v.service_id),
-        cityId: Number(v.city_id),
+        serviceId: String(v.service_id).trim(),
+        cityId: String(v.city_id).trim(),
         streetName: v.street_name,
         houseNumber: v.house_number,
         propertySize: v.property_size,

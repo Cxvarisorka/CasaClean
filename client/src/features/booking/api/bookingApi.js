@@ -14,8 +14,8 @@ const ref = (id) => `CC-${String(id).slice(-6).toUpperCase()}`;
 
 export function toBookingPayload(values, quote) {
   return {
-    serviceId: String(values.serviceId),
-    cityId: String(values.cityId),
+    serviceId: values.serviceId,
+    cityId: values.cityId,
     // Customer details (auto-filled from the account, editable in the wizard).
     customerName: values.name,
     customerEmail: values.email,

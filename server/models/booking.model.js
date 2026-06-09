@@ -23,14 +23,12 @@ const bookingSchema = new mongoose.Schema({
     required: true
   },
   serviceId: {
-    type: String,
-    required: true,
-    trim: true
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Service"
   },
   cityId: {
-    type: String,
-    required: true,
-    trim: true
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "City"
   },
   customerName: {
     type: String,

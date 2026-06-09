@@ -68,6 +68,23 @@ export default function BookingsPage() {
     [t]
   );
 
+  // Service/city pickers for the create form. The booking API stores real
+  // Service/City ids (the server rejects anything that isn't a valid, enabled
+  // id), so an admin must choose from the live catalogues — only enabled
+  // entries are offered.
+  const serviceOptions = useMemo(
+    () =>
+      services
+        .filter((s) => s.enabled)
+        .map((s) => ({ value: s._id, label: s.name })),
+    [services]
+  );
+  const cityOptions = useMemo(
+    () =>
+      cities.filter((c) => c.enabled).map((c) => ({ value: c._id, label: c.name })),
+    [cities]
+  );
+
   // Edit only exposes the fields the backend's editBooking endpoint accepts;
   // service/city and the customer identity are fixed once a booking is created.
   const editFields = useMemo(
@@ -87,15 +104,16 @@ export default function BookingsPage() {
     [t, statusOptions]
   );
 
-  // Create collects the full booking the model needs. serviceId/cityId are the
-  // model's legacy numeric ids (see booking.model.js), so they're plain numbers.
+  // Create collects the full booking the model needs. service_id/city_id are
+  // real Service/City ids chosen from the catalogues (see booking.model.js); the
+  // server validates existence, enabled state and coverage.
   const createFields = useMemo(
     () => [
       { name: "customer_name", label: t("admin.bookings.field.customerName"), required: true },
       { name: "customer_email", label: t("admin.bookings.field.email"), type: "email", required: true },
       { name: "customer_phone", label: t("admin.bookings.field.phone"), required: true },
-      { name: "service_id", label: t("admin.bookings.field.serviceId"), type: "number", required: true, hint: t("admin.bookings.field.serviceIdHint") },
-      { name: "city_id", label: t("admin.bookings.field.cityId"), type: "number", required: true },
+      { name: "service_id", label: t("admin.bookings.field.serviceId"), type: "select", options: serviceOptions, placeholder: t("admin.form.selectOption"), required: true },
+      { name: "city_id", label: t("admin.bookings.field.cityId"), type: "select", options: cityOptions, placeholder: t("admin.form.selectOption"), required: true },
       { name: "booking_date", label: t("admin.bookings.field.date"), type: "date", required: true },
       { name: "booking_time", label: t("admin.bookings.field.time"), type: "time", required: true },
       { name: "street_name", label: t("admin.bookings.field.street"), required: true },
@@ -107,7 +125,7 @@ export default function BookingsPage() {
       { name: "total_amount", label: t("admin.bookings.field.total"), type: "number", required: true },
       { name: "notes", label: t("admin.bookings.field.notes"), type: "textarea", full: true },
     ],
-    [t]
+    [t, serviceOptions, cityOptions]
   );
 
   const data = useMemo(() => {

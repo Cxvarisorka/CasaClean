@@ -832,6 +832,7 @@ export default {
       create: "Create",
       saveChanges: "Save changes",
       noOptions: "No options available yet.",
+      selectOption: "Select an option…",
       required: "{label} is required",
       translationsFallback: "Translations fall back to English when left blank.",
       deleteConfirm: 'Delete "{name}"? This can\'t be undone.',

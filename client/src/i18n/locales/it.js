@@ -809,6 +809,7 @@ export default {
       create: "Crea",
       saveChanges: "Salva modifiche",
       noOptions: "Nessuna opzione disponibile.",
+      selectOption: "Seleziona un'opzione…",
       required: "Il campo «{label}» è obbligatorio",
       translationsFallback: "Le traduzioni mancanti usano l'inglese.",
       deleteConfirm: "Eliminare «{name}»? L'azione è irreversibile.",

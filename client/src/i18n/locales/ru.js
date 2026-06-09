@@ -818,6 +818,7 @@ export default {
       create: "Создать",
       saveChanges: "Сохранить изменения",
       noOptions: "Пока нет доступных вариантов.",
+      selectOption: "Выберите вариант…",
       required: "Поле «{label}» обязательно",
       translationsFallback: "Незаполненные переводы заменяются английским.",
       deleteConfirm: "Удалить «{name}»? Это действие нельзя отменить.",
