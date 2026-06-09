@@ -490,6 +490,10 @@ export default {
       heroTitle: "Full-service operations for short-term rentals",
       heroSubtitle:
         "From a single turnover to fully managed linens, restocking and inspections — choose exactly what your listings need.",
+      emptyTitle: "Services coming soon",
+      emptyDescription:
+        "We're putting the finishing touches on our service lineup. Get in touch and we'll tailor a plan for you.",
+      emptyAction: "Contact us",
       processEyebrow: "The process",
       processTitle: "Effortless from the first booking",
       processSubtitle:
@@ -836,6 +840,12 @@ export default {
       required: "{label} is required",
       translationsFallback: "Translations fall back to English when left blank.",
       deleteConfirm: 'Delete "{name}"? This can\'t be undone.',
+      imageUpload: "Upload image",
+      imageReplace: "Replace",
+      imageRemove: "Remove image",
+      imageProcessing: "Processing…",
+      listAdd: "Add item",
+      listRemove: "Remove",
     },
     confirm: {
       title: "Are you sure?",
@@ -939,6 +949,15 @@ export default {
       },
       field: {
         name: "Name",
+        image: "Service image",
+        imageHint: "Shown on the service card. A wide (16:10) photo works best.",
+        subtitle: "Sub-title",
+        subtitleHint: "A short tagline shown under the name.",
+        subtitlePlaceholder: "e.g. Guest-ready in hours, not days",
+        includes: "What's included",
+        includesHint: "Bullet points listing what this service covers.",
+        includesPlaceholder: "e.g. Full kitchen & bathroom sanitation",
+        includesAdd: "Add inclusion",
         pricePerHour: "Price per hour (€)",
         description: "Description",
         allCities: "Available in all cities",

@@ -487,6 +487,10 @@ export default {
       heroTitle: "Operazioni complete per gli affitti brevi",
       heroSubtitle:
         "Da un singolo riassetto alla gestione completa di biancheria, rifornimenti e ispezioni — scegli esattamente ciò che serve ai tuoi alloggi.",
+      emptyTitle: "Servizi in arrivo",
+      emptyDescription:
+        "Stiamo ultimando la nostra gamma di servizi. Contattaci e creeremo un piano su misura per te.",
+      emptyAction: "Contattaci",
       processEyebrow: "Il processo",
       processTitle: "Semplice fin dalla prima prenotazione",
       processSubtitle:
@@ -813,6 +817,12 @@ export default {
       required: "Il campo «{label}» è obbligatorio",
       translationsFallback: "Le traduzioni mancanti usano l'inglese.",
       deleteConfirm: "Eliminare «{name}»? L'azione è irreversibile.",
+      imageUpload: "Carica immagine",
+      imageReplace: "Sostituisci",
+      imageRemove: "Rimuovi immagine",
+      imageProcessing: "Elaborazione…",
+      listAdd: "Aggiungi voce",
+      listRemove: "Rimuovi",
     },
     confirm: {
       title: "Sei sicuro?",
@@ -910,6 +920,15 @@ export default {
       },
       field: {
         name: "Nome (inglese)",
+        image: "Immagine del servizio",
+        imageHint: "Mostrata sulla scheda del servizio. Ideale una foto panoramica (16:10).",
+        subtitle: "Sottotitolo",
+        subtitleHint: "Un breve slogan mostrato sotto il nome.",
+        subtitlePlaceholder: "es. Pronto per gli ospiti in poche ore",
+        includes: "Cosa è incluso",
+        includesHint: "Punti elenco che descrivono cosa copre questo servizio.",
+        includesPlaceholder: "es. Sanificazione completa di cucina e bagno",
+        includesAdd: "Aggiungi voce",
         pricePerHour: "Prezzo orario (€)",
         description: "Descrizione (inglese)",
         nameIt: "Nome (italiano)",
