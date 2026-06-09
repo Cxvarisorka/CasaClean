@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { ArrowUpRight, Check } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -18,7 +19,7 @@ import { staggerItemScale } from "@/animations/stagger";
  * Services index. `featured` highlights the popular offering.
  */
 
-export function ServiceCard({ service, featured = false }) {
+function ServiceCardComponent({ service, featured = false }) {
   const { t } = useTranslation();
 
   // Static services have i18n entries keyed by their numeric id; database
@@ -108,5 +109,9 @@ export function ServiceCard({ service, featured = false }) {
     </motion.div>
   );
 }
+
+// Pure, props-driven card rendered in long grids — memoized so a parent state
+// change (e.g. language toggle, hover state elsewhere) doesn't re-render them all.
+export const ServiceCard = memo(ServiceCardComponent);
 
 export default ServiceCard;

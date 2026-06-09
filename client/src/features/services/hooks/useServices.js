@@ -31,10 +31,14 @@ function normalizeDbService(s, index) {
     id: s._id, // string id → no i18n entry, so ServiceCard uses these fields directly
     name: s.name,
     description: s.description,
-    tagline: "",
-    features: [],
+    // Admin-authored sub-title and inclusion list drive the card's tagline and
+    // ticked features; fall back to neutral empties when not provided.
+    tagline: s.subtitle || "",
+    features: Array.isArray(s.includes) ? s.includes : [],
     icon: "Sparkles",
-    image: FALLBACK_IMAGES[index % FALLBACK_IMAGES.length],
+    // Prefer the admin-uploaded image; otherwise rotate through the curated
+    // photos so the grid stays visually consistent.
+    image: s.image || FALLBACK_IMAGES[index % FALLBACK_IMAGES.length],
     pricePerHour: s.pricePerHour,
     startingAt: s.pricePerHour,
     popular: false,
@@ -60,10 +64,9 @@ function normalizeDbService(s, index) {
 async function fetchDbServices() {
   const data = await request({ method: "GET", url: "/service?limit=100" });
   const list = data?.services ?? [];
-  const staticNames = new Set(SERVICES.map((s) => s.name.toLowerCase()));
-  return list
-    .filter((s) => s.enabled && !staticNames.has(String(s.name).toLowerCase()))
-    .map(normalizeDbService);
+  // Every enabled service the admin created — these are what the marketing pages
+  // actually render now (no static seed data is shown there anymore).
+  return list.filter((s) => s.enabled).map(normalizeDbService);
 }
 
 export function useServices() {
@@ -73,8 +76,17 @@ export function useServices() {
     staleTime: 5 * 60 * 1000, // catalogue changes rarely
   });
 
-  // Static originals first, then the admin-created ones.
-  return { services: [...SERVICES, ...dbServices], dbServices, ...rest };
+  // `dbServices` is the real, admin-managed catalogue shown across the marketing
+  // site. `services` additionally folds in the static seed list as a fallback so
+  // the booking wizard and price engine keep working even before the DB is
+  // populated; a DB service that shares a static one's name wins (deduped here).
+  const dbNames = new Set(dbServices.map((s) => String(s.name).toLowerCase()));
+  const services = [
+    ...SERVICES.filter((s) => !dbNames.has(s.name.toLowerCase())),
+    ...dbServices,
+  ];
+
+  return { services, dbServices, ...rest };
 }
 
 export default useServices;
