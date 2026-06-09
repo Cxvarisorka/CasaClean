@@ -5,6 +5,7 @@ const City = require("../models/city.model");
 // Utils
 const AppError = require("../utils/appError.util");
 const catchAsync = require("../utils/catchAsync.util");
+const SpecialRequest = require("../models/specialRequest.model");
 
 // "rEGULAR cleaning" -> "Regular cleaning". Capitalise the first letter and
 // lowercase the rest so the same service can't be stored under different casings.
@@ -50,6 +51,46 @@ const resolveCoverage = async (allCities, cities) => {
     return { allCities: false, cities: uniqueCityIds };
 };
 
+/**
+ * Resolve and validate which special-request add-ons a service enables.
+ *
+ * Accepts:
+ *   - allSpecialRequests: true            -> every add-on is offered; list cleared
+ *   - specialRequests: "<id>" | ["<id>"]  -> only the listed add-ons
+ *   - empty / nothing                     -> the service offers no add-ons
+ *
+ * Returns { allSpecialRequests, specialRequests } ready to store, or throws an
+ * AppError (caught by catchAsync) when an id doesn't reference a real add-on.
+ * Mirrors resolveCoverage; an empty selection is valid (unlike cities, a service
+ * is allowed to have no special requests).
+ */
+const resolveSpecialRequest = async (allSpecialRequests, specialRequests) => {
+    if (allSpecialRequests === true) {
+        return { allSpecialRequests: true, specialRequests: [] };
+    }
+
+    const ids = Array.isArray(specialRequests)
+        ? specialRequests
+        : specialRequests ? [specialRequests] : [];
+
+    if (ids.length === 0) {
+        return { allSpecialRequests: false, specialRequests: [] };
+    }
+
+    // Drop duplicate ids (e.g. the same add-on sent twice from the UI).
+    const uniqueIds = [...new Set(ids.map(String))];
+
+    // Every id must point to a special request that actually exists, otherwise
+    // we'd store dangling references that break population later on.
+    const foundCount = await SpecialRequest.countDocuments({ _id: { $in: uniqueIds } });
+
+    if (foundCount !== uniqueIds.length) {
+        throw new AppError("One or more selected special requests do not exist!", 400);
+    }
+
+    return { allSpecialRequests: false, specialRequests: uniqueIds };
+};
+
 // GET /api/v1/service -> paginated list of services
 const getServices = catchAsync(async (req, res, next) => {
     // Query params arrive as strings; sanitise them into safe, bounded numbers
@@ -59,6 +100,7 @@ const getServices = catchAsync(async (req, res, next) => {
 
     const services = await Service.find()
         .populate("cities")
+        .populate("specialRequests")
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
@@ -80,7 +122,7 @@ const getServices = catchAsync(async (req, res, next) => {
 const getServiceById = catchAsync(async (req, res, next) => {
     const { id } = req.params;
 
-    const service = await Service.findById(id).populate("cities");
+    const service = await Service.findById(id).populate("cities").populate("specialRequests");
 
     if (!service) {
         return next(new AppError("Service not found!", 404));
@@ -97,7 +139,7 @@ const getServiceById = catchAsync(async (req, res, next) => {
 
 // POST /api/v1/service -> create a service (admin only)
 const createService = catchAsync(async (req, res, next) => {
-    const { name, description, pricePerHour, allCities, cities } = req.body;
+    const { name, description, pricePerHour, allCities, cities, allSpecialRequests, specialRequests } = req.body;
 
     // Guard required fields up-front so we never hit `name[0]` on undefined and
     // the client gets a clear 400 instead of a generic schema error.
@@ -117,12 +159,14 @@ const createService = catchAsync(async (req, res, next) => {
 
     // Validate the chosen coverage (all / one / multiple cities).
     const coverage = await resolveCoverage(allCities, cities);
+    const specialRequest = await resolveSpecialRequest(allSpecialRequests, specialRequests);
 
     const service = await Service.create({
         name: formattedName,
         description,
         pricePerHour,
-        ...coverage
+        ...coverage,
+        ...specialRequest
     });
 
     res.status(201).json({
@@ -137,7 +181,7 @@ const createService = catchAsync(async (req, res, next) => {
 // PATCH /api/v1/service/:id -> partial update (admin only)
 const editService = catchAsync(async (req, res, next) => {
     const { id } = req.params;
-    const { name, description, pricePerHour, enabled, allCities, cities } = req.body;
+    const { name, description, pricePerHour, enabled, allCities, cities, allSpecialRequests, specialRequests } = req.body;
 
     const service = await Service.findById(id);
 
@@ -174,6 +218,17 @@ const editService = catchAsync(async (req, res, next) => {
 
         service.allCities = coverage.allCities;
         service.cities = coverage.cities;
+    }
+
+    // Likewise, only touch the special-request selection when the client sent one.
+    if (allSpecialRequests !== undefined || specialRequests !== undefined) {
+        const resolved = await resolveSpecialRequest(
+            allSpecialRequests !== undefined ? allSpecialRequests : service.allSpecialRequests,
+            specialRequests !== undefined ? specialRequests : service.specialRequests
+        );
+
+        service.allSpecialRequests = resolved.allSpecialRequests;
+        service.specialRequests = resolved.specialRequests;
     }
 
     await service.save();

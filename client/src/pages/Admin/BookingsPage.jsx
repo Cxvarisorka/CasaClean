@@ -17,8 +17,11 @@ import { useTranslation } from "@/i18n";
 /*
  * Bookings management
  * -------------------
- * Browse, filter and manage the booking pipeline. Status can be changed inline
- * or from the detail drawer; bookings can also be created, edited and deleted.
+ * Browse, filter and manage the booking pipeline (backed by the real API).
+ * Status can be changed inline or from the edit dialog; bookings can be edited
+ * and deleted. Bookings are *created* by customers through the booking wizard
+ * (the API ties each booking to the authenticated customer), so there is no
+ * admin "add" here.
  */
 
 const eur = (n) =>
@@ -37,7 +40,20 @@ function DetailRow({ label, value }) {
 
 export default function BookingsPage() {
   const { items, create, update, remove } = useCollection("bookings");
+  const { items: cities } = useCollection("cities");
+  const { items: services } = useCollection("services");
   const { t } = useTranslation();
+
+  // Bookings store service/city ids; resolve them to names from the catalogues
+  // (DB services/cities). Static (non-DB) service ids fall back to the id form.
+  const cityNameById = useMemo(
+    () => Object.fromEntries(cities.map((c) => [String(c._id), c.name])),
+    [cities]
+  );
+  const serviceNameById = useMemo(
+    () => Object.fromEntries(services.map((s) => [String(s._id), s.name])),
+    [services]
+  );
   const [statusFilter, setStatusFilter] = useState("");
   const [editing, setEditing] = useState(undefined);
   const [viewing, setViewing] = useState(null);
@@ -52,35 +68,82 @@ export default function BookingsPage() {
     [t]
   );
 
-  const fields = useMemo(
+  // Service/city pickers for the create form. The booking API stores real
+  // Service/City ids (the server rejects anything that isn't a valid, enabled
+  // id), so an admin must choose from the live catalogues — only enabled
+  // entries are offered.
+  const serviceOptions = useMemo(
+    () =>
+      services
+        .filter((s) => s.enabled)
+        .map((s) => ({ value: s._id, label: s.name })),
+    [services]
+  );
+  const cityOptions = useMemo(
+    () =>
+      cities.filter((c) => c.enabled).map((c) => ({ value: c._id, label: c.name })),
+    [cities]
+  );
+
+  // Edit only exposes the fields the backend's editBooking endpoint accepts;
+  // service/city and the customer identity are fixed once a booking is created.
+  const editFields = useMemo(
     () => [
-      { name: "customer_name", label: t("admin.bookings.field.customerName"), required: true },
-      { name: "customer_email", label: t("admin.bookings.field.email"), type: "email" },
+      { name: "status", label: t("admin.bookings.field.status"), type: "select", options: statusOptions, required: true },
       { name: "customer_phone", label: t("admin.bookings.field.phone") },
-      { name: "service_name", label: t("admin.bookings.field.service"), required: true },
-      { name: "city_name", label: t("admin.bookings.field.city"), required: true },
-      { name: "booking_date", label: t("admin.bookings.field.date"), placeholder: "2026-06-12" },
-      { name: "booking_time", label: t("admin.bookings.field.time"), placeholder: "14:00" },
+      { name: "booking_date", label: t("admin.bookings.field.date"), type: "date" },
+      { name: "booking_time", label: t("admin.bookings.field.time"), type: "time" },
       { name: "street_name", label: t("admin.bookings.field.street") },
       { name: "house_number", label: t("admin.bookings.field.houseNo") },
+      { name: "property_size", label: t("admin.bookings.detail.propertySize") },
       { name: "hours", label: t("admin.bookings.field.hours"), type: "number" },
       { name: "cleaners", label: t("admin.bookings.field.cleaners"), type: "number" },
       { name: "total_amount", label: t("admin.bookings.field.total"), type: "number", required: true },
-      { name: "status", label: t("admin.bookings.field.status"), type: "select", options: statusOptions, required: true },
       { name: "notes", label: t("admin.bookings.field.notes"), type: "textarea", full: true },
     ],
     [t, statusOptions]
   );
 
-  const data = useMemo(
-    () => (statusFilter ? items.filter((b) => b.status === statusFilter) : items),
-    [items, statusFilter]
+  // Create collects the full booking the model needs. service_id/city_id are
+  // real Service/City ids chosen from the catalogues (see booking.model.js); the
+  // server validates existence, enabled state and coverage.
+  const createFields = useMemo(
+    () => [
+      { name: "customer_name", label: t("admin.bookings.field.customerName"), required: true },
+      { name: "customer_email", label: t("admin.bookings.field.email"), type: "email", required: true },
+      { name: "customer_phone", label: t("admin.bookings.field.phone"), required: true },
+      { name: "service_id", label: t("admin.bookings.field.serviceId"), type: "select", options: serviceOptions, placeholder: t("admin.form.selectOption"), required: true },
+      { name: "city_id", label: t("admin.bookings.field.cityId"), type: "select", options: cityOptions, placeholder: t("admin.form.selectOption"), required: true },
+      { name: "booking_date", label: t("admin.bookings.field.date"), type: "date", required: true },
+      { name: "booking_time", label: t("admin.bookings.field.time"), type: "time", required: true },
+      { name: "street_name", label: t("admin.bookings.field.street"), required: true },
+      { name: "house_number", label: t("admin.bookings.field.houseNo"), required: true },
+      { name: "property_size", label: t("admin.bookings.detail.propertySize"), required: true },
+      { name: "doorbell_name", label: t("admin.bookings.field.doorbell"), required: true },
+      { name: "hours", label: t("admin.bookings.field.hours"), type: "number", required: true },
+      { name: "cleaners", label: t("admin.bookings.field.cleaners"), type: "number", required: true },
+      { name: "total_amount", label: t("admin.bookings.field.total"), type: "number", required: true },
+      { name: "notes", label: t("admin.bookings.field.notes"), type: "textarea", full: true },
+    ],
+    [t, serviceOptions, cityOptions]
   );
 
-  const handleSubmit = (values) => {
-    if (editing) update(editing._id, values);
-    else create(values);
-    setEditing(undefined);
+  const data = useMemo(() => {
+    const base = statusFilter
+      ? items.filter((b) => b.status === statusFilter)
+      : items;
+    return base.map((b) => ({
+      ...b,
+      service_name: serviceNameById[String(b.service_id)] || b.service_name,
+      city_name: cityNameById[String(b.city_id)] || b.city_name,
+    }));
+  }, [items, statusFilter, serviceNameById, cityNameById]);
+
+  const handleSubmit = async (values) => {
+    const ok = editing
+      ? await update(editing._id, values)
+      : await create(values);
+    if (ok) setEditing(undefined);
   };
 
   const columns = [
@@ -222,8 +285,8 @@ export default function BookingsPage() {
         onClose={() => setEditing(undefined)}
         onSubmit={handleSubmit}
         title={editing ? t("admin.bookings.editTitle") : t("admin.bookings.addTitle")}
-        fields={fields}
-        initialValues={editing || { status: "pending" }}
+        fields={editing ? editFields : createFields}
+        initialValues={editing || { hours: 2, cleaners: 1 }}
         submitLabel={editing ? t("admin.form.saveChanges") : t("admin.form.create")}
       />
 

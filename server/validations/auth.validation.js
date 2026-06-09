@@ -37,7 +37,14 @@ const signinSchema = z.object({
         .string()
         .trim()
         .min(1, { message: "Password must contain at least 1 character!" })
-        .max(50, { message: "Password is too long!" })
+        .max(50, { message: "Password is too long!" }),
+
+    // Optional: the client sends this to choose a persistent vs. session-only
+    // cookie. The schema is .strict(), so it must be allowed explicitly or the
+    // whole request is rejected ("Validation failed!").
+    remember: z
+        .boolean()
+        .optional()
 
 }).strict({ message: "Unknown fields are not allowed!" });
 

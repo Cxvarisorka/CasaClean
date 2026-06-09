@@ -817,6 +817,7 @@ export default {
       create: "Δημιουργία",
       saveChanges: "Αποθήκευση αλλαγών",
       noOptions: "Δεν υπάρχουν διαθέσιμες επιλογές ακόμη.",
+      selectOption: "Επιλέξτε μια επιλογή…",
       required: "Το πεδίο «{label}» είναι υποχρεωτικό",
       translationsFallback: "Οι κενές μεταφράσεις εμφανίζονται στα αγγλικά.",
       deleteConfirm: "Διαγραφή «{name}»; Η ενέργεια δεν αναιρείται.",

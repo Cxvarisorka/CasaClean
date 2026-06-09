@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { FormProvider, useForm, useFormContext } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AnimatePresence, motion } from "framer-motion";
@@ -8,8 +9,10 @@ import { useTranslation } from "@/i18n";
 import { bookingSchema, bookingDefaults } from "../validation/bookingSchema";
 import { BookingProvider, useBookingNav } from "../store/BookingContext";
 import { useCreateBooking } from "../hooks/useCreateBooking";
+import { useSpecialRequests } from "../hooks/useSpecialRequests";
 import { toBookingPayload } from "../api/bookingApi";
 import { computeQuote } from "../utils/pricing";
+import { useServices } from "@/features/services";
 import { BookingProgress } from "./BookingProgress";
 import { BookingSummary } from "./BookingSummary";
 import { PropertyStep } from "./steps/PropertyStep";
@@ -51,6 +54,8 @@ function WizardBody({ onConfirmed }) {
   const { step, direction, isFirst, isLast, next, prev, steps } = useBookingNav();
   const { trigger, handleSubmit } = useFormContext();
   const { mutateAsync, isPending, error } = useCreateBooking();
+  const { data: addons = [] } = useSpecialRequests();
+  const { services } = useServices();
 
   const StepComponent = STEP_COMPONENTS[step];
   const activeStep = steps[step];
@@ -61,7 +66,7 @@ function WizardBody({ onConfirmed }) {
   };
 
   const handleFinalSubmit = handleSubmit(async (values) => {
-    const quote = computeQuote(values);
+    const quote = computeQuote(values, { addons, services });
     const payload = toBookingPayload(values, quote);
     const booking = await mutateAsync(payload);
     onConfirmed(booking);
@@ -141,9 +146,17 @@ function WizardBody({ onConfirmed }) {
 }
 
 export function BookingWizard() {
+  // A service can be pre-selected from a service card (`/booking?service=<id>`),
+  // so the wizard opens with that service already chosen.
+  const [searchParams] = useSearchParams();
+  const preselectedService = searchParams.get("service");
+
   const methods = useForm({
     resolver: zodResolver(bookingSchema),
-    defaultValues: bookingDefaults,
+    defaultValues: {
+      ...bookingDefaults,
+      ...(preselectedService ? { serviceId: preselectedService } : {}),
+    },
     mode: "onTouched",
   });
   const [confirmation, setConfirmation] = useState(null);

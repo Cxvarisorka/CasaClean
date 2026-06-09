@@ -7,9 +7,10 @@ import { useAuth } from "../context";
  * AdminRoute
  * ----------
  * Gate for the admin area. Waits for the auth check to resolve, then either
- * renders the protected tree or redirects to sign in, preserving the intended
- * destination so the user can be returned after login. Access is governed by
- * `canAccessAdmin` (real admins, plus everyone while the demo fallback is on).
+ * renders the protected tree or redirects to the dedicated admin login,
+ * preserving the intended destination so the admin returns there after login.
+ * Access is governed by `canAccessAdmin` (real admins, plus everyone while the
+ * demo fallback is on).
  */
 
 export function AdminRoute({ children }) {
@@ -19,7 +20,7 @@ export function AdminRoute({ children }) {
   if (isLoading) return <PageLoader />;
 
   if (!canAccessAdmin) {
-    return <Navigate to={ROUTES.signin} state={{ from: location }} replace />;
+    return <Navigate to={ROUTES.admin.login} state={{ from: location }} replace />;
   }
 
   return children;

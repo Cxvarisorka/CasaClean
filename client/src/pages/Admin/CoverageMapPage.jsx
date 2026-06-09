@@ -5,7 +5,7 @@ import { Image } from "@/components/ui/Image";
 import { Badge } from "@/components/ui/Badge";
 import { PageHeader, StatCard, useAdminData } from "@/features/admin";
 import { CoverageMap } from "@/features/admin/components/CoverageMap";
-import { CITY_GEO } from "@/data/cityGeo";
+import { geoForCity } from "@/data/cityGeo";
 import { useTranslation } from "@/i18n";
 
 /*
@@ -26,8 +26,20 @@ const eur = (n) =>
   }).format(Number(n) || 0);
 
 export default function CoverageMapPage() {
-  const { bookings } = useAdminData();
+  const { bookings, cities: cityList, services } = useAdminData();
   const { t } = useTranslation();
+
+  // Bookings store only the city/service ids, so resolve real names from the
+  // loaded catalogues. The geo lookup is keyed by the city's English name, so
+  // without this every completed booking falls through and the map stays empty.
+  const cityNameById = useMemo(
+    () => Object.fromEntries(cityList.map((c) => [String(c._id), c.name])),
+    [cityList]
+  );
+  const serviceNameById = useMemo(
+    () => Object.fromEntries(services.map((s) => [String(s._id), s.name])),
+    [services]
+  );
 
   // Roll up completed bookings → one entry per city that has geo data.
   const cities = useMemo(() => {
@@ -35,11 +47,12 @@ export default function CoverageMapPage() {
 
     for (const b of bookings) {
       if (b.status !== "completed") continue;
-      const geo = CITY_GEO[b.city_name];
+      const cityName = cityNameById[String(b.city_id)] || b.city_name;
+      const geo = geoForCity(cityName);
       if (!geo) continue; // city without coordinates simply isn't plotted
 
-      const entry = byCity.get(b.city_name) || {
-        name: b.city_name,
+      const entry = byCity.get(cityName) || {
+        name: cityName,
         ...geo,
         completed: 0,
         revenue: 0,
@@ -47,14 +60,14 @@ export default function CoverageMapPage() {
       };
       entry.completed += 1;
       entry.revenue += Number(b.total_amount) || 0;
-      entry.services.add(b.service_name);
-      byCity.set(b.city_name, entry);
+      entry.services.add(serviceNameById[String(b.service_id)] || b.service_name);
+      byCity.set(cityName, entry);
     }
 
     return [...byCity.values()]
       .map((c) => ({ ...c, services: [...c.services] }))
       .sort((a, b) => b.completed - a.completed);
-  }, [bookings]);
+  }, [bookings, cityNameById, serviceNameById]);
 
   const totals = useMemo(
     () => ({

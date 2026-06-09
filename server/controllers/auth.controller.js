@@ -176,6 +176,125 @@ const getMe = (req, res) => {
     });
 };
 
+// GET /api/v1/auth/users -> list every account (admin only). The password hash
+// is select:false on the schema, so it's never returned. Newest first, so the
+// admin panel shows the most recent sign-ups at the top.
+const getAllUsers = catchAsync(async (req, res, next) => {
+    const users = await User.find().sort({ createdAt: -1 });
+
+    res.status(200).json({
+        status: "success",
+        message: "Users returned successfully!",
+        userCount: users.length,
+        data: { users }
+    });
+});
+
+// POST /api/v1/auth/users -> admin creates an account directly. Unlike signup,
+// no verification email is sent; the admin decides the role and whether the
+// account is already verified.
+const createUser = catchAsync(async (req, res, next) => {
+    const { fullname, email, phone, password, role, isVerified } = req.body;
+
+    if (!fullname || !email || !phone || !password) {
+        return next(new AppError("Please provide fullname, email, phone and password!", 400));
+    }
+
+    if (await User.findOne({ email })) {
+        return next(new AppError("An account with that email already exists.", 409));
+    }
+
+    if (await User.findOne({ phone })) {
+        return next(new AppError("An account with that phone number already exists.", 409));
+    }
+
+    // Whitelist fields explicitly — an admin may set role/isVerified, but nothing
+    // else (e.g. googleId/provider) can be injected.
+    const user = await User.create({
+        fullname,
+        email,
+        phone,
+        password,
+        role: role === "admin" ? "admin" : "user",
+        isVerified: Boolean(isVerified)
+    });
+
+    // Never leak the hash, even though it's select:false on normal queries.
+    user.password = undefined;
+
+    res.status(201).json({
+        status: "success",
+        message: "User created successfully!",
+        data: { user }
+    });
+});
+
+// PATCH /api/v1/auth/users/:id -> admin edits an account. Only the supplied
+// fields change; a blank/absent password leaves the existing one untouched.
+const updateUser = catchAsync(async (req, res, next) => {
+    const { id } = req.params;
+    const { fullname, email, phone, password, role, isVerified } = req.body;
+
+    const user = await User.findById(id);
+
+    if (!user) {
+        return next(new AppError("User not found to edit!", 404));
+    }
+
+    // Guard uniqueness only when the value actually changes, excluding this user
+    // so re-saving the same email/phone isn't flagged as a duplicate.
+    if (email && email !== user.email) {
+        if (await User.findOne({ email, _id: { $ne: id } })) {
+            return next(new AppError("An account with that email already exists.", 409));
+        }
+        user.email = email;
+    }
+
+    if (phone && phone !== user.phone) {
+        if (await User.findOne({ phone, _id: { $ne: id } })) {
+            return next(new AppError("An account with that phone number already exists.", 409));
+        }
+        user.phone = phone;
+    }
+
+    if (fullname) user.fullname = fullname;
+    if (role === "user" || role === "admin") user.role = role;
+    if (isVerified === true || isVerified === false) user.isVerified = isVerified;
+    // Only set a new password when one is provided; the pre-save hook hashes it.
+    if (password) user.password = password;
+
+    await user.save();
+
+    user.password = undefined;
+
+    res.status(200).json({
+        status: "success",
+        message: "User edited successfully!",
+        data: { user }
+    });
+});
+
+// DELETE /api/v1/auth/users/:id -> admin removes an account.
+const deleteUser = catchAsync(async (req, res, next) => {
+    const { id } = req.params;
+
+    // An admin can't delete their own account out from under themselves.
+    if (String(req.user._id) === String(id)) {
+        return next(new AppError("You can't delete your own account!", 400));
+    }
+
+    const user = await User.findByIdAndDelete(id);
+
+    if (!user) {
+        return next(new AppError("User not found to delete!", 404));
+    }
+
+    res.status(200).json({
+        status: "success",
+        message: "User deleted successfully!"
+    });
+});
+
 const googleCallback = catchAsync(async (req, res, next) => {
     setTokenCookie(req.user, res);
     res.redirect(`${process.env.CLIENT_URL}/`);
@@ -242,4 +361,4 @@ const resendVerificationEmail = catchAsync(async (req, res, next) => {
     res.status(200).json(genericResponse);
 });
 
-module.exports = { signup, signin, logout, getMe, googleCallback, verifyEmail, resendVerificationEmail };
+module.exports = { signup, signin, logout, getMe, getAllUsers, createUser, updateUser, deleteUser, googleCallback, verifyEmail, resendVerificationEmail };

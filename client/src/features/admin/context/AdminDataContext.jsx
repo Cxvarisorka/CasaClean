@@ -4,104 +4,129 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useReducer,
+  useState,
 } from "react";
-import { buildSeed, uid } from "../data/seed";
+import { RESOURCES } from "../api/adminApi";
 
 /*
  * AdminDataContext
  * ----------------
  * The single source of truth for every admin-managed collection (services,
- * cities, bookings, users, content). State lives in a reducer and is mirrored
- * to localStorage, so edits survive reloads and the panel behaves like a real
- * CRUD app without any backend wiring.
+ * cities, special requests, bookings). Everything is read from and written to
+ * the real backend (MongoDB) — there is no seed or localStorage. On mount the
+ * panel loads each collection; create/update/remove call the matching API
+ * endpoint and then patch local state from the server's response.
  *
- * The API is deliberately generic — `create/update/remove(collection, …)` —
- * so pages stay declarative and a future swap to real HTTP endpoints touches
- * only this file.
+ * The API is deliberately generic — `create/update/remove(collection, …)` — so
+ * pages stay declarative and every collection is wired the same way.
  */
-
-const STORAGE_KEY = "casaclean:admin:db";
 
 const AdminDataContext = createContext(null);
 
-// --- Persistence helpers ---------------------------------------------------
-const loadInitial = () => {
-  if (typeof window === "undefined") return buildSeed();
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      // Merge against the seed so a newly-added collection isn't missing for
-      // users who already have a persisted (older) database shape.
-      return { ...buildSeed(), ...parsed };
-    }
-  } catch {
-    /* corrupt storage — fall back to a fresh seed */
-  }
-  return buildSeed();
+const EMPTY_DB = {
+  cities: [],
+  services: [],
+  specialRequests: [],
+  bookings: [],
+  // Loaded from the admin-only GET /auth/users endpoint (read-only).
+  users: [],
 };
 
-// --- Reducer ---------------------------------------------------------------
-function reducer(state, action) {
-  switch (action.type) {
-    case "CREATE": {
-      const { collection, item } = action;
-      const record = {
-        _id: uid(),
-        createdAt: new Date().toISOString(),
-        ...item,
-      };
-      return { ...state, [collection]: [record, ...state[collection]] };
-    }
-    case "UPDATE": {
-      const { collection, id, patch } = action;
-      return {
-        ...state,
-        [collection]: state[collection].map((row) =>
-          row._id === id ? { ...row, ...patch } : row
-        ),
-      };
-    }
-    case "REMOVE": {
-      const { collection, id } = action;
-      return {
-        ...state,
-        [collection]: state[collection].filter((row) => row._id !== id),
-      };
-    }
-    case "RESET":
-      return buildSeed();
-    default:
-      return state;
-  }
-}
-
 export function AdminDataProvider({ children }) {
-  const [db, dispatch] = useReducer(reducer, undefined, loadInitial);
+  const [db, setDb] = useState(EMPTY_DB);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Persist on every change.
+  // Load every collection in parallel. `allSettled` so one failing resource
+  // (e.g. bookings, which needs the admin role) doesn't blank the whole panel.
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    const names = ["cities", "services", "specialRequests", "bookings", "users"];
+    const results = await Promise.allSettled(
+      names.map((name) => RESOURCES[name].list())
+    );
+
+    setDb((prev) => {
+      const next = { ...prev };
+      results.forEach((res, i) => {
+        if (res.status === "fulfilled") next[names[i]] = res.value;
+      });
+      return next;
+    });
+
+    const failed = results.find((r) => r.status === "rejected");
+    setError(failed ? failed.reason : null);
+    setLoading(false);
+  }, []);
+
   useEffect(() => {
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
-    } catch {
-      /* storage full/unavailable — keep in-memory state only */
-    }
-  }, [db]);
+    refresh();
+  }, [refresh]);
+
+  // Run a mutation against the backend. On failure we surface the server's
+  // message and re-sync from the source of truth, then report failure so the
+  // caller can keep an edit dialog open. Never throws (safe for fire-and-forget
+  // inline toggles).
+  const runMutation = useCallback(
+    async (fn) => {
+      try {
+        await fn();
+        return true;
+      } catch (err) {
+        // Guard against a collection that has no backend resource wired up, so a
+        // stray call surfaces a clear message instead of an opaque TypeError.
+        if (err instanceof TypeError) {
+          if (typeof window !== "undefined")
+            window.alert("This collection isn't backed by the API.");
+          return false;
+        }
+        const message =
+          err?.message || "The request failed. Please try again.";
+        if (typeof window !== "undefined") window.alert(message);
+        await refresh();
+        return false;
+      }
+    },
+    [refresh]
+  );
 
   const create = useCallback(
-    (collection, item) => dispatch({ type: "CREATE", collection, item }),
-    []
+    (collection, item) =>
+      runMutation(async () => {
+        const record = await RESOURCES[collection].create(item);
+        setDb((s) => ({
+          ...s,
+          [collection]: [record, ...s[collection]],
+        }));
+      }),
+    [runMutation]
   );
+
   const update = useCallback(
-    (collection, id, patch) => dispatch({ type: "UPDATE", collection, id, patch }),
-    []
+    (collection, id, patch) =>
+      runMutation(async () => {
+        const record = await RESOURCES[collection].update(id, patch);
+        setDb((s) => ({
+          ...s,
+          [collection]: s[collection].map((row) =>
+            row._id === id ? { ...row, ...record } : row
+          ),
+        }));
+      }),
+    [runMutation]
   );
+
   const remove = useCallback(
-    (collection, id) => dispatch({ type: "REMOVE", collection, id }),
-    []
+    (collection, id) =>
+      runMutation(async () => {
+        await RESOURCES[collection].remove(id);
+        setDb((s) => ({
+          ...s,
+          [collection]: s[collection].filter((row) => row._id !== id),
+        }));
+      }),
+    [runMutation]
   );
-  const reset = useCallback(() => dispatch({ type: "RESET" }), []);
 
   // Lightweight derived metrics for the dashboard.
   const stats = useMemo(() => {
@@ -121,14 +146,15 @@ export function AdminDataProvider({ children }) {
       activeServices: db.services.filter((s) => s.enabled).length,
       cities: db.cities.length,
       activeCities: db.cities.filter((c) => c.enabled).length,
+      specialRequests: db.specialRequests.length,
       users: db.users.length,
       byStatus,
     };
   }, [db]);
 
   const value = useMemo(
-    () => ({ ...db, stats, create, update, remove, reset }),
-    [db, stats, create, update, remove, reset]
+    () => ({ ...db, stats, loading, error, create, update, remove, refresh }),
+    [db, stats, loading, error, create, update, remove, refresh]
   );
 
   return (
@@ -150,9 +176,11 @@ export function useAdminData() {
 /** Convenience selector for a single collection + its scoped CRUD ops. */
 // eslint-disable-next-line react-refresh/only-export-components
 export function useCollection(name) {
-  const { create, update, remove, ...rest } = useAdminData();
+  const { create, update, remove, loading, refresh, ...rest } = useAdminData();
   return {
     items: rest[name] ?? [],
+    loading,
+    refresh,
     create: (item) => create(name, item),
     update: (id, patch) => update(name, id, patch),
     remove: (id) => remove(name, id),

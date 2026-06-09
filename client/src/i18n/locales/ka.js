@@ -807,6 +807,7 @@ export default {
       create: "შექმნა",
       saveChanges: "ცვლილებების შენახვა",
       noOptions: "ჯერ ვარიანტები არ არის ხელმისაწვდომი.",
+      selectOption: "აირჩიეთ ვარიანტი…",
       required: "ველი «{label}» სავალდებულოა",
       translationsFallback: "ცარიელი თარგმანები ჩაანაცვლებს ინგლისურით.",
       deleteConfirm: "წავშალოთ «{name}»? ამ მოქმედების გაუქმება შეუძლებელია.",

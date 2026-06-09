@@ -16,7 +16,7 @@ const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 let loaderPromise = null;
 
 function loadGoogleMaps() {
-  if (window.google?.maps) return Promise.resolve();
+  if (window.google?.maps?.Map) return Promise.resolve();
   if (loaderPromise) return loaderPromise;
 
   loaderPromise = new Promise((resolve, reject) => {
@@ -24,7 +24,18 @@ function loadGoogleMaps() {
     script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&v=weekly&loading=async`;
     script.async = true;
     script.defer = true;
-    script.onload = () => resolve();
+    // With `loading=async`, `onload` only means the bootstrap loader is ready —
+    // the Map/Marker/etc. classes aren't on `google.maps` until we import the
+    // library. Await it here so callers can safely use `new google.maps.Map(...)`.
+    script.onload = () => {
+      window.google.maps
+        .importLibrary("maps")
+        .then(() => resolve())
+        .catch((err) => {
+          loaderPromise = null;
+          reject(err);
+        });
+    };
     script.onerror = () => {
       loaderPromise = null; // allow a retry on next mount
       reject(new Error("Failed to load Google Maps"));
@@ -38,7 +49,7 @@ function loadGoogleMaps() {
 /** @returns {"no-key"|"loading"|"ready"|"error"} */
 export function useGoogleMaps() {
   const [status, setStatus] = useState(() =>
-    API_KEY ? (window.google?.maps ? "ready" : "loading") : "no-key"
+    API_KEY ? (window.google?.maps?.Map ? "ready" : "loading") : "no-key"
   );
 
   useEffect(() => {

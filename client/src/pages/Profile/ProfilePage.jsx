@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   User,
@@ -25,6 +25,8 @@ import { useAuth } from "@/features/admin/context";
 import { BOOKING_STATUS_META } from "@/features/admin/constants";
 import { updateProfile } from "@/features/auth/api/authApi";
 import { getMyBookings } from "@/features/booking";
+import { useCities } from "@/features/booking/hooks/useCities";
+import { useServices } from "@/features/services";
 import { Seo } from "@/seo";
 import { useTranslation } from "@/i18n";
 import { ROUTES } from "@/constants/routes";
@@ -71,13 +73,34 @@ const ProfilePage = () => {
   const [status, setStatus] = useState("idle"); // idle | saving | saved | error
   const [errorMsg, setErrorMsg] = useState("");
 
-  // Booking history for the signed-in user. Degrades to demo data when the
-  // list endpoint isn't reachable, so the section is always demonstrable.
+  // Booking history for the signed-in user — straight from the database.
   const { data: bookings = [], isLoading: bookingsLoading } = useQuery({
     queryKey: ["my-bookings", user?.email],
     queryFn: getMyBookings,
     enabled: Boolean(user),
   });
+
+  // Bookings store the service/city id only, so resolve display names from the
+  // live catalogues (same source the booking wizard offers).
+  const { services } = useServices();
+  const { data: cities = [] } = useCities();
+  const serviceNameById = useMemo(
+    () => Object.fromEntries(services.map((s) => [String(s.id), s.name])),
+    [services]
+  );
+  const cityNameById = useMemo(
+    () => Object.fromEntries(cities.map((c) => [String(c.id), c.name])),
+    [cities]
+  );
+  const history = useMemo(
+    () =>
+      bookings.map((b) => ({
+        ...b,
+        service_name: serviceNameById[String(b.service_id)] || "Service",
+        city_name: cityNameById[String(b.city_id)] || "",
+      })),
+    [bookings, serviceNameById, cityNameById]
+  );
 
   if (!user) return null;
 
@@ -283,7 +306,7 @@ const ProfilePage = () => {
                 <div className="flex items-center justify-center py-10">
                   <Spinner size="lg" />
                 </div>
-              ) : bookings.length === 0 ? (
+              ) : history.length === 0 ? (
                 <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-ink-200 py-12 text-center">
                   <span className="grid size-12 place-items-center rounded-2xl bg-ink-50 text-ink-400">
                     <Sparkles className="size-6" />
@@ -302,7 +325,7 @@ const ProfilePage = () => {
                 </div>
               ) : (
                 <ul className="divide-y divide-ink-100">
-                  {bookings.map((b) => {
+                  {history.map((b) => {
                     const meta = BOOKING_STATUS_META[b.status];
                     return (
                       <li

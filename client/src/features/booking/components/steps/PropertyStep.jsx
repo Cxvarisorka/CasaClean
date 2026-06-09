@@ -1,14 +1,15 @@
 import { useFormContext } from "react-hook-form";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { ENABLED_CITIES } from "@/data/cities";
+import { useCities } from "../../hooks/useCities";
 
 /*
  * PropertyStep
  * ------------
  * Step 1 — where the turnover happens. Fields map directly to the backend
  * booking model (city_id, street_name, house_number, property_size,
- * doorbell_name). Reads/writes the shared RHF form via context.
+ * doorbell_name). Reads/writes the shared RHF form via context. The city list
+ * is loaded live from the database (enabled cities only).
  */
 
 export function PropertyStep() {
@@ -16,14 +17,15 @@ export function PropertyStep() {
     register,
     formState: { errors },
   } = useFormContext();
+  const { data: cities = [], isLoading } = useCities();
 
   return (
     <div className="space-y-5">
       <Select
         label="City"
-        placeholder="Select your city"
+        placeholder={isLoading ? "Loading cities…" : "Select your city"}
         required
-        options={ENABLED_CITIES.map((c) => ({ value: String(c.id), label: c.name }))}
+        options={cities.map((c) => ({ value: String(c.id), label: c.name }))}
         error={errors.cityId?.message}
         {...register("cityId")}
       />

@@ -2,10 +2,12 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { AlertCircle } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { formatDate } from "@/utils/formatDate";
-import { CITIES } from "@/data/cities";
+import { useServices } from "@/features/services";
 import { useBookingNav } from "../../store/BookingContext";
+import { useCities } from "../../hooks/useCities";
+import { useSpecialRequests } from "../../hooks/useSpecialRequests";
 import { computeQuote } from "../../utils/pricing";
-import { ADDITIONAL_SERVICES, SUPPLY_OPTIONS } from "../../constants";
+import { SUPPLY_OPTIONS } from "../../constants";
 
 /*
  * ReviewStep
@@ -47,11 +49,14 @@ function Group({ title, stepIndex, children }) {
 export function ReviewStep({ submitError }) {
   const { control } = useFormContext();
   const v = useWatch({ control });
-  const quote = computeQuote(v);
+  const { data: cities = [] } = useCities();
+  const { data: addons = [] } = useSpecialRequests();
+  const { services } = useServices();
+  const quote = computeQuote(v, { addons, services });
 
-  const city = CITIES.find((c) => String(c.id) === String(v.cityId))?.name;
+  const city = cities.find((c) => String(c.id) === String(v.cityId))?.name;
   const addonLabels = (v.additionalServices || [])
-    .map((id) => ADDITIONAL_SERVICES.find((a) => a.value === id)?.label)
+    .map((id) => addons.find((a) => a.value === id)?.label)
     .filter(Boolean)
     .join(", ");
   const supplyLabels = (v.supplies || [])
