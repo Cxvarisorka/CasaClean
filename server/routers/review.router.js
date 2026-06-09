@@ -1,5 +1,10 @@
 const express = require('express');
-const { createReview, getServiceReviews } = require('../controllers/review.controller');
+const {  createReview,
+  getServiceReviews,
+  editReview,
+  deleteReview
+ } = require('../controllers/review.controller');
+
 const { protect } = require('../middlewares/protect.middleware');
 
 const reviewRouter = express.Router();
@@ -7,7 +12,8 @@ const reviewRouter = express.Router();
 
 reviewRouter.get('/:serviceId', getServiceReviews);
 
-
 reviewRouter.post('/', protect, createReview);
+reviewRouter.patch('/:id', protect, editReview);
+reviewRouter.delete('/:id', protect, deleteReview);
 
 module.exports = reviewRouter
