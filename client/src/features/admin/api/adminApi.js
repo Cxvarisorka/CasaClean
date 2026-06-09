@@ -79,7 +79,10 @@ export const cityApi = {
 const serviceFromApi = (s) => ({
   _id: s._id,
   name: s.name,
+  subtitle: s.subtitle ?? "",
   description: s.description,
+  image: s.image ?? "",
+  includes: Array.isArray(s.includes) ? s.includes : [],
   price_per_hour: s.pricePerHour,
   all_cities: Boolean(s.allCities),
   // `cities` may arrive populated (objects) or as raw ids depending on the
@@ -109,7 +112,10 @@ export const serviceApi = {
       url: "/service",
       data: {
         name: v.name,
+        subtitle: v.subtitle || "",
         description: v.description,
+        image: v.image || "",
+        includes: Array.isArray(v.includes) ? v.includes.filter(Boolean) : [],
         pricePerHour: Number(v.price_per_hour),
         allCities,
         cities: allCities ? [] : (v.cities ?? []),
@@ -124,7 +130,12 @@ export const serviceApi = {
     // allCities / cities / allSpecialRequests / specialRequests (no `enabled`).
     const body = definedOnly({
       name: patch.name,
+      subtitle: patch.subtitle,
       description: patch.description,
+      image: patch.image,
+      includes: Array.isArray(patch.includes)
+        ? patch.includes.filter(Boolean)
+        : undefined,
       pricePerHour:
         patch.price_per_hour !== undefined
           ? Number(patch.price_per_hour)

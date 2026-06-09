@@ -50,9 +50,32 @@ export default function ServicesPage() {
 
   const fields = useMemo(
     () => [
+      {
+        name: "image",
+        label: t("admin.services.field.image"),
+        type: "image",
+        hint: t("admin.services.field.imageHint"),
+        full: true,
+      },
       { name: "name", label: t("admin.services.field.name"), required: true },
       { name: "price_per_hour", label: t("admin.services.field.pricePerHour"), type: "number", required: true },
+      {
+        name: "subtitle",
+        label: t("admin.services.field.subtitle"),
+        hint: t("admin.services.field.subtitleHint"),
+        placeholder: t("admin.services.field.subtitlePlaceholder"),
+        full: true,
+      },
       { name: "description", label: t("admin.services.field.description"), type: "textarea", required: true, full: true },
+      {
+        name: "includes",
+        label: t("admin.services.field.includes"),
+        type: "list",
+        hint: t("admin.services.field.includesHint"),
+        placeholder: t("admin.services.field.includesPlaceholder"),
+        addLabel: t("admin.services.field.includesAdd"),
+        full: true,
+      },
       {
         name: "all_cities",
         label: t("admin.services.field.allCities"),
@@ -102,7 +125,27 @@ export default function ServicesPage() {
     {
       key: "name",
       header: t("admin.services.col.service"),
-      render: (s) => <p className="font-semibold text-ink-900">{s.name}</p>,
+      render: (s) => (
+        <div className="flex items-center gap-3">
+          {s.image ? (
+            <img
+              src={s.image}
+              alt=""
+              className="size-11 shrink-0 rounded-lg object-cover"
+            />
+          ) : (
+            <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-ink-100 text-ink-300">
+              <Sparkles className="size-5" />
+            </span>
+          )}
+          <div className="min-w-0">
+            <p className="font-semibold text-ink-900">{s.name}</p>
+            {s.subtitle && (
+              <p className="truncate text-body-sm text-ink-500">{s.subtitle}</p>
+            )}
+          </div>
+        </div>
+      ),
     },
     {
       key: "price_per_hour",
@@ -181,6 +224,9 @@ export default function ServicesPage() {
         fields={fields}
         initialValues={
           editing || {
+            image: "",
+            subtitle: "",
+            includes: [],
             all_cities: true,
             cities: [],
             all_special_requests: false,
