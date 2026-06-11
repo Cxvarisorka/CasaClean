@@ -10,10 +10,10 @@ const { protect } = require('../middlewares/protect.middleware');
 const reviewRouter = express.Router();
 
 
-reviewRouter.get('/:serviceId', getServiceReviews);
-reviewRouter.post('/:serviceId', protect, createReview);
+reviewRouter.get('/service/:serviceId', getServiceReviews);
+reviewRouter.post('/service/:serviceId', protect, createReview);
 
 reviewRouter.patch('/:id', protect, editReview);
 reviewRouter.delete('/:id', protect, deleteReview);
 
-module.exports = reviewRouter
+module.exports = reviewRouter;

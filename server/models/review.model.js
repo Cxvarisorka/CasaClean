@@ -12,14 +12,19 @@ const reviewSchema = new mongoose.Schema({
   },
   rating: {
     type: Number,
-    min: 1,
-    max: 5,
-    required: [true, 'Please provide a rating between 1 and 5']
+    required: [true, 'Please provide a rating between 1 and 5'],
+    min: [1, 'Rating must be at least 1'],
+    max: [5, 'Rating must be at most 5'],
+    validate: {
+      validator: Number.isInteger,
+      message: 'Rating must be a whole number!'
+    }
   },
   review_text: {
     type: String,
     required: [true, 'Review text cannot be empty'],
-    trim: true
+    trim: true,
+    maxlength: [500, 'Review text cannot exceed 500 characters']
   }
 }, { 
   timestamps: true,
@@ -27,6 +32,7 @@ const reviewSchema = new mongoose.Schema({
 });
 
 reviewSchema.index({ service_id: 1, user: 1 }, { unique: true });
+
 
 const Review = mongoose.model('Review', reviewSchema);
 module.exports = Review;

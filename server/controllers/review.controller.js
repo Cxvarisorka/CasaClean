@@ -2,71 +2,114 @@ const Review = require('../models/review.model');
 const Booking = require('../models/booking.model');
 const catchAsync = require('../utils/catchAsync.util');
 const AppError = require('../utils/appError.util');
+const mongoose = require("mongoose"); 
 
 
-// POST /api/v1/review/:id
+// POST /api/v1/review/service/:serviceId
 const createReview = catchAsync(async (req, res, next) => {
   const { serviceId } = req.params;
   const { rating, review_text } = req.body; 
   const userId = req.user._id;
 
-  const userEmail = req.user.email; 
+  const parsedServiceId = Number(serviceId);
+  if (isNaN(parsedServiceId)) {
+    return next(new AppError("Invalid service ID provided in URL!", 400));
+  }
+
+  if (!rating || rating < 1 || rating > 5 || !Number.isInteger(rating)) {
+    return next(new AppError("Please provide a valid integer rating between 1 and 5!", 400));
+  }
+  if (!review_text || !review_text.trim()) {
+    return next(new AppError("Review text cannot be empty!", 400));
+  }
   const hasBooked = await Booking.findOne({
-    customerEmail: userEmail,
-    serviceId: Number(serviceId)
+    user: userId,
+    serviceId: parsedServiceId
   });
 
   if (!hasBooked) {
     return next(new AppError("You can only review services you have actually booked before!", 403));
   }
-
   const review = await Review.create({
-    service_id: Number(serviceId),
+    service_id: parsedServiceId,
     user: userId,
     rating,
-    review_text
+    review_text: review_text.trim(),
   });
 
   res.status(201).json({
-    status: 'success',
-    message: 'Review added successfully!',
-    data: { review }
+    status: "success",
+    message: "Review added successfully!",
+    data: { review },
   });
 });
-
 // GET /api/v1/review/:id
 const getServiceReviews = catchAsync(async (req, res, next) => {
   const { serviceId } = req.params;
+  const parsedServiceId = Number(serviceId);
 
-  const reviews = await Review.find({ service_id: serviceId })
-    .populate({
-      path: 'user',
-      select: 'fullname'
-    });
+  if (isNaN(parsedServiceId)) {
+    return next(new AppError("Invalid service ID!", 400));
+  }
+const page = Number(req.query.page) || 1;
+const limit = Number(req.query.limit) || 10;
+
+const skip = (page - 1) * limit;
+
+const reviews = await Review.find({
+  service_id: parsedServiceId
+})
+  .populate({
+    path: "user",
+    select: "fullname",
+  })
+  .sort({ createdAt: -1 })
+  .skip(skip)
+  .limit(limit)
+  .lean();
 
   res.status(200).json({
-    status: 'success',
-    results: reviews.length,
-    data: { reviews }
-  });
+  status: "success",
+  page,
+  limit,
+  results: reviews.length,
+  data: { reviews },
 });
-
+});
 // PATCH /api/v1/review/:id
 const editReview = catchAsync(async (req, res, next) => {
   const { id } = req.params;
   const { rating, review_text } = req.body;
   const userId = req.user._id;
 
+  if (rating !== undefined && (rating < 1 || rating > 5 || !Number.isInteger(rating))) {
+    return next(new AppError("Rating must be an integer between 1 and 5!", 400));
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+  return next(new AppError("Invalid review ID!", 400));
+}
+
   const review = await Review.findById(id);
 
   if (!review) {
     return next(new AppError("Review not found!", 404));
   }
+
   if (review.user.toString() !== userId.toString()) {
     return next(new AppError("You can only edit your own reviews!", 403));
   }
-  if (rating) review.rating = rating;
-  if (review_text) review.review_text = review_text;
+
+  if (rating !== undefined) {
+  review.rating = Number(rating);
+}
+  if (review_text !== undefined) {
+  if (!review_text.trim()) {
+    return next(new AppError("Review text cannot be empty!", 400));
+  }
+
+  review.review_text = review_text.trim();
+}
 
   await review.save();
 
@@ -76,19 +119,22 @@ const editReview = catchAsync(async (req, res, next) => {
     data: { review }
   });
 });
-
 // DELETE /api/v1/review/:id
 const deleteReview = catchAsync(async (req, res, next) => {
   const { id } = req.params;
   const userId = req.user._id;
-  const userRole = req.user.role;
+  
+  const userRole = req.user.role || 'user'; 
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+  return next(new AppError("Invalid review ID!", 400));
+}
 
   const review = await Review.findById(id);
 
   if (!review) {
     return next(new AppError("Review not found!", 404));
   }
-
   if (review.user.toString() !== userId.toString() && userRole !== 'admin') {
     return next(new AppError("You do not have permission to delete this review!", 403));
   }
@@ -107,3 +153,5 @@ module.exports = {
   editReview,
   deleteReview
 };
+
+
