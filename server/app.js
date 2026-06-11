@@ -25,6 +25,7 @@ const cityRouter = require('./routers/city.router');
 const serviceRouter = require('./routers/service.router');
 const bookingRouter = require('./routers/booking.router');
 const specialRequestRouter = require('./routers/specialRequest.router');
+const reviewRouter = require('./routers/review.router');
 
 // Express app init
 const app = express();
@@ -52,6 +53,7 @@ app.use('/api/v1/city', cityRouter);
 app.use('/api/v1/service', serviceRouter);
 app.use('/api/v1/booking', bookingRouter)
 app.use('/api/v1/special-request', specialRequestRouter);
+app.use('/api/v1/review', reviewRouter);
 
 // 404 — any unmatched route falls through to here.
 // Express 5 changed the wildcard syntax; use a named splat ("/*splat").
