@@ -11,27 +11,29 @@ const createReview = catchAsync(async (req, res, next) => {
   const { rating, review_text } = req.body; 
   const userId = req.user._id;
 
-  const parsedServiceId = Number(serviceId);
-  if (isNaN(parsedServiceId)) {
+  // Services are ObjectIds (see service.model.js / booking.model.js), so the
+  // id must be validated as one — comparing as Number could never match a
+  // real booking, which silently broke the "must have booked" gate below.
+  if (!mongoose.Types.ObjectId.isValid(serviceId)) {
     return next(new AppError("Invalid service ID provided in URL!", 400));
   }
 
   if (!rating || rating < 1 || rating > 5 || !Number.isInteger(rating)) {
     return next(new AppError("Please provide a valid integer rating between 1 and 5!", 400));
   }
-  if (!review_text || !review_text.trim()) {
+  if (!review_text || typeof review_text !== "string" || !review_text.trim()) {
     return next(new AppError("Review text cannot be empty!", 400));
   }
   const hasBooked = await Booking.findOne({
     user: userId,
-    serviceId: parsedServiceId
+    serviceId
   });
 
   if (!hasBooked) {
     return next(new AppError("You can only review services you have actually booked before!", 403));
   }
   const review = await Review.create({
-    service_id: parsedServiceId,
+    service_id: serviceId,
     user: userId,
     rating,
     review_text: review_text.trim(),
@@ -46,18 +48,19 @@ const createReview = catchAsync(async (req, res, next) => {
 // GET /api/v1/review/:id
 const getServiceReviews = catchAsync(async (req, res, next) => {
   const { serviceId } = req.params;
-  const parsedServiceId = Number(serviceId);
 
-  if (isNaN(parsedServiceId)) {
+  if (!mongoose.Types.ObjectId.isValid(serviceId)) {
     return next(new AppError("Invalid service ID!", 400));
   }
-const page = Number(req.query.page) || 1;
-const limit = Number(req.query.limit) || 10;
+// Clamp pagination so crafted query strings can't request huge pages or
+// negative skips.
+const page = Math.max(Number(req.query.page) || 1, 1);
+const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 50);
 
 const skip = (page - 1) * limit;
 
 const reviews = await Review.find({
-  service_id: parsedServiceId
+  service_id: serviceId
 })
   .populate({
     path: "user",
@@ -104,7 +107,7 @@ const editReview = catchAsync(async (req, res, next) => {
   review.rating = Number(rating);
 }
   if (review_text !== undefined) {
-  if (!review_text.trim()) {
+  if (typeof review_text !== "string" || !review_text.trim()) {
     return next(new AppError("Review text cannot be empty!", 400));
   }
 

@@ -1,8 +1,12 @@
 const mongoose = require('mongoose');
 
 const reviewSchema = new mongoose.Schema({
+  // ObjectId ref, consistent with Booking.serviceId / Service._id. (Was a
+  // Number, which could never match real ObjectIds — that broke the
+  // "must have booked the service" check in createReview.)
   service_id: {
-    type: Number, 
+    type: mongoose.Schema.ObjectId,
+    ref: 'Service',
     required: [true, 'Review must belong to a service.']
   },
   user: {
