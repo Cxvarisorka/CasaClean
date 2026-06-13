@@ -184,7 +184,7 @@ const createService = catchAsync(async (req, res, next) => {
 // PATCH /api/v1/service/:id -> partial update (admin only)
 const editService = catchAsync(async (req, res, next) => {
     const { id } = req.params;
-    const { name, description, pricePerHour, enabled, allCities, cities, allSpecialRequests, specialRequests } = req.body;
+    const { name, subtitle, description, image, includes, pricePerHour, enabled, allCities, cities, allSpecialRequests, specialRequests } = req.body;
 
     const service = await Service.findById(id);
 
