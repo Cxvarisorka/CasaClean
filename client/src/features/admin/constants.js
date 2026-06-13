@@ -24,7 +24,7 @@ export const ADMIN_NAV = [
   { to: ROUTES.admin.services, label: "Services", labelKey: "admin.nav.services", icon: Sparkles },
   { to: ROUTES.admin.specialRequests, label: "Special requests", labelKey: "admin.nav.specialRequests", icon: ListPlus },
   { to: ROUTES.admin.cities, label: "Cities", labelKey: "admin.nav.cities", icon: MapPin },
-  { to: ROUTES.admin.coverage, label: "Coverage map", labelKey: "admin.nav.coverage", icon: Map },
+  { to: ROUTES.admin.coverage, label: "Bookings map", labelKey: "admin.nav.coverage", icon: Map },
   { to: ROUTES.admin.users, label: "Users", labelKey: "admin.nav.users", icon: Users },
 ];
 
@@ -37,4 +37,14 @@ export const BOOKING_STATUS_META = {
   confirmed: { label: "Confirmed", labelKey: "admin.status.confirmed", variant: "brand" },
   completed: { label: "Completed", labelKey: "admin.status.completed", variant: "success" },
   cancelled: { label: "Cancelled", labelKey: "admin.status.cancelled", variant: "outline" },
+};
+
+// Map-marker / legend colour per booking status (bookings map). Lives here (not
+// in the map component) so non-component modules can import it without tripping
+// react-refresh's only-export-components rule.
+export const STATUS_COLORS = {
+  pending: "#e8a33d",
+  confirmed: "#1dae9f",
+  completed: "#16a34a",
+  cancelled: "#9aa3b8",
 };
