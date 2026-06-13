@@ -1,4 +1,5 @@
 const AppError = require("../utils/appError.util");
+const { isProduction } = require("../utils/env.util");
 
 // --- Error transformers: turn 3rd-party/DB errors into operational AppErrors ---
 
@@ -58,7 +59,10 @@ const globalErrorHandler = (err, req, res, next) => {
     err.statusCode = err.statusCode || 500;
     err.status = err.status || "error";
 
-    if (process.env.NODE_ENV === "dev") {
+    // Fail-secure: stacks/error internals are only sent when the environment
+    // is EXPLICITLY a development one (see utils/env.util.js). Any unknown
+    // NODE_ENV value gets the safe production behaviour.
+    if (!isProduction) {
         return sendErrorDev(err, res);
     }
 

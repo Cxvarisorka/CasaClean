@@ -17,16 +17,25 @@ passport.use(
         async (accessToken, refreshToken, profile, done) => {
             try {
                 const photo = profile.photos?.[0]?.value;
+                const email = profile.emails?.[0]?.value;
 
                 let user = await User.findOne({ googleId: profile.id });
 
                 if (!user) {
-                    user = await User.findOne({ email: profile.emails[0].value });
+                    // Only link/create by email when Google has actually
+                    // verified that address. Otherwise an attacker could
+                    // register an unverified Google account with a victim's
+                    // email and take over their local account here.
+                    if (!email || profile._json?.email_verified !== true) {
+                        return done(null, false, { message: "Google account email is not verified." });
+                    }
+
+                    user = await User.findOne({ email });
 
                     if (!user) {
                         user = await User.create({
                             googleId: profile.id,
-                            email: profile.emails[0].value,
+                            email,
                             fullname: profile.displayName,
                             avatar: photo,
                             provider: "google",

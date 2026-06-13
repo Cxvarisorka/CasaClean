@@ -17,7 +17,13 @@ export const apiClient = attachInterceptors(
     baseURL,
     timeout: 15000,
     withCredentials: true, // send the http-only auth cookie set by the API
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      // CSRF defense: the API rejects state-changing requests without this
+      // header. Cross-site forms can't set custom headers, so its presence
+      // proves the request came from our own code (paired with strict CORS).
+      "X-Requested-With": "XMLHttpRequest",
+    },
   })
 );
 

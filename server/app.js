@@ -1,10 +1,16 @@
 // Third party modules
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const dotenv = require('dotenv');
 
 // Env config (load before anything reads process.env)
 dotenv.config();
+
+// Fail fast on missing/weak configuration (JWT secret, CLIENT_URL, …) BEFORE
+// any middleware is wired up — a misconfigured server must not accept traffic.
+const { isProduction, assertEnv } = require('./utils/env.util');
+assertEnv();
 
 const cookieParser = require('cookie-parser');
 const passport = require("passport");
@@ -17,6 +23,9 @@ require("./config/sentry.config");
 
 // Custom middlewares
 const globalErrorHandler = require('./controllers/error.controller');
+const csrfGuard = require('./middlewares/csrf.middleware');
+const sanitizeMongo = require('./middlewares/sanitize.middleware');
+const { globalLimiter } = require('./middlewares/rateLimit.middleware');
 const AppError = require('./utils/appError.util');
 
 // Routers
@@ -30,13 +39,43 @@ const reviewRouter = require('./routers/review.router');
 // Express app init
 const app = express();
 
+// Production deployments sit behind a reverse proxy (Render/Heroku/nginx).
+// Trusting the first hop makes req.ip the real client address, so rate
+// limiting keys on the actual user instead of lumping everyone together
+// under the proxy's IP. (1 hop, not `true` — trusting every hop would let
+// clients spoof X-Forwarded-For to dodge the limiter.)
+if (isProduction) {
+    app.set('trust proxy', 1);
+}
+
 // --- Global middlewares ---
 
-// CORS — credentials:true is required so the browser sends/stores the auth cookie.
+// Security headers (X-Content-Type-Options, frameguard, HSTS in prod, …).
+app.use(helmet({
+    // HSTS only makes sense over HTTPS; enabling it on plain-HTTP localhost
+    // would poison the browser's HTTPS-only cache for the dev domain.
+    strictTransportSecurity: isProduction
+}));
+
+// CORS — credentials:true is required so the browser sends/stores the auth
+// cookie. The origin is an explicit allow-list (assertEnv guarantees
+// CLIENT_URL is set, so this can never silently become reflect-any-origin);
+// unknown origins get no CORS headers and their preflights fail.
+const allowedOrigins = [process.env.CLIENT_URL];
 app.use(cors({
-    origin: process.env.CLIENT_URL,
+    origin: (origin, callback) => {
+        // Allow non-browser/same-origin requests (no Origin header) and
+        // exactly the configured client.
+        if (!origin || allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        callback(new AppError("Not allowed by CORS", 403));
+    },
     credentials: true
 }));
+
+// Global rate limit — per-route stricter limits live on the auth router.
+app.use(globalLimiter);
 
 app.use(passport.initialize());
 
@@ -46,6 +85,14 @@ app.use(passport.initialize());
 // editing a service; everything else the API receives is compact JSON.
 app.use(express.json({ limit: '4mb' }));
 app.use(cookieParser()); // populates req.cookies (used by protect middleware)
+
+// CSRF: state-changing requests must carry the custom X-Requested-With header
+// (cross-site forms can't set it; cross-origin scripts are blocked by CORS).
+app.use(csrfGuard);
+
+// Strip Mongo operator keys ($/.) from body & params (defense in depth on top
+// of the per-route Zod validation).
+app.use(sanitizeMongo);
 
 // --- Routers ---
 app.use('/api/v1/auth', authRouter);

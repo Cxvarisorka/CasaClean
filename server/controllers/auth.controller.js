@@ -1,12 +1,19 @@
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
 
 const User = require("../models/user.model");
 const { VERIFICATION_TOKEN_TTL_HOURS } = require("../models/user.model");
+const { isProduction } = require("../utils/env.util");
 const AppError = require("../utils/appError.util");
 const catchAsync = require("../utils/catchAsync.util");
 const sendEmail = require("../utils/email.util");
 const { verificationEmail } = require("../utils/emailTemplates.util");
+
+// Cost-12 hash of a random value, computed once at boot. signin compares
+// against it when the email doesn't exist so both branches do the same bcrypt
+// work (anti user-enumeration via timing). Never matches a real password.
+const DUMMY_PASSWORD_HASH = bcrypt.hashSync(crypto.randomBytes(32).toString("hex"), 12);
 
 /**
  * Issue a fresh verification token for a user, persist it and email the link.
@@ -44,10 +51,12 @@ const sendVerificationEmail = async (user) => {
 
 /**
  * Signs a JWT for a given user.
- * Only non-sensitive, stable claims go into the payload (id + role).
+ * Only the user id goes into the payload. Deliberately NO role claim: the
+ * protect middleware re-loads the user and authorizes on the DB role, so a
+ * role in the token would only be a stale value waiting to be misused.
  */
 const signToken = (user) => {
-    return jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
+    return jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
         expiresIn: process.env.JWT_EXPIRES_IN
     });
 };
@@ -64,19 +73,21 @@ const signToken = (user) => {
 const setTokenCookie = (user, res, remember = true) => {
     const token = signToken(user);
 
-    const isProd = process.env.NODE_ENV === "prod";
-
     res.cookie("lt", token, {
         // Persistent cookie only when "Remember me" is checked; otherwise a
         // session cookie (no maxAge) that's cleared when the browser closes.
         ...(remember
             ? { maxAge: process.env.COOKIE_EXPIRES * 24 * 60 * 60 * 1000 }
             : {}),
-        // Cross-site cookies must be SameSite=None AND Secure, so we only
-        // relax to "None" in prod where HTTPS (secure) is guaranteed.
-        sameSite: isProd ? "None" : "Lax",
+        // isProduction is fail-secure (anything not explicitly a dev env is
+        // treated as production — see utils/env.util.js). Cross-site cookies
+        // must be SameSite=None AND Secure; SameSite=None alone would disable
+        // the browser's CSRF protection, which is why every state-changing
+        // request additionally requires the X-Requested-With header
+        // (middlewares/csrf.middleware.js).
+        sameSite: isProduction ? "None" : "Lax",
         httpOnly: true,        // not readable from JS -> mitigates XSS token theft
-        secure: isProd         // only sent over HTTPS in production
+        secure: isProduction   // only sent over HTTPS in production
     });
 };
 
@@ -140,9 +151,21 @@ const signin = catchAsync(async (req, res, next) => {
     // password is select:false on the schema, so opt back in for comparison.
     const user = await User.findOne({ email }).select("+password");
 
+    // Constant-work comparison: ALWAYS run one bcrypt compare, even when the
+    // email doesn't exist (against a dummy hash). Short-circuiting would make
+    // "unknown email" measurably faster than "wrong password", letting an
+    // attacker enumerate registered emails via response timing. (Google
+    // accounts have no local password and take the dummy branch too.)
+    let passwordMatches = false;
+    if (user && user.password) {
+        passwordMatches = await user.comparePassword(password);
+    } else {
+        await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
+    }
+
     // Use one generic message for both branches so we don't reveal whether
     // an email exists (prevents user enumeration).
-    if (!user || !(await user.comparePassword(password))) {
+    if (!user || !passwordMatches) {
         return next(new AppError("Credentials are incorrect!", 401));
     }
 
@@ -162,8 +185,8 @@ const logout = (req, res) => {
     res.cookie("lt", "", {
         maxAge: 0,
         httpOnly: true,
-        sameSite: process.env.NODE_ENV === "prod" ? "None" : "Lax",
-        secure: process.env.NODE_ENV === "prod"
+        sameSite: isProduction ? "None" : "Lax",
+        secure: isProduction
     });
 
     res.status(200).json({
