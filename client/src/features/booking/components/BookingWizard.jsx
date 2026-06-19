@@ -67,8 +67,13 @@ function WizardBody({ onConfirmed }) {
 
   const handleFinalSubmit = handleSubmit(async (values) => {
     const quote = computeQuote(values, { addons, services });
-    const payload = toBookingPayload(values, quote);
-    const booking = await mutateAsync(payload);
+    const payload = toBookingPayload(values);
+    // name/total are passed for display only (offline confirmation); the live
+    // server derives the name from the account and computes the total itself.
+    const booking = await mutateAsync({
+      payload,
+      display: { customerName: values.name, totalAmount: quote.total },
+    });
     onConfirmed(booking);
   });
 

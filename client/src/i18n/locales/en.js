@@ -58,6 +58,12 @@ export default {
     noBookings: "No bookings yet",
     noBookingsHint: "When you book a cleaning, it will show up here.",
     bookNow: "Book a cleaning",
+    cancelBooking: "Cancel",
+    cancelTitle: "Cancel this booking?",
+    cancelBody: "This will cancel your {service} cleaning on {date}. This can't be undone.",
+    cancelConfirm: "Yes, cancel booking",
+    keepBooking: "Keep booking",
+    cancelError: "We couldn't cancel this booking. Please try again.",
   },
 
   nav: {
@@ -883,6 +889,7 @@ export default {
       emptyTitle: "No bookings",
       emptyDescription: "Bookings from the site will appear here.",
       allStatuses: "All statuses",
+      noAccount: "— No linked account —",
       addTitle: "Add booking",
       editTitle: "Edit booking",
       deleteTitle: "Delete booking",
@@ -907,6 +914,7 @@ export default {
         notes: "Notes",
       },
       field: {
+        linkAccount: "Link to account (optional)",
         customerName: "Customer name",
         email: "Email",
         phone: "Phone",

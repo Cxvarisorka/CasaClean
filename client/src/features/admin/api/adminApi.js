@@ -200,6 +200,12 @@ export const specialRequestApi = {
 
 /* ---------------------------------------------------------------- Bookings */
 
+// serviceId/cityId arrive either as a raw id string OR as a populated
+// `{ _id, name }` object (the booking read endpoints populate them). Normalise
+// to a plain id string + an optional name so the page can resolve/display both.
+const refId = (v) => (v && typeof v === "object" ? v._id : v);
+const refName = (v) => (v && typeof v === "object" ? v.name : null);
+
 const bookingFromApi = (b) => ({
   _id: b._id,
   // Short human-readable reference derived from the id (bookings have no
@@ -208,13 +214,14 @@ const bookingFromApi = (b) => ({
   customer_name: b.customerName,
   customer_email: b.customerEmail,
   customer_phone: b.customerPhone,
-  // Raw service/city references stored on the booking (string ids — a real
-  // City/Service _id, or a legacy numeric catalogue id). The page resolves these
-  // to names from the loaded catalogues, falling back to the id form below.
-  service_id: b.serviceId,
-  city_id: b.cityId,
-  service_name: b.serviceId != null ? `Service #${b.serviceId}` : "—",
-  city_name: b.cityId != null ? `City #${b.cityId}` : "—",
+  // The page resolves names from the loaded catalogues by id; the populated name
+  // (when present) is the fallback, then the id form.
+  service_id: refId(b.serviceId),
+  city_id: refId(b.cityId),
+  service_name:
+    refName(b.serviceId) || (b.serviceId != null ? `Service #${refId(b.serviceId)}` : "—"),
+  city_name:
+    refName(b.cityId) || (b.cityId != null ? `City #${refId(b.cityId)}` : "—"),
   street_name: b.streetName,
   house_number: b.houseNumber,
   property_size: b.propertySize,
@@ -237,19 +244,22 @@ export const bookingApi = {
     return (data.bookings ?? []).map(bookingFromApi);
   },
   async create(v) {
-    // Admin-entered booking. The backend reads these exact camelCase keys and
-    // attributes the booking to the customer details supplied here (falling back
-    // to the operator's account only when omitted). serviceId/cityId are stored
-    // as STRINGS server-side (booking.model.js) and may be a real Service/City
-    // ObjectId or a legacy numeric catalogue id — so we pass them through as
-    // trimmed strings. Coercing to Number would turn an ObjectId into NaN.
+    // Admin-entered booking, on a customer's behalf. The admin may either link a
+    // registered account (userId) and/or type the contact details directly; the
+    // server fills any omitted contact field from the linked account. serviceId/
+    // cityId must be real, enabled Service/City ObjectIds (server-validated).
+    // totalAmount is NOT sent — the server computes it from the service price,
+    // hours and add-ons.
     const data = await request({
       method: "POST",
       url: "/booking",
-      data: {
-        customerName: v.customer_name,
-        customerEmail: v.customer_email,
-        customerPhone: v.customer_phone,
+      data: definedOnly({
+        // Empty string from the optional account picker → omit so the strict
+        // schema doesn't reject it (objectId validation would fail on "").
+        userId: v.customer_user_id ? String(v.customer_user_id).trim() : undefined,
+        customerName: v.customer_name || undefined,
+        customerEmail: v.customer_email || undefined,
+        customerPhone: v.customer_phone || undefined,
         serviceId: String(v.service_id).trim(),
         cityId: String(v.city_id).trim(),
         streetName: v.street_name,
@@ -260,15 +270,15 @@ export const bookingApi = {
         bookingTime: v.booking_time,
         hours: Number(v.hours),
         cleaners: Number(v.cleaners),
-        totalAmount: Number(v.total_amount),
         notes: v.notes || null,
         supplies: v.supplies || [],
-      },
+      }),
     });
     return bookingFromApi(data.booking);
   },
   async update(id, patch) {
-    // editBooking whitelists these fields server-side.
+    // editBooking whitelists these fields server-side. totalAmount is omitted —
+    // the server recomputes it whenever hours or add-ons change.
     const data = await request({
       method: "PATCH",
       url: `/booking/${id}`,
@@ -279,10 +289,6 @@ export const bookingApi = {
         hours: patch.hours !== undefined ? Number(patch.hours) : undefined,
         cleaners:
           patch.cleaners !== undefined ? Number(patch.cleaners) : undefined,
-        totalAmount:
-          patch.total_amount !== undefined
-            ? Number(patch.total_amount)
-            : undefined,
         streetName: patch.street_name,
         houseNumber: patch.house_number,
         propertySize: patch.property_size,

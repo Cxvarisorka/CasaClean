@@ -42,6 +42,7 @@ export default function BookingsPage() {
   const { items, create, update, remove } = useCollection("bookings");
   const { items: cities } = useCollection("cities");
   const { items: services } = useCollection("services");
+  const { items: users } = useCollection("users");
   const { t } = useTranslation();
 
   // Bookings store service/city ids; resolve them to names from the catalogues
@@ -85,6 +86,17 @@ export default function BookingsPage() {
     [cities]
   );
 
+  // Optional account link for an admin-created booking. The leading blank option
+  // means "no linked account" — the booking then lives on the typed contact
+  // details alone (walk-in / phone booking).
+  const userOptions = useMemo(
+    () => [
+      { value: "", label: t("admin.bookings.noAccount") },
+      ...users.map((u) => ({ value: u._id, label: `${u.fullname} (${u.email})` })),
+    ],
+    [users, t]
+  );
+
   // Edit only exposes the fields the backend's editBooking endpoint accepts;
   // service/city and the customer identity are fixed once a booking is created.
   const editFields = useMemo(
@@ -98,7 +110,8 @@ export default function BookingsPage() {
       { name: "property_size", label: t("admin.bookings.detail.propertySize") },
       { name: "hours", label: t("admin.bookings.field.hours"), type: "number" },
       { name: "cleaners", label: t("admin.bookings.field.cleaners"), type: "number" },
-      { name: "total_amount", label: t("admin.bookings.field.total"), type: "number", required: true },
+      // total is server-computed (price × hours + add-ons); shown read-only in
+      // the detail view, not editable here.
       { name: "notes", label: t("admin.bookings.field.notes"), type: "textarea", full: true },
     ],
     [t, statusOptions]
@@ -109,9 +122,12 @@ export default function BookingsPage() {
   // server validates existence, enabled state and coverage.
   const createFields = useMemo(
     () => [
-      { name: "customer_name", label: t("admin.bookings.field.customerName"), required: true },
-      { name: "customer_email", label: t("admin.bookings.field.email"), type: "email", required: true },
-      { name: "customer_phone", label: t("admin.bookings.field.phone"), required: true },
+      // Optionally link a registered account. When linked, any contact field left
+      // blank is filled from that account server-side; otherwise type them in.
+      { name: "customer_user_id", label: t("admin.bookings.field.linkAccount"), type: "select", options: userOptions },
+      { name: "customer_name", label: t("admin.bookings.field.customerName") },
+      { name: "customer_email", label: t("admin.bookings.field.email"), type: "email" },
+      { name: "customer_phone", label: t("admin.bookings.field.phone") },
       { name: "service_id", label: t("admin.bookings.field.serviceId"), type: "select", options: serviceOptions, placeholder: t("admin.form.selectOption"), required: true },
       { name: "city_id", label: t("admin.bookings.field.cityId"), type: "select", options: cityOptions, placeholder: t("admin.form.selectOption"), required: true },
       { name: "booking_date", label: t("admin.bookings.field.date"), type: "date", required: true },
@@ -122,10 +138,10 @@ export default function BookingsPage() {
       { name: "doorbell_name", label: t("admin.bookings.field.doorbell"), required: true },
       { name: "hours", label: t("admin.bookings.field.hours"), type: "number", required: true },
       { name: "cleaners", label: t("admin.bookings.field.cleaners"), type: "number", required: true },
-      { name: "total_amount", label: t("admin.bookings.field.total"), type: "number", required: true },
+      // total is computed server-side from the service price, hours and add-ons.
       { name: "notes", label: t("admin.bookings.field.notes"), type: "textarea", full: true },
     ],
-    [t, serviceOptions, cityOptions]
+    [t, serviceOptions, cityOptions, userOptions]
   );
 
   const data = useMemo(() => {
@@ -286,7 +302,7 @@ export default function BookingsPage() {
         onSubmit={handleSubmit}
         title={editing ? t("admin.bookings.editTitle") : t("admin.bookings.addTitle")}
         fields={editing ? editFields : createFields}
-        initialValues={editing || { hours: 2, cleaners: 1 }}
+        initialValues={editing || { hours: 2, cleaners: 1, customer_user_id: "" }}
         submitLabel={editing ? t("admin.form.saveChanges") : t("admin.form.create")}
       />
 

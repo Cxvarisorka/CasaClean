@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   User,
   Mail,
@@ -13,6 +13,7 @@ import {
   CalendarCheck,
   Clock,
   Sparkles,
+  XCircle,
 } from "lucide-react";
 import { Page } from "@/components/shared/Page";
 import { Container } from "@/components/ui/Container";
@@ -21,10 +22,11 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
+import { Modal } from "@/components/ui/Modal";
 import { useAuth } from "@/features/admin/context";
 import { BOOKING_STATUS_META } from "@/features/admin/constants";
 import { updateProfile } from "@/features/auth/api/authApi";
-import { getMyBookings } from "@/features/booking";
+import { getMyBookings, cancelMyBooking } from "@/features/booking";
 import { useCities } from "@/features/booking/hooks/useCities";
 import { useServices } from "@/features/services";
 import { Seo } from "@/seo";
@@ -62,6 +64,10 @@ const eur = (n) =>
     Number(n) || 0
   );
 
+// A booking can only be cancelled by the customer while it's still upcoming.
+// Completed/cancelled bookings are terminal (matches the server-side guard).
+const isCancellable = (status) => status === "pending" || status === "confirmed";
+
 const ProfilePage = () => {
   const { t, locale } = useTranslation();
   const { user, isAdmin, updateUser, logout } = useAuth();
@@ -78,6 +84,18 @@ const ProfilePage = () => {
     queryKey: ["my-bookings", user?.email],
     queryFn: getMyBookings,
     enabled: Boolean(user),
+  });
+
+  // Self-cancel flow: confirm in a modal, then PATCH /booking/:id/cancel and
+  // refresh the history so the status flips to "cancelled" in place.
+  const queryClient = useQueryClient();
+  const [cancelTarget, setCancelTarget] = useState(null);
+  const cancelMutation = useMutation({
+    mutationFn: (id) => cancelMyBooking(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-bookings"] });
+      setCancelTarget(null);
+    },
   });
 
   // Bookings store the service/city id only, so resolve display names from the
@@ -362,9 +380,22 @@ const ProfilePage = () => {
                             )}
                           </p>
                         </div>
-                        <span className="text-body-md font-bold text-ink-900">
-                          {eur(b.total_amount)}
-                        </span>
+                        <div className="flex shrink-0 items-center gap-3">
+                          <span className="text-body-md font-bold text-ink-900">
+                            {eur(b.total_amount)}
+                          </span>
+                          {isCancellable(b.status) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              leftIcon={XCircle}
+                              onClick={() => setCancelTarget(b)}
+                              className="text-red-600 hover:bg-red-500/10 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-500/15 dark:hover:text-red-300"
+                            >
+                              {t("profile.cancelBooking")}
+                            </Button>
+                          )}
+                        </div>
                       </li>
                     );
                   })}
@@ -374,6 +405,46 @@ const ProfilePage = () => {
           </Card>
         </Container>
       </section>
+
+      {/* Cancel confirmation */}
+      <Modal
+        open={Boolean(cancelTarget)}
+        onClose={() => !cancelMutation.isPending && setCancelTarget(null)}
+        title={t("profile.cancelTitle")}
+        size="sm"
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              onClick={() => setCancelTarget(null)}
+              disabled={cancelMutation.isPending}
+            >
+              {t("profile.keepBooking")}
+            </Button>
+            <Button
+              onClick={() => cancelMutation.mutate(cancelTarget._id)}
+              loading={cancelMutation.isPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {t("profile.cancelConfirm")}
+            </Button>
+          </>
+        }
+      >
+        {cancelTarget && (
+          <p className="text-body-sm text-ink-600">
+            {t("profile.cancelBody", {
+              service: cancelTarget.service_name,
+              date: fmtDate(cancelTarget.booking_date, locale),
+            })}
+          </p>
+        )}
+        {cancelMutation.isError && (
+          <p className="mt-3 text-body-sm text-red-600">
+            {t("profile.cancelError")}
+          </p>
+        )}
+      </Modal>
     </Page>
   );
 };

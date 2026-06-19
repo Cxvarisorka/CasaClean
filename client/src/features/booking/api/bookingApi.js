@@ -12,13 +12,13 @@ import { request } from "@/services/api";
 
 const ref = (id) => `CC-${String(id).slice(-6).toUpperCase()}`;
 
-export function toBookingPayload(values, quote) {
+export function toBookingPayload(values) {
   return {
     serviceId: values.serviceId,
     cityId: values.cityId,
-    // Customer details (auto-filled from the account, editable in the wizard).
-    customerName: values.name,
-    customerEmail: values.email,
+    // Name and email are NOT sent: the server derives them from the signed-in
+    // account (a user can't book under someone else's identity) and rejects them
+    // as unknown fields. Phone is allowed (falls back to the account's number).
     customerPhone: values.phone,
     streetName: values.street,
     houseNumber: values.houseNumber,
@@ -28,7 +28,8 @@ export function toBookingPayload(values, quote) {
     bookingTime: values.time,
     hours: Number(values.hours),
     cleaners: Number(values.cleaners),
-    totalAmount: quote.total,
+    // totalAmount is computed and stored server-side from the service price,
+    // hours and selected add-ons — never trusted from the client.
     notes: values.notes || null,
     // Add-ons are SpecialRequest ids (validated server-side against enabled items).
     specialRequests: values.additionalServices || [],
@@ -36,7 +37,15 @@ export function toBookingPayload(values, quote) {
   };
 }
 
-export async function createBooking(payload) {
+/**
+ * Submit a booking. `input` is either the raw server payload, or
+ * `{ payload, display }` where `display` carries name/total used ONLY to render
+ * the offline-simulated confirmation (those values aren't sent — the server
+ * derives the name and computes the total itself).
+ */
+export async function createBooking(input) {
+  const payload = input?.payload ?? input;
+  const display = input?.display ?? {};
   try {
     const res = await request({ method: "POST", url: "/booking", data: payload });
     const b = res?.booking ?? res;
@@ -58,14 +67,24 @@ export async function createBooking(payload) {
         id: `CC-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
         status: "confirmed",
         simulated: true,
-        customer_name: payload.customerName,
+        customer_name: display.customerName,
         booking_date: payload.bookingDate,
         booking_time: payload.bookingTime,
-        total_amount: payload.totalAmount,
+        total_amount: display.totalAmount,
       };
     }
     throw err;
   }
+}
+
+/**
+ * Cancel one of the signed-in user's own bookings. The server enforces ownership
+ * and only allows cancelling a pending/confirmed booking.
+ */
+export async function cancelMyBooking(id) {
+  const res = await request({ method: "PATCH", url: `/booking/${id}/cancel` });
+  const b = res?.booking ?? res;
+  return { _id: b._id, status: b.status };
 }
 
 /**
@@ -76,11 +95,14 @@ export async function createBooking(payload) {
 export async function getMyBookings() {
   const res = await request({ method: "GET", url: "/booking/my" });
   const list = res?.bookings ?? res?.data?.bookings ?? [];
+  // serviceId/cityId may be raw ids or populated `{ _id, name }` objects — keep
+  // the id (the profile page resolves names from the live catalogues).
+  const idOf = (v) => (v && typeof v === "object" ? v._id : v);
   return list.map((b) => ({
     _id: b._id,
     reference: ref(b._id),
-    service_id: b.serviceId,
-    city_id: b.cityId,
+    service_id: idOf(b.serviceId),
+    city_id: idOf(b.cityId),
     booking_date: b.bookingDate,
     booking_time: b.bookingTime,
     total_amount: b.totalAmount,
