@@ -24,13 +24,16 @@ const createReview = catchAsync(async (req, res, next) => {
   if (!review_text || typeof review_text !== "string" || !review_text.trim()) {
     return next(new AppError("Review text cannot be empty!", 400));
   }
+  // Fix 13: only completed bookings qualify. A user with only pending/cancelled
+  // bookings for this service has not received the service and must not review it.
   const hasBooked = await Booking.findOne({
     user: userId,
-    serviceId
+    serviceId,
+    status: 'completed'
   });
 
   if (!hasBooked) {
-    return next(new AppError("You can only review services you have actually booked before!", 403));
+    return next(new AppError("You can only review services from completed bookings", 403));
   }
   const review = await Review.create({
     service_id: serviceId,
