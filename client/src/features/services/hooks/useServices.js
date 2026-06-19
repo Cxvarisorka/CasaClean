@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { request } from "@/services/api";
-import { SERVICES } from "@/data/services";
 import { IMAGES } from "@/constants/images";
 
 /*
@@ -76,17 +75,7 @@ export function useServices() {
     staleTime: 5 * 60 * 1000, // catalogue changes rarely
   });
 
-  // `dbServices` is the real, admin-managed catalogue shown across the marketing
-  // site. `services` additionally folds in the static seed list as a fallback so
-  // the booking wizard and price engine keep working even before the DB is
-  // populated; a DB service that shares a static one's name wins (deduped here).
-  const dbNames = new Set(dbServices.map((s) => String(s.name).toLowerCase()));
-  const services = [
-    ...SERVICES.filter((s) => !dbNames.has(s.name.toLowerCase())),
-    ...dbServices,
-  ];
-
-  return { services, dbServices, ...rest };
+  return { services: dbServices, dbServices, ...rest };
 }
 
 export default useServices;
