@@ -6,6 +6,7 @@ const Booking = require('../models/booking.model');
 const SpecialRequest = require('../models/specialRequest.model');
 const City = require('../models/city.model');
 const Service = require('../models/service.model');
+const User = require('../models/user.model');
 
 // Utils
 const catchAsync = require('../utils/catchAsync.util');
@@ -18,12 +19,15 @@ const sendEmail = require('../utils/email.util');
  * Fail-closed: both ids MUST be valid ObjectIds that resolve to an existing,
  * *enabled* Service/City document — anything else is rejected. When the service
  * is offered only in specific cities (allCities === false), the chosen city must
- * be one of them. Returns the resolved Service document so the caller can reuse
- * it for add-on compatibility checks.
+ * be one of them.
  *
- * Throws AppError on any failure and does NOT catch — the caller's catchAsync
- * forwards it to the error middleware. Swallowing here would let invalid input
- * through and break the destructuring in the caller.
+ * Returns { service, city } so the caller can:
+ *   - use service.pricePerHour for server-side price computation (Fix 1)
+ *   - use city.workingHourStarts / city.workingHourEnds for time validation (Fix 3)
+ *   - pass service to resolveSpecialRequests for add-on compatibility (existing)
+ *
+ * Throws AppError on any failure; the caller's catchAsync forwards it to the
+ * error middleware.
  */
 const resolveServiceAndCity = async (serviceId, cityId) => {
   if (
@@ -33,11 +37,16 @@ const resolveServiceAndCity = async (serviceId, cityId) => {
     throw new AppError("Invalid service or city id!", 400);
   }
 
-  // Only read the fields we actually validate against; .lean() since we never
-  // mutate these documents.
+  // Include pricePerHour so the controller can compute the booking total
+  // without a second query (Fix 1). Include workingHour* on city for the
+  // time-range check (Fix 3).
   const [service, city] = await Promise.all([
-    Service.findById(serviceId).select("name enabled allCities cities allSpecialRequests specialRequests").lean(),
-    City.findById(cityId).select("enabled").lean()
+    Service.findById(serviceId)
+      .select("name enabled allCities cities allSpecialRequests specialRequests pricePerHour")
+      .lean(),
+    City.findById(cityId)
+      .select("enabled workingHourStarts workingHourEnds")
+      .lean()
   ]);
 
   // Combined existence/enabled message so we don't leak existing-but-disabled
@@ -59,20 +68,21 @@ const resolveServiceAndCity = async (serviceId, cityId) => {
     }
   }
 
-  return service;
+  return { service, city };
 };
 
 /**
  * Validate the special-request add-ons selected for a booking.
  *
- * Accepts an array of SpecialRequest ids and returns a de-duplicated list of
- * ids that all point to real, *enabled* catalogue items — or throws an AppError
- * (caught by catchAsync) when anything is invalid. This stops a booking from
- * referencing add-ons that don't exist or have been disabled.
+ * Accepts an array of SpecialRequest ids and returns the full resolved
+ * SpecialRequest documents (not just ids) so the caller can sum their `price`
+ * fields for server-side total computation (Fix 1). Documents are de-duplicated
+ * before the DB query.
  *
- * When a `service` is supplied and it restricts its add-ons
+ * All ids must resolve to real, *enabled* catalogue items, otherwise throws
+ * AppError. When a `service` is supplied and it restricts its add-ons
  * (allSpecialRequests === false), every selected id must be one the service
- * actually offers — otherwise the add-on doesn't belong to that service.
+ * actually offers.
  */
 const resolveSpecialRequests = async (ids, service = null) => {
 
@@ -93,13 +103,14 @@ const resolveSpecialRequests = async (ids, service = null) => {
     throw new AppError("One or more special request ids are invalid!", 400);
   }
 
-  // Every id must resolve to an existing, enabled item.
-  const foundCount = await SpecialRequest.countDocuments({
+  // Fetch the full documents so the caller can read the `price` field (Fix 1).
+  // We select only the fields we need to keep the payload small.
+  const foundDocs = await SpecialRequest.find({
     _id: { $in: uniqueIds },
     enabled: true
-  });
+  }).select("_id price").lean();
 
-  if (foundCount !== uniqueIds.length) {
+  if (foundDocs.length !== uniqueIds.length) {
     throw new AppError("One or more selected special requests do not exist or are unavailable!", 400);
   }
 
@@ -113,7 +124,8 @@ const resolveSpecialRequests = async (ids, service = null) => {
     }
   }
 
-  return uniqueIds;
+  // Return the full documents so callers can access price and other fields.
+  return foundDocs;
 };
 
 /* ----------------------------------------------------- Confirmation email */
@@ -248,6 +260,8 @@ const getBookings = catchAsync(async (req, res, next) => {
   // Run the page query and the total count in parallel (independent reads).
   const [bookings, bookingCount] = await Promise.all([
     Booking.find()
+      .populate('serviceId', 'name')
+      .populate('cityId', 'name')
       .populate('specialRequests')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
@@ -274,6 +288,8 @@ const getMyBookings = catchAsync(async (req, res, next) => {
 
   const [bookings, bookingCount] = await Promise.all([
     Booking.find(filter)
+      .populate('serviceId', 'name')
+      .populate('cityId', 'name')
       .populate('specialRequests')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
@@ -293,7 +309,11 @@ const getMyBookings = catchAsync(async (req, res, next) => {
 // GET /api/v1/booking/:id (admin) — single booking (404 if missing, 400 if id malformed)
 const getBookingById = catchAsync(async (req, res, next) => {
   const { id } = req.params;
-  const booking = await Booking.findById(id).populate('specialRequests');
+  const booking = await Booking.findById(id)
+    .populate('serviceId', 'name')
+    .populate('cityId', 'name')
+    .populate('specialRequests')
+    .lean();
 
   if (!booking) {
     return next(new AppError("Booking not found!", 404));
@@ -308,21 +328,50 @@ const getBookingById = catchAsync(async (req, res, next) => {
 
 // POST /api/v1/booking — create a booking (requires a signed-in user)
 const createBooking = catchAsync(async (req, res, next) => {
-  // Customer contact details default to the authenticated user's stored profile
-  // (the public booking wizard doesn't re-collect what was given at
-  // registration). When the caller DOES provide them — e.g. an admin entering a
-  // booking on a customer's behalf — the body values win, so the booking is
-  // attributed to the real customer rather than the operator. The booking keeps
-  // its own snapshot of these regardless.
-  const customerName = req.body.customerName || req.user.fullname;
-  const customerEmail = req.body.customerEmail || req.user.email;
-  const customerPhone = req.body.customerPhone || req.user.phone;
+  const isAdmin = req.user.role === 'admin';
+
+  // "On behalf" = an admin explicitly booking FOR a customer, signalled by
+  // supplying a linked account (userId) and/or typed customer name/email.
+  // Everything else is a SELF-booking owned by req.user with their own details:
+  //  • any normal user (body name/email are ignored — no identity spoofing), and
+  //  • an admin booking through the public wizard for themselves (which sends no
+  //    customer-identity fields). This is why we key off the supplied data, not
+  //    the role alone — otherwise an admin could never book for themselves.
+  const onBehalf =
+    isAdmin && Boolean(req.body.userId || req.body.customerName || req.body.customerEmail);
+
+  let owner = req.user._id;
+  let profile = req.user;
+
+  if (onBehalf) {
+    if (req.body.userId) {
+      const linked = await User.findById(req.body.userId).select('fullname email phone');
+      if (!linked) {
+        return next(new AppError("The linked customer account does not exist!", 400));
+      }
+      owner = linked._id;
+      profile = linked;
+    } else {
+      owner = undefined; // walk-in / phone booking not tied to an account
+      profile = null;
+    }
+  }
+
+  const customerName = onBehalf
+    ? (req.body.customerName || profile?.fullname)
+    : req.user.fullname;
+  const customerEmail = onBehalf
+    ? (req.body.customerEmail || profile?.email)
+    : req.user.email;
+  const customerPhone = onBehalf
+    ? (req.body.customerPhone || profile?.phone)
+    : (req.body.customerPhone || req.user.phone);
 
   // Booking-specific fields — the only things the wizard actually collects.
   const {
     serviceId, cityId, streetName, houseNumber, propertySize,
     doorbellName, bookingDate, bookingTime, hours, cleaners,
-    totalAmount, notes, specialRequests, supplies
+    notes, specialRequests, supplies
   } = req.body;
 
   // Required-field guard. Numeric fields are compared against undefined (not
@@ -330,8 +379,7 @@ const createBooking = catchAsync(async (req, res, next) => {
   if (
     serviceId === undefined || cityId === undefined || !streetName ||
     !houseNumber || !propertySize || !doorbellName || !bookingDate ||
-    !bookingTime || hours === undefined || cleaners === undefined ||
-    totalAmount === undefined
+    !bookingTime || hours === undefined || cleaners === undefined
   ) {
     return next(new AppError("Please provide all required fields for booking!", 400));
   }
@@ -344,17 +392,34 @@ const createBooking = catchAsync(async (req, res, next) => {
     return next(new AppError("Please add a phone number to your profile or provide one for this booking!", 400));
   }
 
-  // Validate the service/city pair (existence, enabled state, coverage) and
-  // reuse the resolved service to check add-on compatibility below.
-  const service = await resolveServiceAndCity(serviceId, cityId);
+  // Validate the service/city pair (existence, enabled state, coverage).
+  // Now returns both the service (for price computation) and the city
+  // (for working-hours check). Fix 1 + Fix 3.
+  const { service, city } = await resolveServiceAndCity(serviceId, cityId);
 
-  // Make sure any selected add-ons are real, enabled, and offered by the service.
-  const requestIds = await resolveSpecialRequests(specialRequests, service);
+  // Fix 3: reject bookingTime outside city working hours. Both values are
+  // zero-padded "HH:MM" strings so lexicographic comparison is equivalent
+  // to numeric comparison.
+  if (bookingTime < city.workingHourStarts || bookingTime >= city.workingHourEnds) {
+    return next(new AppError("Booking time is outside city working hours", 400));
+  }
+
+  // Make sure any selected add-ons are real, enabled, and offered by the
+  // service. Returns full documents so we can sum prices (Fix 1).
+  const resolvedSpecialRequests = await resolveSpecialRequests(specialRequests, service);
+
+  // Fix 1: compute the booking total on the server — never trust the client.
+  // specialRequests now contains full documents with a `price` field.
+  const computedTotal = service.pricePerHour * hours +
+    resolvedSpecialRequests.reduce((sum, sr) => sum + sr.price, 0);
+
+  // Extract just the ids for storage (the Booking model stores ObjectId refs).
+  const requestIds = resolvedSpecialRequests.map((sr) => sr._id);
 
   // Whitelist exactly what we persist — we never spread req.body, so a caller
-  // can't mass-assign server-managed fields (user/status/payment).
+  // can't mass-assign server-managed fields (user/status/payment/totalAmount).
   const booking = await Booking.create({
-    user: req.user._id,
+    user: owner,
     serviceId,
     cityId,
     customerName,
@@ -368,7 +433,7 @@ const createBooking = catchAsync(async (req, res, next) => {
     bookingTime,
     hours,
     cleaners,
-    totalAmount,
+    totalAmount: computedTotal,
     notes: notes ?? null,
     specialRequests: requestIds,
     supplies: Array.isArray(supplies) ? supplies : []
@@ -386,7 +451,7 @@ const createBooking = catchAsync(async (req, res, next) => {
       cleaners,
       streetName,
       houseNumber,
-      totalAmount
+      totalAmount: computedTotal
     });
     await sendEmail({ email: customerEmail, subject, html, text });
   } catch (emailError) {
@@ -406,9 +471,10 @@ const editBooking = catchAsync(async (req, res, next) => {
 
   // Whitelist editable fields so an admin request can't overwrite ownership or
   // payment fields (user/paymentIntentId/...) by including them in the body.
+  // totalAmount is intentionally excluded — price is server-managed (Fix 1).
   const editableFields = [
     'status', 'bookingDate', 'bookingTime', 'hours', 'cleaners',
-    'totalAmount', 'streetName', 'houseNumber', 'propertySize',
+    'streetName', 'houseNumber', 'propertySize',
     'doorbellName', 'customerPhone', 'notes', 'supplies'
   ];
 
@@ -417,15 +483,76 @@ const editBooking = catchAsync(async (req, res, next) => {
     if (req.body[field] !== undefined) updates[field] = req.body[field];
   }
 
-  // Special requests, if being changed, must still reference real items.
-  if (req.body.specialRequests !== undefined) {
-    updates.specialRequests = await resolveSpecialRequests(req.body.specialRequests);
+  const srChanged = req.body.specialRequests !== undefined;
+  const hoursChanged = updates.hours !== undefined;
+  const timeChanged = updates.bookingTime !== undefined;
+
+  // We only need the existing booking + its service/city when a change affects
+  // add-on eligibility, the price, or the working-hours window. For a pure
+  // status/notes/address edit we skip the extra reads entirely.
+  let existing = null;
+  let service = null;
+  let city = null;
+  if (srChanged || hoursChanged || timeChanged) {
+    existing = await Booking.findById(id)
+      .select('serviceId cityId hours specialRequests')
+      .lean();
+    if (!existing) {
+      return next(new AppError("Booking not found!", 404));
+    }
+    // Re-use the booking's own service/city (already validated at create time)
+    // to recover pricePerHour and the city working-hours window.
+    ({ service, city } = await resolveServiceAndCity(
+      String(existing.serviceId),
+      String(existing.cityId)
+    ));
+  }
+
+  // Re-validate the working-hours window when the time changes (the create-time
+  // guard otherwise wouldn't run on edits).
+  if (timeChanged && city) {
+    if (updates.bookingTime < city.workingHourStarts || updates.bookingTime >= city.workingHourEnds) {
+      return next(new AppError("Booking time is outside city working hours", 400));
+    }
+  }
+
+  // Special requests being changed must still pass the service compatibility
+  // gate. resolveSpecialRequests returns full docs so we can also re-price below.
+  let resolvedSpecialRequests = null;
+  if (srChanged) {
+    resolvedSpecialRequests = await resolveSpecialRequests(req.body.specialRequests, service);
+    updates.specialRequests = resolvedSpecialRequests.map((sr) => sr._id);
+  }
+
+  // Recompute the server-managed total whenever a price input (hours or add-ons)
+  // changes — otherwise the stored amount would drift out of sync with the
+  // booking. Price = pricePerHour * hours + sum(add-on prices).
+  if ((hoursChanged || srChanged) && service) {
+    const finalHours = hoursChanged ? updates.hours : existing.hours;
+
+    let addOnTotal;
+    if (srChanged) {
+      addOnTotal = resolvedSpecialRequests.reduce((sum, sr) => sum + sr.price, 0);
+    } else {
+      // Hours changed but the add-ons didn't — price the existing ones. Look up
+      // by id only (no `enabled` filter) so a since-disabled add-on still counts.
+      const existingDocs = await SpecialRequest
+        .find({ _id: { $in: existing.specialRequests || [] } })
+        .select('price')
+        .lean();
+      addOnTotal = existingDocs.reduce((sum, sr) => sum + sr.price, 0);
+    }
+
+    updates.totalAmount = service.pricePerHour * finalHours + addOnTotal;
   }
 
   const booking = await Booking.findByIdAndUpdate(id, updates, {
     new: true,
     runValidators: true
-  });
+  })
+    .populate('serviceId', 'name')
+    .populate('cityId', 'name')
+    .populate('specialRequests');
 
   if (!booking) {
     return next(new AppError("Booking not found!", 404));
@@ -435,6 +562,47 @@ const editBooking = catchAsync(async (req, res, next) => {
     status: "success",
     message: "Booking updated successfully!",
     data: { booking }
+  });
+});
+
+// PATCH /api/v1/booking/:id/cancel — a user cancels their OWN booking.
+// Scoped to req.user so it can't touch anyone else's booking (admins use the
+// admin PATCH route to change any status). Only a pending/confirmed booking can
+// be cancelled — completed work and already-cancelled bookings are rejected.
+const cancelMyBooking = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return next(new AppError("Invalid booking id!", 400));
+  }
+
+  // Ownership is enforced in the query itself: a booking that isn't the user's
+  // simply isn't found (no information leak about other users' bookings).
+  const booking = await Booking.findOne({ _id: id, user: req.user._id });
+  if (!booking) {
+    return next(new AppError("Booking not found!", 404));
+  }
+
+  if (booking.status === 'cancelled') {
+    return next(new AppError("This booking is already cancelled.", 400));
+  }
+  if (booking.status === 'completed') {
+    return next(new AppError("A completed booking can't be cancelled.", 400));
+  }
+
+  booking.status = 'cancelled';
+  await booking.save();
+
+  const populated = await Booking.findById(booking._id)
+    .populate('serviceId', 'name')
+    .populate('cityId', 'name')
+    .populate('specialRequests')
+    .lean();
+
+  res.status(200).json({
+    status: "success",
+    message: "Booking cancelled successfully!",
+    data: { booking: populated }
   });
 });
 
@@ -459,5 +627,6 @@ module.exports = {
   getBookingById,
   createBooking,
   editBooking,
+  cancelMyBooking,
   deleteBooking
 };

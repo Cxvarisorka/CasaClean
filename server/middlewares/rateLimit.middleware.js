@@ -31,4 +31,10 @@ const emailLimiter = rateLimit(
     limiterOptions(5, 60 * 60 * 1000, "Too many requests. Please try again later.")
 );
 
-module.exports = { globalLimiter, signinLimiter, signupLimiter, emailLimiter };
+// Booking creation: tighter than the global limit to prevent booking-spam and
+// runaway test scripts from filling the collection.
+const bookingLimiter = rateLimit(
+    limiterOptions(20, 15 * 60 * 1000, "Too many booking requests. Please try again later.")
+);
+
+module.exports = { globalLimiter, signinLimiter, signupLimiter, emailLimiter, bookingLimiter };

@@ -13,12 +13,16 @@ const mongoose = require('mongoose');
 // must always resolve to a real, enabled service and city (validated in the
 // controller via resolveServiceAndCity before the document is created).
 const bookingSchema = new mongoose.Schema({
-  // Owner of the booking. Bookings now require authentication, so every booking
-  // is tied to the user who created it (used for "my bookings" and auditing).
+  // Owner of the booking. For customer self-service bookings this is always the
+  // signed-in user (set by the controller, used for "my bookings" and auditing).
+  // It is intentionally OPTIONAL: an admin may create a booking on a customer's
+  // behalf without linking it to a registered account (walk-in / phone booking),
+  // in which case the customer identity lives only in the customerName/email/phone
+  // fields below. The controller enforces that customer self-bookings are always
+  // owned by req.user.
   user: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: [true, "User ID is required!"]
+    ref: 'User'
   },
   serviceId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -94,6 +98,7 @@ const bookingSchema = new mongoose.Schema({
   notes: {
     type: String,
     trim: true,
+    maxlength: [2000, "Notes can't exceed 2000 characters."],
     default: null
   },
   // Add-on requests (e.g. "Fridge Cleaning"). References to SpecialRequest
