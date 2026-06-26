@@ -10,6 +10,7 @@ import {
   ResourceModal,
   ConfirmDialog,
   BOOKING_STATUS_META,
+  PAYMENT_STATUS_META,
   useCollection,
 } from "@/features/admin";
 import { useTranslation } from "@/i18n";
@@ -43,6 +44,7 @@ export default function BookingsPage() {
   const { items: cities } = useCollection("cities");
   const { items: services } = useCollection("services");
   const { items: users } = useCollection("users");
+  const { items: workers } = useCollection("workers");
   const { t } = useTranslation();
 
   // Bookings store service/city ids; resolve them to names from the catalogues
@@ -97,6 +99,16 @@ export default function BookingsPage() {
     [users, t]
   );
 
+  // Cleaning staff the admin can assign to a booking. Only enabled workers are
+  // offered; the server validates the ids fail-closed on save.
+  const workerOptions = useMemo(
+    () =>
+      workers
+        .filter((w) => w.enabled)
+        .map((w) => ({ value: w._id, label: w.fullname })),
+    [workers]
+  );
+
   // Edit only exposes the fields the backend's editBooking endpoint accepts;
   // service/city and the customer identity are fixed once a booking is created.
   const editFields = useMemo(
@@ -112,9 +124,10 @@ export default function BookingsPage() {
       { name: "cleaners", label: t("admin.bookings.field.cleaners"), type: "number" },
       // total is server-computed (price × hours + add-ons); shown read-only in
       // the detail view, not editable here.
+      { name: "workers", label: t("admin.bookings.field.workers"), type: "multiselect", options: workerOptions, hint: t("admin.bookings.field.workersHint") },
       { name: "notes", label: t("admin.bookings.field.notes"), type: "textarea", full: true },
     ],
-    [t, statusOptions]
+    [t, statusOptions, workerOptions]
   );
 
   // Create collects the full booking the model needs. service_id/city_id are
@@ -138,10 +151,11 @@ export default function BookingsPage() {
       { name: "doorbell_name", label: t("admin.bookings.field.doorbell"), required: true },
       { name: "hours", label: t("admin.bookings.field.hours"), type: "number", required: true },
       { name: "cleaners", label: t("admin.bookings.field.cleaners"), type: "number", required: true },
+      { name: "workers", label: t("admin.bookings.field.workers"), type: "multiselect", options: workerOptions, hint: t("admin.bookings.field.workersHint") },
       // total is computed server-side from the service price, hours and add-ons.
       { name: "notes", label: t("admin.bookings.field.notes"), type: "textarea", full: true },
     ],
-    [t, serviceOptions, cityOptions, userOptions]
+    [t, serviceOptions, cityOptions, userOptions, workerOptions]
   );
 
   const data = useMemo(() => {
@@ -196,6 +210,18 @@ export default function BookingsPage() {
       key: "total_amount",
       header: t("admin.bookings.col.total"),
       render: (b) => <span className="font-semibold">{eur(b.total_amount)}</span>,
+    },
+    {
+      key: "payment_status",
+      header: t("admin.bookings.col.payment"),
+      render: (b) => {
+        const meta = PAYMENT_STATUS_META[b.payment_status] || PAYMENT_STATUS_META.unpaid;
+        return (
+          <Badge variant={meta.variant} size="sm">
+            {t(meta.labelKey)}
+          </Badge>
+        );
+      },
     },
     {
       key: "status",
@@ -271,10 +297,20 @@ export default function BookingsPage() {
         {viewing && (
           <div className="space-y-1">
             <div className="mb-4 flex items-center justify-between">
-              <Badge variant={BOOKING_STATUS_META[viewing.status]?.variant}>
-                {BOOKING_STATUS_META[viewing.status] &&
-                  t(BOOKING_STATUS_META[viewing.status].labelKey)}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant={BOOKING_STATUS_META[viewing.status]?.variant}>
+                  {BOOKING_STATUS_META[viewing.status] &&
+                    t(BOOKING_STATUS_META[viewing.status].labelKey)}
+                </Badge>
+                {(() => {
+                  const pm = PAYMENT_STATUS_META[viewing.payment_status] || PAYMENT_STATUS_META.unpaid;
+                  return (
+                    <Badge variant={pm.variant} size="sm">
+                      {t(pm.labelKey)}
+                    </Badge>
+                  );
+                })()}
+              </div>
               <span className="text-heading-sm font-bold text-ink-900">
                 {eur(viewing.total_amount)}
               </span>
@@ -291,6 +327,10 @@ export default function BookingsPage() {
             <DetailRow label={t("admin.bookings.detail.dateTime")} value={`${viewing.booking_date} · ${viewing.booking_time}`} />
             <DetailRow label={t("admin.bookings.detail.hoursCleaners")} value={`${viewing.hours || "—"} h · ${viewing.cleaners || "—"}`} />
             <DetailRow label={t("admin.bookings.detail.propertySize")} value={viewing.property_size ? `${viewing.property_size} m²` : "—"} />
+            <DetailRow
+              label={t("admin.bookings.detail.workers")}
+              value={viewing.worker_names?.length ? viewing.worker_names.join(", ") : "—"}
+            />
             <DetailRow label={t("admin.bookings.detail.notes")} value={viewing.notes} />
           </div>
         )}

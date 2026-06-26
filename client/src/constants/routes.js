@@ -32,6 +32,8 @@ export const ROUTES = {
     cities: "/admin/cities",
     coverage: "/admin/coverage",
     users: "/admin/users",
+    workers: "/admin/workers",
+    quality: "/admin/quality",
   },
   notFound: "*",
 };

@@ -39,6 +39,8 @@ const AdminSpecialRequestsPage = lazy(() => import("@/pages/Admin/SpecialRequest
 const AdminCitiesPage = lazy(() => import("@/pages/Admin/CitiesPage"));
 const AdminCoverageMapPage = lazy(() => import("@/pages/Admin/CoverageMapPage"));
 const AdminUsersPage = lazy(() => import("@/pages/Admin/UsersPage"));
+const AdminWorkersPage = lazy(() => import("@/pages/Admin/WorkersPage"));
+const AdminQualityPage = lazy(() => import("@/pages/Admin/QualityPage"));
 
 /** Routes hosted by the marketing MainLayout (Navbar + Footer). */
 export const MAIN_ROUTES = [
@@ -80,6 +82,8 @@ export const ADMIN_ROUTES = [
   { path: "special-requests", element: AdminSpecialRequestsPage },
   { path: "cities", element: AdminCitiesPage },
   { path: "coverage", element: AdminCoverageMapPage },
+  { path: "workers", element: AdminWorkersPage },
+  { path: "quality", element: AdminQualityPage },
   { path: "users", element: AdminUsersPage },
 ];
 

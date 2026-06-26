@@ -127,7 +127,7 @@ export const serviceApi = {
   },
   async update(id, patch) {
     // editServiceSchema is strict: name / description / pricePerHour /
-    // allCities / cities / allSpecialRequests / specialRequests (no `enabled`).
+    // allCities / cities / allSpecialRequests / specialRequests / enabled.
     const body = definedOnly({
       name: patch.name,
       subtitle: patch.subtitle,
@@ -144,6 +144,8 @@ export const serviceApi = {
       cities: patch.cities,
       allSpecialRequests: patch.all_special_requests,
       specialRequests: patch.special_requests,
+      // Soft on/off switch — a disabled service is hidden from the public site.
+      enabled: patch.enabled,
     });
     const data = await request({
       method: "PATCH",
@@ -198,6 +200,54 @@ export const specialRequestApi = {
   remove: (id) => request({ method: "DELETE", url: `/special-request/${id}` }),
 };
 
+/* ------------------------------------------------------------------ Workers */
+
+const workerFromApi = (w) => ({
+  _id: w._id,
+  fullname: w.fullname,
+  email: w.email ?? "",
+  phone: w.phone ?? "",
+  enabled: w.enabled,
+  createdAt: w.createdAt,
+});
+
+export const workerApi = {
+  async list() {
+    const data = await request({ method: "GET", url: `/worker${LIST_QS}` });
+    return (data.workers ?? []).map(workerFromApi);
+  },
+  async create(v) {
+    // addWorkerSchema is strict: fullname required, email/phone optional. Blank
+    // contact fields are omitted so the strict schema doesn't see empty noise.
+    const data = await request({
+      method: "POST",
+      url: "/worker",
+      data: definedOnly({
+        fullname: v.fullname,
+        email: v.email ? v.email : undefined,
+        phone: v.phone ? v.phone : undefined,
+      }),
+    });
+    return workerFromApi(data.worker);
+  },
+  async update(id, patch) {
+    // editWorkerSchema allows fullname / email / phone / enabled. Email and phone
+    // are sent even when blanked (empty string) so the admin can clear them.
+    const data = await request({
+      method: "PATCH",
+      url: `/worker/${id}`,
+      data: definedOnly({
+        fullname: patch.fullname,
+        email: patch.email,
+        phone: patch.phone,
+        enabled: patch.enabled,
+      }),
+    });
+    return workerFromApi(data.worker);
+  },
+  remove: (id) => request({ method: "DELETE", url: `/worker/${id}` }),
+};
+
 /* ---------------------------------------------------------------- Bookings */
 
 // serviceId/cityId arrive either as a raw id string OR as a populated
@@ -232,9 +282,20 @@ const bookingFromApi = (b) => ({
   cleaners: b.cleaners,
   total_amount: b.totalAmount,
   status: b.status,
+  // Payment posture (read-only in the admin UI): how it was paid and where the
+  // money currently sits. 'manual' = offline/cash booking (no Stripe).
+  payment_method: b.paymentMethod ?? "card",
+  payment_status: b.paymentStatus ?? "unpaid",
+  refund_id: b.refundId ?? null,
   notes: b.notes ?? "",
   supplies: b.supplies ?? [],
   special_requests: b.specialRequests ?? [],
+  // Assigned staff arrive populated as { _id, fullname } objects (or raw ids).
+  // Keep the ids for the assignment multiselect and the names for display.
+  workers: (b.workers ?? []).map((w) => (w && w._id ? w._id : w)),
+  worker_names: (b.workers ?? []).map((w) =>
+    w && w.fullname ? w.fullname : `#${w}`
+  ),
   createdAt: b.createdAt,
 });
 
@@ -272,6 +333,7 @@ export const bookingApi = {
         cleaners: Number(v.cleaners),
         notes: v.notes || null,
         supplies: v.supplies || [],
+        workers: v.workers || [],
       }),
     });
     return bookingFromApi(data.booking);
@@ -296,6 +358,7 @@ export const bookingApi = {
         customerPhone: patch.customer_phone,
         notes: patch.notes,
         supplies: patch.supplies,
+        workers: patch.workers,
       }),
     });
     return bookingFromApi(data.booking);
@@ -356,6 +419,56 @@ export const userApi = {
   remove: (id) => request({ method: "DELETE", url: `/auth/users/${id}` }),
 };
 
+/* ----------------------------------------------------------------- Reviews */
+
+// Reviews are written by customers (and only after a completed booking — that
+// gate is enforced server-side). The admin panel is read-only here apart from
+// moderation: it lists scores + comments and can delete an inappropriate
+// review. `user`, `service_id` and the rated `booking` arrive populated from the
+// admin feed (GET /review), so reuse the booking ref helpers to normalise them.
+const reviewFromApi = (r) => {
+  // The rated booking is populated so the admin can see exactly which booking a
+  // review is for; it may be null if the booking was later deleted.
+  const b = r.booking && typeof r.booking === "object" ? r.booking : null;
+  return {
+    _id: r._id,
+    rating: Number(r.rating) || 0,
+    comment: r.review_text ?? "",
+    service_id: refId(r.service_id),
+    service_name: refName(r.service_id) || "—",
+    // The author is populated; fall back to the booking's contact, then a dash.
+    customer_name: (r.user && r.user.fullname) || b?.customerName || "—",
+    customer_email: (r.user && r.user.email) || b?.customerEmail || "",
+    // Rated booking — a short reference (same scheme as the Bookings page) plus
+    // the details the admin needs to identify it.
+    booking_id: refId(r.booking),
+    booking_reference: r.booking
+      ? `CC-${String(refId(r.booking)).slice(-6).toUpperCase()}`
+      : "—",
+    booking_date: b?.bookingDate || "",
+    booking_time: b?.bookingTime || "",
+    booking_status: b?.status || "",
+    booking_total: b?.totalAmount,
+    booking_hours: b?.hours,
+    booking_cleaners: b?.cleaners,
+    booking_property_size: b?.propertySize || "",
+    booking_doorbell: b?.doorbellName || "",
+    booking_city: refName(b?.cityId) || "",
+    booking_address: b
+      ? [b.streetName, b.houseNumber].filter(Boolean).join(" ")
+      : "",
+    createdAt: r.createdAt,
+  };
+};
+
+export const reviewApi = {
+  async list() {
+    const data = await request({ method: "GET", url: `/review${LIST_QS}` });
+    return (data.reviews ?? []).map(reviewFromApi);
+  },
+  remove: (id) => request({ method: "DELETE", url: `/review/${id}` }),
+};
+
 /* ----------------------------------------------------------------- Registry */
 
 // Collection name (as used by the admin pages) → its API module. The data
@@ -366,4 +479,6 @@ export const RESOURCES = {
   specialRequests: specialRequestApi,
   bookings: bookingApi,
   users: userApi,
+  workers: workerApi,
+  reviews: reviewApi,
 };

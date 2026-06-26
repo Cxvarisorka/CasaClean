@@ -7,4 +7,4 @@
 
 export * from "./context";
 export * from "./components";
-export { ADMIN_NAV, BOOKING_STATUS_META, STATUS_COLORS } from "./constants";
+export { ADMIN_NAV, BOOKING_STATUS_META, PAYMENT_STATUS_META, STATUS_COLORS } from "./constants";

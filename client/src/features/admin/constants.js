@@ -6,6 +6,8 @@ import {
   MapPin,
   Map,
   Users,
+  HardHat,
+  Star,
 } from "lucide-react";
 import { ROUTES } from "@/constants/routes";
 
@@ -25,6 +27,8 @@ export const ADMIN_NAV = [
   { to: ROUTES.admin.specialRequests, label: "Special requests", labelKey: "admin.nav.specialRequests", icon: ListPlus },
   { to: ROUTES.admin.cities, label: "Cities", labelKey: "admin.nav.cities", icon: MapPin },
   { to: ROUTES.admin.coverage, label: "Bookings map", labelKey: "admin.nav.coverage", icon: Map },
+  { to: ROUTES.admin.workers, label: "Workers", labelKey: "admin.nav.workers", icon: HardHat },
+  { to: ROUTES.admin.quality, label: "Quality", labelKey: "admin.nav.quality", icon: Star },
   { to: ROUTES.admin.users, label: "Users", labelKey: "admin.nav.users", icon: Users },
 ];
 
@@ -37,6 +41,15 @@ export const BOOKING_STATUS_META = {
   confirmed: { label: "Confirmed", labelKey: "admin.status.confirmed", variant: "brand" },
   completed: { label: "Completed", labelKey: "admin.status.completed", variant: "success" },
   cancelled: { label: "Cancelled", labelKey: "admin.status.cancelled", variant: "outline" },
+};
+
+// Read-only payment posture badge (mirrors booking.model.js paymentStatus enum).
+// 'manual' marks an offline/cash booking entered by an admin (no Stripe).
+export const PAYMENT_STATUS_META = {
+  paid: { label: "Paid", labelKey: "admin.payment.paid", variant: "success" },
+  refunded: { label: "Refunded", labelKey: "admin.payment.refunded", variant: "outline" },
+  manual: { label: "Manual / cash", labelKey: "admin.payment.manual", variant: "accent" },
+  unpaid: { label: "Unpaid", labelKey: "admin.payment.unpaid", variant: "outline" },
 };
 
 // Map-marker / legend colour per booking status (bookings map). Lives here (not

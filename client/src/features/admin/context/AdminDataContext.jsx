@@ -30,6 +30,11 @@ const EMPTY_DB = {
   bookings: [],
   // Loaded from the admin-only GET /auth/users endpoint (read-only).
   users: [],
+  // Cleaning staff, managed via the admin-only /worker endpoints.
+  workers: [],
+  // Customer reviews, loaded from the admin-only GET /review feed. The panel
+  // only reads + moderates (deletes) these — they're authored by customers.
+  reviews: [],
 };
 
 export function AdminDataProvider({ children }) {
@@ -41,7 +46,7 @@ export function AdminDataProvider({ children }) {
   // (e.g. bookings, which needs the admin role) doesn't blank the whole panel.
   const refresh = useCallback(async () => {
     setLoading(true);
-    const names = ["cities", "services", "specialRequests", "bookings", "users"];
+    const names = ["cities", "services", "specialRequests", "bookings", "users", "workers", "reviews"];
     const results = await Promise.allSettled(
       names.map((name) => RESOURCES[name].list())
     );
@@ -139,6 +144,20 @@ export function AdminDataProvider({ children }) {
       return acc;
     }, {});
 
+    // Quality metrics from the review feed: count, mean score and a 1–5
+    // distribution the Quality page renders as bars.
+    const ratingDistribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    let ratingSum = 0;
+    db.reviews.forEach((r) => {
+      const score = Number(r.rating) || 0;
+      if (score >= 1 && score <= 5) {
+        ratingDistribution[score] += 1;
+        ratingSum += score;
+      }
+    });
+    const reviewCount = db.reviews.length;
+    const avgRating = reviewCount ? ratingSum / reviewCount : 0;
+
     return {
       bookings: db.bookings.length,
       revenue,
@@ -149,6 +168,9 @@ export function AdminDataProvider({ children }) {
       specialRequests: db.specialRequests.length,
       users: db.users.length,
       byStatus,
+      reviews: reviewCount,
+      avgRating,
+      ratingDistribution,
     };
   }, [db]);
 
