@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Sparkles, Plus, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { Switch } from "@/components/ui/Switch";
 import {
   PageHeader,
   DataTable,
@@ -110,6 +111,12 @@ export default function ServicesPage() {
         // Only pick specific add-ons when "all special requests" is off.
         show: (v) => !v.all_special_requests,
       },
+      {
+        name: "enabled",
+        label: t("admin.services.field.enabled"),
+        type: "switch",
+        full: true,
+      },
     ],
     [cityOptions, specialRequestOptions, t]
   );
@@ -176,6 +183,19 @@ export default function ServicesPage() {
         );
       },
     },
+    {
+      key: "enabled",
+      header: t("admin.services.col.status"),
+      align: "center",
+      // A disabled service is hidden from the public site (useServices filters
+      // on `enabled`) and can't be booked (the API rejects disabled services).
+      render: (s) => (
+        <Switch
+          checked={Boolean(s.enabled)}
+          onChange={() => update(s._id, { enabled: !s.enabled })}
+        />
+      ),
+    },
   ];
 
   return (
@@ -231,6 +251,7 @@ export default function ServicesPage() {
             cities: [],
             all_special_requests: false,
             special_requests: [],
+            enabled: true,
           }
         }
         submitLabel={editing ? t("admin.form.saveChanges") : t("admin.form.create")}

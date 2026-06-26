@@ -104,6 +104,12 @@ const editServiceSchema = z.object({
 
     specialRequests: z
         .array(z.string())
+        .optional(),
+
+    // Soft on/off switch: a disabled service is hidden from the public site and
+    // can't be booked, without deleting it. Only editable, not set on create.
+    enabled: z
+        .boolean()
         .optional()
 
 }).strict({ message: "Unknown fields are not allowed!" });
