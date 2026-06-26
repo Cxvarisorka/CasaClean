@@ -59,7 +59,22 @@ const userSchema = new mongoose.Schema({
         enum: ["local", "google"],
         default: "local"
     },
-    avatar: String
+    avatar: String,
+    // --- Payments (Stripe) ------------------------------------------------------
+    // The user's Stripe Customer id, created lazily on their first payment (see
+    // ensureStripeCustomer). Saved cards and PaymentIntents are attached to it.
+    // sparse+unique: most users won't have one until they pay, and null values
+    // must not collide on the unique index.
+    stripeCustomerId: {
+        type: String,
+        unique: true,
+        sparse: true
+    },
+    // The card the user picked as their default for one-click future bookings.
+    // A Stripe PaymentMethod id ("pm_..."); cleared if that card is removed.
+    defaultPaymentMethodId: {
+        type: String
+    }
 }, {
     timestamps: true
 });

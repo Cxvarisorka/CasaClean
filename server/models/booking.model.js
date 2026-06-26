@@ -114,25 +114,67 @@ const bookingSchema = new mongoose.Schema({
     type: [String],
     default: []
   },
+  // Cleaning staff assigned to this booking. Admin-managed only — references to
+  // Worker documents so each entry is a real staff member. Customers never set
+  // this; the controller only honours it for admin requests (resolveWorkers
+  // validates the ids before they're stored).
+  workers: {
+    type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Worker' }],
+    default: []
+  },
   status: {
     type: String,
     enum: ['pending', 'confirmed', 'cancelled', 'completed'],
     default: 'confirmed'
   },
-  // --- Payment placeholders ---------------------------------------------------
-  // Payments are NOT implemented yet, so these are optional and server-managed
-  // (never accepted from the public create endpoint). They are kept so a future
-  // payment integration can populate them without another migration. When/if a
-  // payment intent id is set it must be unique (one booking per payment) — see
-  // the sparse unique index below.
-  // No `default: null`: the sparse unique index below only ignores documents
-  // where this field is ABSENT, not where it's null. Defaulting to null would
-  // put every payment-less booking into the index as null and collide on the
-  // second one — so we leave the field unset until a payment id actually exists.
+  // --- Payment fields ---------------------------------------------------------
+  // All server-managed (never accepted from the public create endpoint). For a
+  // customer online booking they're populated when the PaymentIntent succeeds
+  // (promotePendingBooking); for an admin walk-in/phone booking the payment is
+  // recorded as 'manual' with no Stripe involvement.
+  //
+  // No `default: null` on paymentIntentId: the sparse unique index below only
+  // ignores documents where this field is ABSENT, not where it's null.
+  // Defaulting to null would put every manual/payment-less booking into the
+  // index as null and collide on the second one — so the field stays unset until
+  // a real payment id exists.
   paymentIntentId: {
     type: String
-    
   },
+  // How the booking was paid for: an online card charge, or a manual/offline
+  // (cash/invoice) booking entered by an admin.
+  paymentMethod: {
+    type: String,
+    enum: ['card', 'manual'],
+    default: 'card'
+  },
+  // Lifecycle of the money: unpaid (no charge yet), paid (captured), refunded
+  // (charge reversed on cancellation), or manual (offline booking, no Stripe).
+  paymentStatus: {
+    type: String,
+    enum: ['unpaid', 'paid', 'refunded', 'manual'],
+    default: 'unpaid'
+  },
+  // Amount actually captured, in decimal euros (mirrors totalAmount at pay time).
+  amountPaid: {
+    type: Number,
+    min: [0, "Amount paid can't be negative."]
+  },
+  currency: {
+    type: String,
+    default: 'eur'
+  },
+  // Stripe refund id, set when a paid booking is cancelled & refunded.
+  refundId: {
+    type: String
+  },
+  paidAt: {
+    type: Date
+  },
+  refundedAt: {
+    type: Date
+  },
+  // Raw Stripe status mirror (e.g. 'succeeded' / 'refunded') for support/debug.
   stripeStatus: {
     type: String,
     default: ''

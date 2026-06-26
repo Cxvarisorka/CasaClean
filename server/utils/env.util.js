@@ -28,7 +28,13 @@ const PLACEHOLDER_SECRETS = [
 const assertEnv = () => {
     const problems = [];
 
-    const required = ["MONGO_URI", "JWT_SECRET", "JWT_EXPIRES_IN", "CLIENT_URL", "SERVER_URL", "PORT"];
+    const required = [
+        "MONGO_URI", "JWT_SECRET", "JWT_EXPIRES_IN", "CLIENT_URL", "SERVER_URL", "PORT",
+        // Stripe: the secret API key (server-side calls) and the webhook signing
+        // secret (HMAC verification). Both are required — payments are now a core
+        // part of the booking flow, so a server without them is misconfigured.
+        "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"
+    ];
     for (const name of required) {
         if (!process.env[name]) {
             problems.push(`Missing required environment variable: ${name}`);

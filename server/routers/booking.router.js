@@ -22,10 +22,11 @@ const { createBookingSchema, editBookingSchema } = require('../validations/booki
 
 const bookingRouter = express.Router();
 
-// Authenticated route — a user must be logged in to book. `protect` populates
-// req.user, whose stored profile (name/email/phone) the controller reuses so the
-// customer doesn't re-enter details they already gave at registration.
-bookingRouter.post('/', bookingLimiter, protect, validate(createBookingSchema), createBooking);
+// Admin-only manual/offline booking creation (walk-in / phone, paid by
+// cash/invoice). Customers now book through the online payment flow
+// (/api/v1/payment/booking/*), which charges the card before the booking is
+// created — so this direct-create path is restricted to admins.
+bookingRouter.post('/', bookingLimiter, protect, restrictTo('admin'), validate(createBookingSchema), createBooking);
 
 // A signed-in user's own bookings. Declared BEFORE '/:id' so the literal "my"
 // isn't swallowed by the dynamic id route.

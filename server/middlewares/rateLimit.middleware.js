@@ -37,4 +37,11 @@ const bookingLimiter = rateLimit(
     limiterOptions(20, 15 * 60 * 1000, "Too many booking requests. Please try again later.")
 );
 
-module.exports = { globalLimiter, signinLimiter, signupLimiter, emailLimiter, bookingLimiter };
+// Payment endpoints (intent creation, setup intents): each creates a Stripe
+// object, so keep them on a tight limit to blunt abuse without blocking a normal
+// checkout (which only needs one or two intents).
+const paymentLimiter = rateLimit(
+    limiterOptions(30, 15 * 60 * 1000, "Too many payment requests. Please try again later.")
+);
+
+module.exports = { globalLimiter, signinLimiter, signupLimiter, emailLimiter, bookingLimiter, paymentLimiter };

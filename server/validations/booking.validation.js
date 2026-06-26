@@ -117,6 +117,13 @@ const createBookingSchema = z.object({
         .array(objectId)
         .optional(),
 
+    // Assigned cleaning staff. Honoured by the controller only for admin
+    // requests (a normal customer can't assign workers to their own booking).
+    workers: z
+        .array(objectId)
+        .max(50, { message: "Workers list can't exceed 50 items!" })
+        .optional(),
+
     supplies: z
         .array(
             z.string()
@@ -209,6 +216,13 @@ const editBookingSchema = z.object({
 
     specialRequests: z
         .array(objectId)
+        .optional(),
+
+    // Assigned cleaning staff (admin-managed). Sending an empty array clears the
+    // current assignment.
+    workers: z
+        .array(objectId)
+        .max(50, { message: "Workers list can't exceed 50 items!" })
         .optional(),
 
     supplies: z

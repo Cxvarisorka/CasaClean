@@ -4,250 +4,60 @@ const mongoose = require('mongoose');
 // Models
 const Booking = require('../models/booking.model');
 const SpecialRequest = require('../models/specialRequest.model');
-const City = require('../models/city.model');
-const Service = require('../models/service.model');
 const User = require('../models/user.model');
+const Worker = require('../models/worker.model');
 
 // Utils
 const catchAsync = require('../utils/catchAsync.util');
 const AppError = require('../utils/appError.util');
 const sendEmail = require('../utils/email.util');
 
-/**
- * Validate the service/city pair selected for a booking.
- *
- * Fail-closed: both ids MUST be valid ObjectIds that resolve to an existing,
- * *enabled* Service/City document — anything else is rejected. When the service
- * is offered only in specific cities (allCities === false), the chosen city must
- * be one of them.
- *
- * Returns { service, city } so the caller can:
- *   - use service.pricePerHour for server-side price computation (Fix 1)
- *   - use city.workingHourStarts / city.workingHourEnds for time validation (Fix 3)
- *   - pass service to resolveSpecialRequests for add-on compatibility (existing)
- *
- * Throws AppError on any failure; the caller's catchAsync forwards it to the
- * error middleware.
- */
-const resolveServiceAndCity = async (serviceId, cityId) => {
-  if (
-    !mongoose.Types.ObjectId.isValid(serviceId) ||
-    !mongoose.Types.ObjectId.isValid(cityId)
-  ) {
-    throw new AppError("Invalid service or city id!", 400);
-  }
+// Shared booking logic (service/city + add-on resolution, pricing, emails) lives
+// in the service layer so the payment controller can reuse it.
+const {
+  resolveServiceAndCity,
+  resolveSpecialRequests,
+  renderBookingConfirmationEmail,
+  renderRefundEmail
+} = require('../services/booking.service');
 
-  // Include pricePerHour so the controller can compute the booking total
-  // without a second query (Fix 1). Include workingHour* on city for the
-  // time-range check (Fix 3).
-  const [service, city] = await Promise.all([
-    Service.findById(serviceId)
-      .select("name enabled allCities cities allSpecialRequests specialRequests pricePerHour")
-      .lean(),
-    City.findById(cityId)
-      .select("enabled workingHourStarts workingHourEnds")
-      .lean()
-  ]);
-
-  // Combined existence/enabled message so we don't leak existing-but-disabled
-  // vs. non-existent.
-  if (!service || !service.enabled) {
-    throw new AppError("The selected service does not exist or is unavailable!", 400);
-  }
-  if (!city || !city.enabled) {
-    throw new AppError("The selected city does not exist or is unavailable!", 400);
-  }
-
-  // Coverage: a city-restricted service must actually serve the chosen city.
-  if (!service.allCities) {
-    const covered = (service.cities || []).some(
-      (c) => String(c) === String(cityId)
-    );
-    if (!covered) {
-      throw new AppError("The selected service is not available in the chosen city!", 400);
-    }
-  }
-
-  return { service, city };
-};
+// Refund helper lives in the payment controller (it talks to Stripe). Used when
+// a paid booking is cancelled (by the user or an admin).
+const { refundBookingPayment } = require('../controllers/payment.controller');
 
 /**
- * Validate the special-request add-ons selected for a booking.
+ * Validate the cleaning staff assigned to a booking.
  *
- * Accepts an array of SpecialRequest ids and returns the full resolved
- * SpecialRequest documents (not just ids) so the caller can sum their `price`
- * fields for server-side total computation (Fix 1). Documents are de-duplicated
- * before the DB query.
- *
- * All ids must resolve to real, *enabled* catalogue items, otherwise throws
- * AppError. When a `service` is supplied and it restricts its add-ons
- * (allSpecialRequests === false), every selected id must be one the service
- * actually offers.
+ * Admin-only at the call site. Fail-closed: every id must be a valid ObjectId
+ * pointing to an existing Worker. Unlike special requests we do NOT require the
+ * worker to be `enabled` — disabling a worker (e.g. on leave) shouldn't make an
+ * existing booking impossible to re-save. Ids are de-duplicated and returned as
+ * ObjectIds ready to store on the booking. An empty/absent list resolves to [].
  */
-const resolveSpecialRequests = async (ids, service = null) => {
-
-  // Nothing selected is perfectly valid — special requests are optional.
+const resolveWorkers = async (ids) => {
   if (!ids) return [];
 
   if (!Array.isArray(ids)) {
-    throw new AppError("specialRequests must be an array of ids!", 400);
+    throw new AppError("workers must be an array of ids!", 400);
   }
 
   if (ids.length === 0) return [];
 
-  // Drop duplicates (e.g. the same add-on sent twice from the UI).
   const uniqueIds = [...new Set(ids.map(String))];
 
-  // Reject malformed ids early so we never hand a bad value to the query.
   if (!uniqueIds.every((id) => mongoose.Types.ObjectId.isValid(id))) {
-    throw new AppError("One or more special request ids are invalid!", 400);
+    throw new AppError("One or more worker ids are invalid!", 400);
   }
 
-  // Fetch the full documents so the caller can read the `price` field (Fix 1).
-  // We select only the fields we need to keep the payload small.
-  const foundDocs = await SpecialRequest.find({
-    _id: { $in: uniqueIds },
-    enabled: true
-  }).select("_id price").lean();
+  const foundDocs = await Worker.find({ _id: { $in: uniqueIds } })
+    .select("_id")
+    .lean();
 
   if (foundDocs.length !== uniqueIds.length) {
-    throw new AppError("One or more selected special requests do not exist or are unavailable!", 400);
+    throw new AppError("One or more selected workers do not exist!", 400);
   }
 
-  // Service/add-on compatibility: a service that lists explicit add-ons may only
-  // be booked with those add-ons. (allSpecialRequests === true accepts any
-  // enabled add-on.)
-  if (service && !service.allSpecialRequests) {
-    const allowed = new Set((service.specialRequests || []).map(String));
-    if (!uniqueIds.every((id) => allowed.has(id))) {
-      throw new AppError("One or more selected special requests are not available for this service!", 400);
-    }
-  }
-
-  // Return the full documents so callers can access price and other fields.
-  return foundDocs;
-};
-
-/* ----------------------------------------------------- Confirmation email */
-
-// Escape user-provided values before interpolating them into the HTML email so
-// a name/address/etc. can never inject markup.
-const escapeHtml = (value) =>
-  String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-
-const formatEuro = (n) =>
-  new Intl.NumberFormat("en-IE", { style: "currency", currency: "EUR" }).format(
-    Number(n) || 0
-  );
-
-/**
- * Build the booking-confirmation email — a branded, email-client-safe HTML body
- * (table layout + inline styles) with a plain-text fallback for deliverability
- * and non-HTML clients. Returns { subject, html, text }.
- *
- * All interpolated user values pass through escapeHtml.
- */
-const renderBookingConfirmationEmail = ({
-  customerName, serviceName, bookingDate, bookingTime,
-  hours, cleaners, streetName, houseNumber, totalAmount
-}) => {
-  const subject = "CasaClean — Your booking is confirmed 🎉";
-  const name = escapeHtml(customerName);
-  const total = formatEuro(totalAmount);
-  const address =
-    [streetName, houseNumber ? `No. ${houseNumber}` : ""].filter(Boolean).join(", ");
-
-  const rows = [
-    ["Service", serviceName || "Cleaning service"],
-    ["Date", bookingDate],
-    ["Time", bookingTime],
-    ["Duration", `${hours} h · ${cleaners} cleaner(s)`],
-    ["Address", address || "—"],
-  ];
-
-  const detailRows = rows
-    .map(
-      ([label, value]) => `
-        <tr>
-          <td style="padding:12px 0;color:#64748b;font-size:14px;">${escapeHtml(label)}</td>
-          <td style="padding:12px 0;color:#0f172a;font-size:14px;font-weight:600;text-align:right;">${escapeHtml(value)}</td>
-        </tr>`
-    )
-    .join("");
-
-  const html = `<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-  </head>
-  <body style="margin:0;padding:0;background-color:#f1f5f9;font-family:Arial,Helvetica,sans-serif;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f1f5f9;padding:32px 12px;">
-      <tr>
-        <td align="center">
-          <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px;background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(15,23,42,0.08);">
-            <tr>
-              <td style="background-color:#0f766e;padding:32px 40px;text-align:center;">
-                <div style="color:#ffffff;font-size:22px;font-weight:700;letter-spacing:0.5px;">CasaClean</div>
-                <div style="color:#99f6e4;font-size:14px;margin-top:4px;">Booking Confirmation</div>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:36px 40px 8px;text-align:center;">
-                <div style="width:56px;height:56px;line-height:56px;border-radius:28px;background-color:#ecfdf5;color:#0d9488;font-size:28px;margin:0 auto;">&#10003;</div>
-                <h1 style="margin:20px 0 6px;color:#0f172a;font-size:22px;font-weight:700;">Thank you, ${name}!</h1>
-                <p style="margin:0;color:#64748b;font-size:15px;">Your reservation has been successfully confirmed.</p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:24px 40px;">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;">
-                  ${detailRows}
-                </table>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:0 40px 8px;">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0fdfa;border-radius:12px;">
-                  <tr>
-                    <td style="padding:16px 20px;color:#0f766e;font-size:15px;font-weight:600;">Total</td>
-                    <td style="padding:16px 20px;color:#0f766e;font-size:20px;font-weight:700;text-align:right;">${escapeHtml(total)}</td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:24px 40px 36px;text-align:center;">
-                <p style="margin:0;color:#94a3b8;font-size:13px;line-height:1.6;">
-                  Need to make a change? Just reply to this email and our team will help.<br />
-                  &copy; ${new Date().getFullYear()} CasaClean. All rights reserved.
-                </p>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-  </body>
-</html>`;
-
-  const text =
-    `Hello ${customerName},\n\n` +
-    `Your CasaClean booking is confirmed.\n\n` +
-    `Service:  ${serviceName || "Cleaning service"}\n` +
-    `Date:     ${bookingDate}\n` +
-    `Time:     ${bookingTime}\n` +
-    `Duration: ${hours} h (${cleaners} cleaner(s))\n` +
-    `Address:  ${address || "—"}\n` +
-    `Total:    ${total}\n\n` +
-    `Thank you for choosing CasaClean!`;
-
-  return { subject, html, text };
+  return foundDocs.map((w) => w._id);
 };
 
 // GET /api/v1/booking (admin) — paginated list, newest first
@@ -263,6 +73,7 @@ const getBookings = catchAsync(async (req, res, next) => {
       .populate('serviceId', 'name')
       .populate('cityId', 'name')
       .populate('specialRequests')
+      .populate('workers', 'fullname')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
@@ -291,6 +102,7 @@ const getMyBookings = catchAsync(async (req, res, next) => {
       .populate('serviceId', 'name')
       .populate('cityId', 'name')
       .populate('specialRequests')
+      .populate('workers', 'fullname')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
@@ -313,6 +125,7 @@ const getBookingById = catchAsync(async (req, res, next) => {
     .populate('serviceId', 'name')
     .populate('cityId', 'name')
     .populate('specialRequests')
+    .populate('workers', 'fullname')
     .lean();
 
   if (!booking) {
@@ -371,7 +184,7 @@ const createBooking = catchAsync(async (req, res, next) => {
   const {
     serviceId, cityId, streetName, houseNumber, propertySize,
     doorbellName, bookingDate, bookingTime, hours, cleaners,
-    notes, specialRequests, supplies
+    notes, specialRequests, supplies, workers
   } = req.body;
 
   // Required-field guard. Numeric fields are compared against undefined (not
@@ -416,8 +229,22 @@ const createBooking = catchAsync(async (req, res, next) => {
   // Extract just the ids for storage (the Booking model stores ObjectId refs).
   const requestIds = resolvedSpecialRequests.map((sr) => sr._id);
 
+  // Worker assignment is an admin-only concern. A normal customer's `workers`
+  // (even if smuggled past the optional schema) is ignored — only an admin
+  // creating a booking on a customer's behalf can assign staff.
+  const assignedWorkers = isAdmin ? await resolveWorkers(workers) : [];
+
+  // Status is server-managed (the create schema rejects any client-supplied
+  // value). An admin booking on a customer's behalf starts as 'pending' so it
+  // can be reviewed/confirmed by staff; an admin booking for themselves is
+  // 'confirmed' immediately (matching the model default).
+  const status = onBehalf ? 'pending' : 'confirmed';
+
+  // This endpoint is admin-only (customers pay online via /payment/booking/*),
+  // so every booking created here is a MANUAL / offline (cash/invoice) booking:
+  // no Stripe charge is taken. The money is settled out-of-band.
   // Whitelist exactly what we persist — we never spread req.body, so a caller
-  // can't mass-assign server-managed fields (user/status/payment/totalAmount).
+  // can't mass-assign server-managed fields (user/paymentIntentId/totalAmount).
   const booking = await Booking.create({
     user: owner,
     serviceId,
@@ -434,9 +261,13 @@ const createBooking = catchAsync(async (req, res, next) => {
     hours,
     cleaners,
     totalAmount: computedTotal,
+    status,
+    paymentMethod: 'manual',
+    paymentStatus: 'manual',
     notes: notes ?? null,
     specialRequests: requestIds,
-    supplies: Array.isArray(supplies) ? supplies : []
+    supplies: Array.isArray(supplies) ? supplies : [],
+    workers: assignedWorkers
   });
 
   // Confirmation email is best-effort: a mail failure must not fail the booking
@@ -524,6 +355,12 @@ const editBooking = catchAsync(async (req, res, next) => {
     updates.specialRequests = resolvedSpecialRequests.map((sr) => sr._id);
   }
 
+  // Worker (re)assignment — admin-only route, so no extra role check needed.
+  // An empty array clears the current assignment; ids are validated fail-closed.
+  if (req.body.workers !== undefined) {
+    updates.workers = await resolveWorkers(req.body.workers);
+  }
+
   // Recompute the server-managed total whenever a price input (hours or add-ons)
   // changes — otherwise the stored amount would drift out of sync with the
   // booking. Price = pricePerHour * hours + sum(add-on prices).
@@ -546,13 +383,48 @@ const editBooking = catchAsync(async (req, res, next) => {
     updates.totalAmount = service.pricePerHour * finalHours + addOnTotal;
   }
 
+  // An admin cancelling a booking must release the money too — a status flip to
+  // 'cancelled' here can't be allowed to bypass the refund. Load the booking's
+  // payment fields, refund a paid card booking, and merge the resulting payment
+  // fields into the update so they persist atomically with the status change.
+  if (updates.status === 'cancelled') {
+    const current = await Booking.findById(id)
+      .select('paymentMethod paymentStatus paymentIntentId status customerName customerEmail bookingDate totalAmount')
+      .populate('serviceId', 'name')
+      .lean();
+    if (!current) {
+      return next(new AppError("Booking not found!", 404));
+    }
+    // Idempotent: don't refund again if it's already cancelled.
+    if (current.status !== 'cancelled') {
+      const refundUpdate = await refundBookingPayment(current);
+      if (refundUpdate) {
+        Object.assign(updates, refundUpdate);
+
+        // Best-effort refund email.
+        try {
+          const { subject, html, text } = renderRefundEmail({
+            customerName: current.customerName,
+            serviceName: current.serviceId?.name,
+            bookingDate: current.bookingDate,
+            amount: current.totalAmount
+          });
+          await sendEmail({ email: current.customerEmail, subject, html, text });
+        } catch (emailError) {
+          console.error('Refund email send error:', emailError.message);
+        }
+      }
+    }
+  }
+
   const booking = await Booking.findByIdAndUpdate(id, updates, {
     new: true,
     runValidators: true
   })
     .populate('serviceId', 'name')
     .populate('cityId', 'name')
-    .populate('specialRequests');
+    .populate('specialRequests')
+    .populate('workers', 'fullname');
 
   if (!booking) {
     return next(new AppError("Booking not found!", 404));
@@ -590,18 +462,46 @@ const cancelMyBooking = catchAsync(async (req, res, next) => {
     return next(new AppError("A completed booking can't be cancelled.", 400));
   }
 
+  // Release the money before marking the booking cancelled. refundBookingPayment
+  // throws on a Stripe failure, which (via catchAsync) aborts the cancellation —
+  // we never want a booking marked cancelled while the customer is still charged.
+  // It's a no-op for manual/offline or unpaid bookings.
+  const refundUpdate = await refundBookingPayment(booking);
+  if (refundUpdate) {
+    Object.assign(booking, refundUpdate);
+  }
+
   booking.status = 'cancelled';
   await booking.save();
+
+  // Best-effort refund email (only when an actual refund was issued).
+  if (refundUpdate) {
+    try {
+      const serviceDoc = await Booking.findById(booking._id).populate('serviceId', 'name').select('serviceId').lean();
+      const { subject, html, text } = renderRefundEmail({
+        customerName: booking.customerName,
+        serviceName: serviceDoc?.serviceId?.name,
+        bookingDate: booking.bookingDate,
+        amount: booking.totalAmount
+      });
+      await sendEmail({ email: booking.customerEmail, subject, html, text });
+    } catch (emailError) {
+      console.error('Refund email send error:', emailError.message);
+    }
+  }
 
   const populated = await Booking.findById(booking._id)
     .populate('serviceId', 'name')
     .populate('cityId', 'name')
     .populate('specialRequests')
+    .populate('workers', 'fullname')
     .lean();
 
   res.status(200).json({
     status: "success",
-    message: "Booking cancelled successfully!",
+    message: refundUpdate
+      ? "Booking cancelled and refunded successfully!"
+      : "Booking cancelled successfully!",
     data: { booking: populated }
   });
 });

@@ -21,6 +21,9 @@ const connectDB = require('./config/db.config');
 require("./config/passport.config");
 require("./config/sentry.config");
 
+// Models (referenced directly for one-off startup tasks like index sync)
+const Review = require('./models/review.model');
+
 // Custom middlewares
 const globalErrorHandler = require('./controllers/error.controller');
 const csrfGuard = require('./middlewares/csrf.middleware');
@@ -35,6 +38,11 @@ const serviceRouter = require('./routers/service.router');
 const bookingRouter = require('./routers/booking.router');
 const specialRequestRouter = require('./routers/specialRequest.router');
 const reviewRouter = require('./routers/review.router');
+const workerRouter = require('./routers/worker.router');
+const paymentRouter = require('./routers/payment.router');
+
+// Stripe webhook (raw-body handler; mounted before the JSON parser & CSRF guard)
+const { handleStripeWebhook } = require('./controllers/webhook.controller');
 
 // Express app init
 const app = express();
@@ -56,6 +64,15 @@ app.use(helmet({
     // would poison the browser's HTTPS-only cache for the dev domain.
     strictTransportSecurity: isProduction
 }));
+
+// --- Stripe webhook (MUST come before express.json, cookieParser, csrfGuard and
+// the global rate limiter) ---------------------------------------------------
+// Stripe signs the webhook against the RAW request bytes, so this route needs
+// the unparsed body (express.raw). The request also carries no auth cookie and
+// no X-Requested-With header — both of which the normal pipeline would reject.
+// Mounting it here (under /webhooks, outside /api/v1) keeps it fully isolated and
+// off the global rate limiter so Stripe's retry bursts are never throttled.
+app.post('/webhooks/stripe', express.raw({ type: 'application/json' }), handleStripeWebhook);
 
 // CORS — credentials:true is required so the browser sends/stores the auth
 // cookie. The origin is an explicit allow-list (assertEnv guarantees
@@ -101,6 +118,8 @@ app.use('/api/v1/service', serviceRouter);
 app.use('/api/v1/booking', bookingRouter)
 app.use('/api/v1/special-request', specialRequestRouter);
 app.use('/api/v1/review', reviewRouter);
+app.use('/api/v1/worker', workerRouter);
+app.use('/api/v1/payment', paymentRouter);
 
 // 404 — any unmatched route falls through to here.
 // Express 5 changed the wildcard syntax; use a named splat ("/*splat").
@@ -121,6 +140,17 @@ app.use(globalErrorHandler);
 const start = async () => {
     try {
         await connectDB();
+
+        // Reconcile the Review indexes. Earlier builds used a unique
+        // (service_id, user) index — one review per service per user. Reviews
+        // are now per-booking (a customer can rate every completed booking), so
+        // sync drops that stale index and builds the booking-unique one. Wrapped
+        // so an index hiccup never blocks startup.
+        try {
+            await Review.syncIndexes();
+        } catch (indexErr) {
+            console.error("Review.syncIndexes failed (non-fatal):", indexErr.message);
+        }
 
         app.listen(process.env.PORT, () => {
             console.log(`Server is running on port ${process.env.PORT}`);

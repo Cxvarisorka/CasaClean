@@ -25,6 +25,34 @@ const handleJWTError = () =>
 const handleJWTExpired = () =>
     new AppError("Your session has expired. Please log in again!", 401);
 
+// Stripe errors. The SDK tags errors with a `type`; turn the common ones into
+// operational AppErrors with a client-safe message (card declines surface their
+// reason; everything else stays generic).
+const STRIPE_ERROR_TYPES = new Set([
+    "StripeCardError",
+    "StripeInvalidRequestError",
+    "StripeRateLimitError",
+    "StripeAuthenticationError",
+    "StripeAPIError",
+    "StripeConnectionError"
+]);
+const isStripeError = (err) =>
+    typeof err?.type === "string" && err.type.startsWith("Stripe");
+const handleStripeError = (err) => {
+    switch (err.type) {
+        case "StripeCardError":
+            // e.g. card declined / insufficient funds — safe to show the reason.
+            return new AppError(err.message || "Your card was declined.", 402);
+        case "StripeRateLimitError":
+            return new AppError("Too many payment requests. Please try again shortly.", 429);
+        case "StripeInvalidRequestError":
+            return new AppError("Invalid payment request.", 400);
+        default:
+            // Auth/API/connection issues are our problem, not the customer's.
+            return new AppError("Payment processing failed. Please try again later.", 502);
+    }
+};
+
 const sendErrorDev = (err, res) => {
     res.status(err.statusCode).json({
         success: false,
@@ -76,6 +104,7 @@ const globalErrorHandler = (err, req, res, next) => {
     if (err.name === "ValidationError") error = handleValidationError(err);
     if (err.name === "JsonWebTokenError") error = handleJWTError();
     if (err.name === "TokenExpiredError") error = handleJWTExpired();
+    if (isStripeError(err) && STRIPE_ERROR_TYPES.has(err.type)) error = handleStripeError(err);
 
     sendErrorProd(error, res);
 };
