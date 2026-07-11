@@ -22,6 +22,11 @@ import { request } from "@/services/api";
 // are small; pagination on the admin side isn't needed yet).
 const LIST_QS = "?limit=100";
 
+// The public catalogue lists (city/service/special-request) only return
+// enabled records; the admin panel must also see soft-disabled ones to manage
+// (and re-enable) them. The server honours this flag only for admins.
+const CATALOGUE_QS = `${LIST_QS}&includeDisabled=true`;
+
 // Keep an object to only the keys whose value is defined — used so a partial
 // edit (e.g. just toggling `enabled`) never sends `undefined` into a strict
 // schema, which would be rejected as an unknown/invalid field.
@@ -41,7 +46,7 @@ const cityFromApi = (c) => ({
 
 export const cityApi = {
   async list() {
-    const data = await request({ method: "GET", url: `/city${LIST_QS}` });
+    const data = await request({ method: "GET", url: `/city${CATALOGUE_QS}` });
     return (data.cities ?? []).map(cityFromApi);
   },
   async create(v) {
@@ -99,7 +104,7 @@ const serviceFromApi = (s) => ({
 
 export const serviceApi = {
   async list() {
-    const data = await request({ method: "GET", url: `/service${LIST_QS}` });
+    const data = await request({ method: "GET", url: `/service${CATALOGUE_QS}` });
     return (data.services ?? []).map(serviceFromApi);
   },
   async create(v) {
@@ -172,7 +177,7 @@ export const specialRequestApi = {
   async list() {
     const data = await request({
       method: "GET",
-      url: `/special-request${LIST_QS}`,
+      url: `/special-request${CATALOGUE_QS}`,
     });
     return (data.specialRequests ?? []).map(specialRequestFromApi);
   },

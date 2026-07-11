@@ -1,6 +1,7 @@
 import {
   LayoutDashboard,
   CalendarCheck,
+  CalendarDays,
   Sparkles,
   ListPlus,
   MapPin,
@@ -23,6 +24,7 @@ import { ROUTES } from "@/constants/routes";
 export const ADMIN_NAV = [
   { to: ROUTES.admin.dashboard, label: "Dashboard", labelKey: "admin.nav.dashboard", icon: LayoutDashboard, end: true },
   { to: ROUTES.admin.bookings, label: "Bookings", labelKey: "admin.nav.bookings", icon: CalendarCheck },
+  { to: ROUTES.admin.calendar, label: "Calendar", labelKey: "admin.nav.calendar", icon: CalendarDays },
   { to: ROUTES.admin.services, label: "Services", labelKey: "admin.nav.services", icon: Sparkles },
   { to: ROUTES.admin.specialRequests, label: "Special requests", labelKey: "admin.nav.specialRequests", icon: ListPlus },
   { to: ROUTES.admin.cities, label: "Cities", labelKey: "admin.nav.cities", icon: MapPin },

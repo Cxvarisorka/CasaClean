@@ -34,6 +34,7 @@ const AdminLayout = lazy(() =>
 );
 const AdminDashboardPage = lazy(() => import("@/pages/Admin/DashboardPage"));
 const AdminBookingsPage = lazy(() => import("@/pages/Admin/BookingsPage"));
+const AdminCalendarPage = lazy(() => import("@/pages/Admin/CalendarPage"));
 const AdminServicesPage = lazy(() => import("@/pages/Admin/ServicesPage"));
 const AdminSpecialRequestsPage = lazy(() => import("@/pages/Admin/SpecialRequestsPage"));
 const AdminCitiesPage = lazy(() => import("@/pages/Admin/CitiesPage"));
@@ -78,6 +79,7 @@ export const ADMIN_LAYOUT = AdminLayout;
 export const ADMIN_ROUTES = [
   { path: "", element: AdminDashboardPage, index: true },
   { path: "bookings", element: AdminBookingsPage },
+  { path: "calendar", element: AdminCalendarPage },
   { path: "services", element: AdminServicesPage },
   { path: "special-requests", element: AdminSpecialRequestsPage },
   { path: "cities", element: AdminCitiesPage },
