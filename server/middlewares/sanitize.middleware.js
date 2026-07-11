@@ -9,6 +9,12 @@
  *
  * (Hand-rolled rather than `express-mongo-sanitize` because that package
  * assigns to req.query, which is a read-only getter in Express 5.)
+ *
+ * ⚠ req.query is NOT covered here (same read-only-getter reason). Query params
+ * must never be passed into a Mongo filter raw — coerce them at the point of
+ * use (every current endpoint casts them to bounded Numbers or compares them
+ * as literal strings, e.g. `req.query.includeDisabled === "true"`). Any future
+ * endpoint that filters by a query param must do the same.
  */
 const sanitizeValue = (value) => {
     if (Array.isArray(value)) {

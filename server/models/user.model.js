@@ -113,8 +113,6 @@ userSchema.methods.createVerificationToken = function () {
     return rawToken;
 };
 
-userSchema.index({ role: 1, isVerified: 1 });
-
 const User = mongoose.model('User', userSchema);
 
 module.exports = User;

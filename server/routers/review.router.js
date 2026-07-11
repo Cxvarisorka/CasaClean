@@ -8,6 +8,10 @@ const {  createReview,
  } = require('../controllers/review.controller');
 
 const { protect, restrictTo } = require('../middlewares/protect.middleware');
+const validate = require('../middlewares/validate.middleware');
+const { reviewLimiter } = require('../middlewares/rateLimit.middleware');
+
+const { createReviewSchema, editReviewSchema } = require('../validations/review.validation');
 
 const reviewRouter = express.Router();
 
@@ -21,10 +25,13 @@ reviewRouter.get('/my', protect, getMyReviews);
 // Public per-service listing.
 reviewRouter.get('/service/:serviceId', getServiceReviews);
 
-// Create a review for one of the user's OWN completed bookings.
-reviewRouter.post('/booking/:bookingId', protect, createReview);
+// Write routes follow the standard middleware order used by every other
+// resource: rate limiter -> protect -> validate(schema) -> controller.
 
-reviewRouter.patch('/:id', protect, editReview);
-reviewRouter.delete('/:id', protect, deleteReview);
+// Create a review for one of the user's OWN completed bookings.
+reviewRouter.post('/booking/:bookingId', reviewLimiter, protect, validate(createReviewSchema), createReview);
+
+reviewRouter.patch('/:id', reviewLimiter, protect, validate(editReviewSchema), editReview);
+reviewRouter.delete('/:id', reviewLimiter, protect, deleteReview);
 
 module.exports = reviewRouter;

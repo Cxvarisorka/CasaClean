@@ -25,7 +25,9 @@ const getWorkers = catchAsync(async (req, res) => {
             .skip((page - 1) * limit)
             .limit(limit)
             .lean(),
-        Worker.countDocuments()
+        // No filter -> estimatedDocumentCount reads collection metadata (O(1))
+        // instead of scanning every document like countDocuments() would.
+        Worker.estimatedDocumentCount()
     ]);
 
     res.status(200).json({

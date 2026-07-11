@@ -23,6 +23,8 @@ require("./config/sentry.config");
 
 // Models (referenced directly for one-off startup tasks like index sync)
 const Review = require('./models/review.model');
+const Booking = require('./models/booking.model');
+const User = require('./models/user.model');
 
 // Custom middlewares
 const globalErrorHandler = require('./controllers/error.controller');
@@ -141,15 +143,21 @@ const start = async () => {
     try {
         await connectDB();
 
-        // Reconcile the Review indexes. Earlier builds used a unique
-        // (service_id, user) index — one review per service per user. Reviews
-        // are now per-booking (a customer can rate every completed booking), so
-        // sync drops that stale index and builds the booking-unique one. Wrapped
-        // so an index hiccup never blocks startup.
+        // Reconcile indexes with the schemas — sync drops indexes that no
+        // longer exist in code and builds new ones:
+        //   - Review: earlier builds used a unique (service_id, user) index;
+        //     reviews are now per-booking, so the booking-unique one replaces it.
+        //   - Booking/User: drops the retired customerEmail and role+isVerified
+        //     indexes (no query ever used them — pure write overhead).
+        // Wrapped so an index hiccup never blocks startup.
         try {
-            await Review.syncIndexes();
+            await Promise.all([
+                Review.syncIndexes(),
+                Booking.syncIndexes(),
+                User.syncIndexes()
+            ]);
         } catch (indexErr) {
-            console.error("Review.syncIndexes failed (non-fatal):", indexErr.message);
+            console.error("syncIndexes failed (non-fatal):", indexErr.message);
         }
 
         app.listen(process.env.PORT, () => {
@@ -164,7 +172,12 @@ const start = async () => {
 start();
 
 // Last-resort safety nets: never leave the process running in a corrupted state
-// after an unhandled async failure.
+// after an unhandled failure — sync (uncaughtException) or async (rejection).
+process.on("uncaughtException", (err) => {
+    console.error("UNCAUGHT EXCEPTION 💥 Shutting down...", err);
+    process.exit(1);
+});
+
 process.on("unhandledRejection", (err) => {
     console.error("UNHANDLED REJECTION 💥 Shutting down...", err);
     process.exit(1);

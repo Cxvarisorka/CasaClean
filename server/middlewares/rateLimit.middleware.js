@@ -44,4 +44,11 @@ const paymentLimiter = rateLimit(
     limiterOptions(30, 15 * 60 * 1000, "Too many payment requests. Please try again later.")
 );
 
-module.exports = { globalLimiter, signinLimiter, signupLimiter, emailLimiter, bookingLimiter, paymentLimiter };
+// Review writes (create/edit/delete): a real customer rates a handful of
+// bookings at most, so a tight limit blunts review-spam without getting in
+// anyone's way.
+const reviewLimiter = rateLimit(
+    limiterOptions(20, 15 * 60 * 1000, "Too many review requests. Please try again later.")
+);
+
+module.exports = { globalLimiter, signinLimiter, signupLimiter, emailLimiter, bookingLimiter, paymentLimiter, reviewLimiter };

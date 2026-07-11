@@ -15,6 +15,12 @@ const { verificationEmail } = require("../utils/emailTemplates.util");
 // work (anti user-enumeration via timing). Never matches a real password.
 const DUMMY_PASSWORD_HASH = bcrypt.hashSync(crypto.randomBytes(32).toString("hex"), 12);
 
+// Auth-cookie lifetime in days. assertEnv() guarantees COOKIE_EXPIRES is a
+// positive number at boot; the fallback only guards direct requires of this
+// module outside the normal startup path. Coerced once — an unvalidated string
+// in the maxAge arithmetic would yield NaN and an invalid cookie.
+const COOKIE_TTL_DAYS = Number(process.env.COOKIE_EXPIRES) > 0 ? Number(process.env.COOKIE_EXPIRES) : 7;
+
 /**
  * Issue a fresh verification token for a user, persist it and email the link.
  *
@@ -77,7 +83,7 @@ const setTokenCookie = (user, res, remember = true) => {
         // Persistent cookie only when "Remember me" is checked; otherwise a
         // session cookie (no maxAge) that's cleared when the browser closes.
         ...(remember
-            ? { maxAge: process.env.COOKIE_EXPIRES * 24 * 60 * 60 * 1000 }
+            ? { maxAge: COOKIE_TTL_DAYS * 24 * 60 * 60 * 1000 }
             : {}),
         // isProduction is fail-secure (anything not explicitly a dev env is
         // treated as production — see utils/env.util.js). Cross-site cookies
@@ -120,10 +126,12 @@ const signup = catchAsync(async (req, res, next) => {
         .lean();
 
     if (existing) {
-        if (existing.email === email) {
-            return next(new AppError("An account with that email already exists.", 400));
-        }
-        return next(new AppError("An account with that phone number already exists.", 400));
+        // One generic message regardless of WHICH field collided — mirroring the
+        // anti-enumeration posture of signin/resend, a signup probe mustn't
+        // reveal whether a specific email or phone number is registered.
+        // (The admin-only createUser below keeps per-field messages: that
+        // endpoint sits behind protect + restrictTo("admin").)
+        return next(new AppError("An account with that email or phone number already exists.", 400));
     }
 
     // Whitelist fields explicitly so a client can't inject role/isVerified.
@@ -208,14 +216,28 @@ const getMe = (req, res) => {
 // is select:false on the schema, so it's never returned. Newest first, so the
 // admin panel shows the most recent sign-ups at the top.
 const getAllUsers = catchAsync(async (req, res, next) => {
+    // Bounded pagination, same pattern as every other list endpoint — an
+    // unpaginated find() would grow linearly with signups.
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 10));
+
     // .lean() — the list is read-only (serialised straight to JSON), so plain
     // objects avoid the cost of hydrating a Mongoose document per user.
-    const users = await User.find().sort({ createdAt: -1 }).lean();
+    const [users, userCount] = await Promise.all([
+        User.find()
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit)
+            .lean(),
+        // No filter -> estimatedDocumentCount reads collection metadata (O(1))
+        // instead of scanning every document like countDocuments() would.
+        User.estimatedDocumentCount()
+    ]);
 
     res.status(200).json({
         status: "success",
         message: "Users returned successfully!",
-        userCount: users.length,
+        userCount,
         data: { users }
     });
 });

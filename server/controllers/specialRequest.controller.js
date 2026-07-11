@@ -14,13 +14,22 @@ const getSpecialRequests = catchAsync(async (req, res, next) => {
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 10));
 
+    // Soft-disabled add-ons are an admin concern: the public list (booking
+    // wizard) only ever sees enabled records. An admin opts into the full
+    // catalogue with ?includeDisabled=true — honoured only when the live DB
+    // role is admin (req.user comes from the attachUser middleware).
+    const includeDisabled = req.query.includeDisabled === "true" && req.user?.role === "admin";
+    const filter = includeDisabled ? {} : { enabled: true };
+
+    // For the unfiltered admin view, estimatedDocumentCount reads collection
+    // metadata (O(1)) instead of scanning every document.
     const [specialRequests, specialRequestCount] = await Promise.all([
-        SpecialRequest.find()
+        SpecialRequest.find(filter)
             .sort({ createdAt: -1 })
             .skip((page - 1) * limit)
             .limit(limit)
             .lean(),
-        SpecialRequest.countDocuments()
+        includeDisabled ? SpecialRequest.estimatedDocumentCount() : SpecialRequest.countDocuments(filter)
     ]);
 
     res.status(200).json({

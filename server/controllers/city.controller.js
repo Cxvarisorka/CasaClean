@@ -10,14 +10,23 @@ const getCities = catchAsync(async (req, res) => {
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 10));
 
+    // Soft-disabled cities are an admin concern: the public list (booking
+    // wizard) only ever sees enabled records. An admin opts into the full
+    // catalogue with ?includeDisabled=true — honoured only when the live DB
+    // role is admin (req.user comes from the attachUser middleware).
+    const includeDisabled = req.query.includeDisabled === "true" && req.user?.role === "admin";
+    const filter = includeDisabled ? {} : { enabled: true };
+
     // Run the page query and the total count in parallel (independent reads).
+    // For the unfiltered admin view, estimatedDocumentCount reads collection
+    // metadata (O(1)) instead of scanning every document.
     const [cities, cityCount] = await Promise.all([
-        City.find()
+        City.find(filter)
             .sort({ createdAt: -1 })
             .skip((page - 1) * limit)
             .limit(limit)
             .lean(),
-        City.countDocuments()
+        includeDisabled ? City.estimatedDocumentCount() : City.countDocuments(filter)
     ]);
 
     res.status(200).json({

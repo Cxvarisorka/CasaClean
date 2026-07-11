@@ -35,6 +35,29 @@ const protect = catchAsync(async (req, res, next) => {
 });
 
 /**
+ * Optional auth: like protect, but NEVER rejects. A valid auth cookie attaches
+ * the user to req.user; anything else (no cookie, expired/invalid token,
+ * deleted user) lets the request continue anonymously.
+ *
+ * Used on public endpoints whose response is richer for an admin — e.g. the
+ * catalogue lists, where ?includeDisabled=true only takes effect when the
+ * caller's live DB role is admin.
+ */
+const attachUser = async (req, res, next) => {
+    try {
+        const token = req.cookies?.lt;
+        if (token) {
+            const payload = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
+            const user = await User.findById(payload.id).lean();
+            if (user) req.user = user;
+        }
+    } catch (err) {
+        // Invalid/expired token on a public route -> treat as anonymous.
+    }
+    next();
+};
+
+/**
  * Role guard: use AFTER protect, e.g. router.delete("/:id", protect, restrictTo("admin"), ...)
  */
 const restrictTo = (...roles) => {
@@ -46,4 +69,4 @@ const restrictTo = (...roles) => {
     };
 };
 
-module.exports = {protect, restrictTo};
+module.exports = {protect, attachUser, restrictTo};

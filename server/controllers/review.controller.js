@@ -134,7 +134,9 @@ const getAllReviews = catchAsync(async (req, res, next) => {
       .skip(skip)
       .limit(limit)
       .lean(),
-    Review.countDocuments(),
+    // No filter -> estimatedDocumentCount reads collection metadata (O(1))
+    // instead of scanning every document like countDocuments() would.
+    Review.estimatedDocumentCount(),
   ]);
 
   res.status(200).json({

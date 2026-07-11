@@ -189,8 +189,6 @@ bookingSchema.index({ createdAt: -1 });
 bookingSchema.index({ user: 1, createdAt: -1 });
 // Admin filtering by status and/or date.
 bookingSchema.index({ status: 1, bookingDate: 1 });
-// Look-ups / support by customer email.
-bookingSchema.index({ customerEmail: 1 });
 // Idempotency guard: a given payment can back at most one booking. `sparse` so
 // the many bookings without a payment id (current state) don't collide on null.
 bookingSchema.index({ paymentIntentId: 1 }, { unique: true, sparse: true });

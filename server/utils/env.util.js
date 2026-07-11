@@ -30,6 +30,10 @@ const assertEnv = () => {
 
     const required = [
         "MONGO_URI", "JWT_SECRET", "JWT_EXPIRES_IN", "CLIENT_URL", "SERVER_URL", "PORT",
+        // Governs the auth-cookie lifetime ("Remember me"). A missing/garbage
+        // value would make maxAge NaN -> an invalid Max-Age browsers drop or
+        // downgrade to a session cookie, silently breaking persistent sign-in.
+        "COOKIE_EXPIRES",
         // Stripe: the secret API key (server-side calls) and the webhook signing
         // secret (HMAC verification). Both are required — payments are now a core
         // part of the booking flow, so a server without them is misconfigured.
@@ -39,6 +43,13 @@ const assertEnv = () => {
         if (!process.env[name]) {
             problems.push(`Missing required environment variable: ${name}`);
         }
+    }
+
+    // Presence alone isn't enough — the value is used in arithmetic, so it must
+    // be a positive number of days (Number("") is 0 and Number("junk") is NaN;
+    // both fail the > 0 check).
+    if (process.env.COOKIE_EXPIRES !== undefined && !(Number(process.env.COOKIE_EXPIRES) > 0)) {
+        problems.push("COOKIE_EXPIRES must be a positive number (cookie lifetime in days).");
     }
 
     const jwtSecret = process.env.JWT_SECRET || "";
