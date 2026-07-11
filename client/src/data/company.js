@@ -10,30 +10,30 @@ export const WHY_CASACLEAN = [
   {
     id: "reliability",
     icon: "ShieldCheck",
-    title: "Reliability you can schedule around",
+    title: "On time, every time",
     description:
-      "Vetted crews, calendar sync and a 99.6% on-time rate mean turnovers happen — even on same-day back-to-backs.",
+      "Punctual professionals, live scheduling and a 99.6% on-time arrival rate — even for same-day requests.",
   },
   {
     id: "standards",
     icon: "ClipboardCheck",
-    title: "A standard you can prove",
+    title: "Background-checked professionals",
     description:
-      "Every clean follows a 50-point checklist and ends in a photo report, so quality is documented, not assumed.",
+      "Every cleaner is identity-verified, background-checked, insured and trained on our 50-point standard before their first visit.",
   },
   {
     id: "allinone",
     icon: "Layers",
-    title: "One vendor, every turnover task",
+    title: "One team for home and office",
     description:
-      "Cleaning, linens, restocking and inspections under one roof — and one dashboard across all your listings.",
+      "Regular cleaning, deep cleans, offices, move-outs, laundry and disinfection — one booking, one invoice, one standard.",
   },
   {
     id: "guarantee",
     icon: "BadgeCheck",
-    title: "The Guest-Ready Guarantee",
+    title: "The Spotless Guarantee",
     description:
-      "If a turnover isn't right, we re-clean within 24 hours or refund the visit. Your reviews are protected.",
+      "Not happy with a clean? Tell us within 48 hours and we'll re-clean for free — or refund the visit.",
   },
 ];
 
@@ -41,16 +41,16 @@ export const COMPANY_VALUES = [
   {
     id: "hospitality",
     icon: "HeartHandshake",
-    title: "Hospitality first",
+    title: "Care in every corner",
     description:
-      "We treat every property like a five-star stay — because your guests' reviews depend on it.",
+      "We clean every home as if the owner were watching — because trust is earned in the details.",
   },
   {
     id: "accountability",
     icon: "ClipboardCheck",
     title: "Radical accountability",
     description:
-      "Photo reports on every visit. If we miss something, we own it and make it right, fast.",
+      "Clear checklists and honest feedback loops. If we miss something, we own it and make it right, fast.",
   },
   {
     id: "craft",
@@ -62,9 +62,9 @@ export const COMPANY_VALUES = [
   {
     id: "scale",
     icon: "TrendingUp",
-    title: "Built to scale with you",
+    title: "Built to grow with you",
     description:
-      "From one listing to a hundred, our operations and tooling grow without dropping a turnover.",
+      "From a studio apartment to a chain of offices, our team and tooling scale without dropping a visit.",
   },
 ];
 
@@ -75,7 +75,7 @@ export const LEADERSHIP = [
     role: "Co-founder & CEO",
     avatar: "LG",
     photo: PORTRAITS.w2,
-    bio: "Former hospitality operations lead who scaled turnover teams across 200+ short-term rentals.",
+    bio: "Former hotel housekeeping director who led cleaning teams across 200+ rooms and suites.",
   },
   {
     id: "ops",
@@ -91,7 +91,7 @@ export const LEADERSHIP = [
     role: "Head of Product",
     avatar: "NP",
     photo: PORTRAITS.w3,
-    bio: "Product leader focused on tools that make complex operations feel effortless.",
+    bio: "Product leader focused on tools that make booking and managing a clean feel effortless.",
   },
   {
     id: "quality",
@@ -99,13 +99,13 @@ export const LEADERSHIP = [
     role: "Head of Quality",
     avatar: "DC",
     photo: PORTRAITS.m3,
-    bio: "Defined the 50-point standard that every CasaClean turnover is measured against.",
+    bio: "Defined the 50-point standard that every CasaClean visit is measured against.",
   },
 ];
 
 export const COMPANY_MILESTONES = [
-  { id: "m1", year: "2021", title: "Founded in Rome", description: "Started with three crews and a five-star obsession." },
-  { id: "m2", year: "2022", title: "1,000th turnover", description: "Expanded to Florence and Milan within the first year." },
-  { id: "m3", year: "2023", title: "Inspection platform", description: "Launched photo-documented 50-point inspections." },
-  { id: "m4", year: "2024", title: "12 cities, 48k+ cleans", description: "Became the operations partner of choice for managers." },
+  { id: "m1", year: "2021", title: "Founded in Rome", description: "Started with three cleaners and one promise: cleaning people can rely on." },
+  { id: "m2", year: "2022", title: "1,000th booking", description: "Word of mouth carried us to Florence and Milan within the first year." },
+  { id: "m3", year: "2023", title: "The Spotless Guarantee", description: "Launched our 50-point standard and re-clean-for-free guarantee." },
+  { id: "m4", year: "2024", title: "12 cities, 48k+ cleans", description: "Became the go-to cleaning partner for homes and offices alike." },
 ];

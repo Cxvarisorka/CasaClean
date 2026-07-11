@@ -8,7 +8,7 @@
 
 export default {
   common: {
-    bookTurnover: "Book a turnover",
+    bookTurnover: "Book a cleaning",
     callUs: "Call us",
     getStarted: "Get started",
     learnMore: "Learn more",
@@ -32,7 +32,7 @@ export default {
     talkToTeam: "Talk to our team",
     talkToSales: "Talk to sales",
     from: "From",
-    perTurnover: "/ turnover",
+    perTurnover: "/ visit",
   },
 
   language: { label: "Language", select: "Select language" },
@@ -98,8 +98,8 @@ export default {
 
   footer: {
     blurb:
-      "Premium turnover cleaning for vacation rentals. Trusted by hosts and property managers across 12+ cities to keep every listing guest-ready.",
-    newsletterTitle: "Get hosting insights, monthly",
+      "Professional home and office cleaning across Italy. Vetted, insured cleaners, transparent prices and a guarantee behind every visit.",
+    newsletterTitle: "Get home care tips, monthly",
     subscribe: "Subscribe",
     subscribed: "You're subscribed — watch your inbox.",
     emailPlaceholder: "you@email.com",
@@ -115,31 +115,31 @@ export default {
       Careers: "Careers",
       Blog: "Blog",
       Contact: "Contact",
-      "Turnover cleaning": "Turnover cleaning",
-      "Linen management": "Linen management",
-      Restocking: "Restocking",
-      Inspections: "Inspections",
+      "Home cleaning": "Home cleaning",
+      "Deep cleaning": "Deep cleaning",
+      "Office cleaning": "Office cleaning",
+      "Move-out cleaning": "Move-out cleaning",
       Pricing: "Pricing",
       FAQ: "FAQ",
-      "Book a turnover": "Book a turnover",
+      "Book a cleaning": "Book a cleaning",
       "Privacy policy": "Privacy policy",
       "Terms of service": "Terms of service",
     },
   },
 
   auth: {
-    panelTitle: "Turnovers, handled.",
+    panelTitle: "Cleaning, handled.",
     panelSubtitle:
-      "Join thousands of hosts who trust CasaClean to keep every listing guest-ready.",
-    panelStat1: "48,000+ turnovers completed",
-    panelStat2: "4.97★ average host rating",
+      "Join thousands of customers who trust CasaClean to keep their homes and offices spotless.",
+    panelStat1: "48,000+ cleans completed",
+    panelStat2: "4.97★ average customer rating",
     panelStat3: "99.6% on-time arrival",
     orContinueWith: "or continue with",
     google: "Continue with Google",
     backToSite: "Back to site",
     signin: {
       title: "Welcome back",
-      subtitle: "Sign in to manage your turnovers and properties.",
+      subtitle: "Sign in to manage your bookings and preferences.",
       submit: "Sign in",
       forgot: "Forgot password?",
       noAccount: "New to CasaClean?",
@@ -148,7 +148,7 @@ export default {
     },
     signup: {
       title: "Create your account",
-      subtitle: "Start booking guest-ready turnovers in minutes.",
+      subtitle: "Book your first cleaning in minutes.",
       submit: "Create account",
       haveAccount: "Already have an account?",
       signInInstead: "Sign in",
@@ -185,29 +185,29 @@ export default {
 
   hero: {
     badge: "Now serving 12 cities across Italy",
-    titleA: "Guest-ready turnovers,",
-    titleHighlight: "every single time",
+    titleA: "A spotless home,",
+    titleHighlight: "without lifting a finger",
     subtitle:
-      "CasaClean handles cleaning, linens, restocking and inspections for your short-term rentals — so every guest walks into a five-star space and you never lift a finger.",
-    ctaPrimary: "Book a turnover",
+      "Book a vetted, insured cleaning professional for your home or office in about 60 seconds. Transparent prices, your language spoken, and every visit backed by our Spotless Guarantee.",
+    ctaPrimary: "Book a cleaning",
     ctaSecondary: "See how it works",
-    ratingText: "from 1,280+ hosts",
-    guarantee: "Guest-Ready Guarantee",
-    cardLabel: "Property turnover",
-    cardStatus: "Guest-ready ✓",
+    ratingText: "from 1,280+ customers",
+    guarantee: "Spotless Guarantee",
+    cardLabel: "Home cleaning",
+    cardStatus: "Spotless ✓",
     cardStatusLabel: "Status",
-    cardRatingLabel: "Avg. guest cleanliness",
+    cardRatingLabel: "Avg. customer rating",
   },
 
   trustedBy: {
-    label: "Trusted by hosts and managers on the platforms you already use",
+    label: "Rated excellent by customers on the platforms you already know",
   },
 
   servicesSection: {
     eyebrow: "What we do",
-    title: "Everything a turnover needs, under one roof",
+    title: "Every kind of clean, one trusted team",
     subtitle:
-      "Mix and match the services your listings need. One vendor, one dashboard, one standard.",
+      "From a weekly home refresh to office contracts and end-of-lease deep cleans — pick what you need, we handle the rest.",
     exploreAll: "Explore all services",
     bookNow: "Book now",
     mostBooked: "Most booked",
@@ -215,97 +215,97 @@ export default {
 
   why: {
     eyebrow: "Why CasaClean",
-    title: "The reliability of an in-house team, without the overhead",
+    title: "Cleaning you can finally stop thinking about",
     subtitle:
-      "We obsess over the operational details so your reviews stay five stars and your time stays yours.",
+      "We sweat the small stuff — vetting, scheduling, quality — so booking a cleaner feels as easy as ordering a taxi.",
     items: {
       reliability: {
-        title: "Reliability you can schedule around",
+        title: "On time, every time",
         description:
-          "Vetted crews, calendar sync and a 99.6% on-time rate mean turnovers happen — even on same-day back-to-backs.",
+          "Punctual professionals, live scheduling and a 99.6% on-time arrival rate — even for same-day requests.",
       },
       standards: {
-        title: "A standard you can prove",
+        title: "Background-checked professionals",
         description:
-          "Every clean follows a 50-point checklist and ends in a photo report, so quality is documented, not assumed.",
+          "Every cleaner is identity-verified, background-checked, insured and trained on our 50-point standard before their first visit.",
       },
       allinone: {
-        title: "One vendor, every turnover task",
+        title: "One team for home and office",
         description:
-          "Cleaning, linens, restocking and inspections under one roof — and one dashboard across all your listings.",
+          "Regular cleaning, deep cleans, offices, move-outs, laundry and disinfection — one booking, one invoice, one standard.",
       },
       guarantee: {
-        title: "The Guest-Ready Guarantee",
+        title: "The Spotless Guarantee",
         description:
-          "If a turnover isn't right, we re-clean within 24 hours or refund the visit. Your reviews are protected.",
+          "Not happy with a clean? Tell us within 48 hours and we'll re-clean for free — or refund the visit.",
       },
     },
   },
 
   workflow: {
     eyebrow: "How it works",
-    title: "From booking to guest-ready in four steps",
+    title: "From booking to sparkling in four steps",
     subtitle:
-      "A turnover workflow designed to disappear into the background of your hosting.",
+      "Booking a cleaner shouldn't feel like a chore. Here's the whole experience.",
     items: {
       book: {
-        title: "Book in minutes",
+        title: "Book online in 60 seconds",
         description:
-          "Tell us about your property and pick a time. Sync your calendar so turnovers auto-schedule after each checkout.",
+          "Choose your service, tell us about your place and pick a time. You see the exact price before you confirm.",
       },
       clean: {
-        title: "We turn it over",
+        title: "Get matched with a pro",
         description:
-          "A vetted crew arrives on time and resets your space to our 50-point, five-star hospitality standard.",
+          "We assign a vetted, background-checked cleaner who fits your schedule — with your language and preferences in mind.",
       },
       inspect: {
-        title: "Inspect & document",
+        title: "We make it shine",
         description:
-          "Every visit ends with a timestamped photo report — damage flagged, supplies logged, lost items recorded.",
+          "Your cleaner works through our 50-point checklist, starting with the priorities you flagged in your booking.",
       },
       relax: {
-        title: "Guest-ready, guaranteed",
+        title: "Rate it — it's guaranteed",
         description:
-          "Your listing is staged, stocked and spotless. If anything's off, we re-clean within 24 hours — no charge.",
+          "Review your clean afterwards. If anything's not right, we'll re-clean within 48 hours at no charge.",
       },
     },
   },
 
   timeline: {
     eyebrow: "On-site process",
-    title: "A documented timeline, every visit",
+    title: "What happens during your clean",
     subtitle:
-      "No guesswork about what gets done. Here's exactly how a CasaClean turnover unfolds.",
+      "No mystery about where the hours go. Here's how a typical CasaClean visit unfolds.",
     items: {
       arrival: {
         title: "Arrival & walkthrough",
         description:
-          "Crew checks in, documents the property's condition on entry, and reviews any host notes from the last guest.",
+          "Your cleaner arrives on time, reviews your booking notes, and confirms priorities and any no-go areas.",
       },
       strip: {
-        title: "Strip & laundry",
+        title: "Tidy & dust",
         description:
-          "Used linens and towels are removed, fresh hotel-grade sets are staged, and laundry is started or swapped.",
+          "Surfaces are decluttered and dusted top to bottom — shelves, frames, skirting boards and the forgotten corners.",
       },
       "kitchen-bath": {
         title: "Kitchen & bathrooms",
         description:
-          "Deep sanitation of the highest-impact rooms: appliances, fixtures, surfaces and high-touch points.",
+          "The rooms that matter most: degreasing, descaling and sanitizing appliances, fixtures and high-touch surfaces.",
       },
       living: {
-        title: "Living spaces & beds",
+        title: "Bedrooms & living areas",
         description:
-          "Floors, dusting, bed making with a hotel fold, and a careful reset of every shared space.",
+          "Beds made, mirrors polished, furniture wiped and every room reset to calm.",
       },
       restock: {
-        title: "Restock & stage",
+        title: "Floors & finishing touches",
         description:
-          "Consumables replenished, welcome amenities staged, lighting and ambiance set for arrival.",
+          "Vacuuming and mopping throughout, bins emptied and everything returned to its place.",
       },
       inspect: {
-        title: "Inspection & report",
+        title: "Final check & feedback",
         description:
-          "Final 50-point check, timestamped photos captured, and your guest-ready confirmation sent.",
+          "A last pass against the checklist, then you rate the visit — your feedback shapes every clean that follows.",
       },
     },
   },
@@ -314,140 +314,140 @@ export default {
     eyebrow: "The CasaClean difference",
     title: "See the transformation",
     subtitle:
-      "Drag to compare a post-checkout space with a CasaClean guest-ready turnover.",
+      "Drag to compare an everyday lived-in room with the same space after a CasaClean visit.",
     before: "Before",
     after: "After",
   },
 
   stats: {
-    turnovers: "Turnovers completed",
-    rating: "Average host rating",
+    turnovers: "Cleans completed",
+    rating: "Average customer rating",
     ontime: "On-time arrival rate",
     cities: "Cities served",
   },
 
   testimonialsSection: {
-    eyebrow: "Loved by hosts",
-    title: "Hosts don't just like us — they rebook",
-    subtitle: "Real words from the operators who trust CasaClean with their guests.",
+    eyebrow: "Loved by customers",
+    title: "Customers don't just like us — they rebook",
+    subtitle: "Real words from the homes and offices that trust CasaClean.",
   },
 
   testimonials: {
     t1: {
       quote:
-        "CasaClean turned our turnover chaos into a non-event. Same-day cleans, photo reports before each guest, and our review scores have never been higher.",
-      metric: "4.97★ average rating",
+        "Coming home on Friday to a spotless apartment has genuinely changed our week. Same cleaner every visit, and she knows exactly how we like things.",
+      metric: "Weekly customer for 2 years",
     },
     t2: {
       quote:
-        "We replaced three vendors with one platform. The inspection photos alone have saved us thousands in disputed damage claims.",
-      metric: "31% fewer guest complaints",
+        "Our studio is cleaned before the team arrives, invoiced once a month, zero chasing. Switching to CasaClean removed a whole task from my job.",
+      metric: "3 locations, one invoice",
     },
     t3: {
       quote:
-        "I book a turnover in under a minute and forget about it. Linens, restocking, the works — my guests think I have a full-time housekeeper.",
-      metric: "12 hrs/week saved",
+        "I booked in English in about a minute, and my cleaner spoke English too — no awkward translation apps. My flat has never looked better.",
+      metric: "Booked in under a minute",
     },
     t4: {
       quote:
-        "Reliability is everything when you're scaling. CasaClean has never missed a turnover in 14 months — that consistency is worth a premium.",
-      metric: "100% on-time turnovers",
+        "Their move-out cleans are so thorough my tenants get their deposits back without a single dispute. I book one for every changeover now.",
+      metric: "Full deposits returned",
     },
     t5: {
       quote:
-        "The dashboard gives me a single view across every property. Onboarding a new listing now takes minutes instead of an afternoon.",
-      metric: "9 listings, one login",
+        "The deep clean reached places I haven't managed in years — inside the oven, behind the furniture, all of it. Kind, careful people.",
+      metric: "4.97★ after 40+ visits",
     },
   },
 
   faqSection: {
     eyebrow: "Questions, answered",
-    title: "The things hosts ask us most",
+    title: "The things customers ask us most",
     subtitle: "Can't find what you need? Our team is one message away.",
     readAll: "Read all FAQs",
   },
 
   cta: {
     eyebrow: "Ready when you are",
-    title: "Your next guest deserves a flawless space.",
+    title: "You have better things to do than scrub.",
     subtitle:
-      "Book a turnover in under two minutes — no contracts, no commitments, just a guest-ready home.",
-    primary: "Book a turnover",
+      "Book a vetted cleaner in about a minute — no contracts, no commitments, just a spotless place.",
+    primary: "Book a cleaning",
     secondary: "Talk to our team",
   },
 
   // ----- Service catalog content (keyed by service id) -----
   services: {
     1: {
-      name: "Turnover Cleaning",
-      tagline: "Guest-ready in hours, not days",
+      name: "Home Cleaning",
+      tagline: "Your regular clean, made effortless",
       description:
-        "A complete reset between guests — every surface, every room, to a five-star hospitality standard.",
+        "A thorough clean of your whole home — kitchen, bathrooms, bedrooms and living areas — as a one-off or on a schedule that suits you.",
       features: [
-        "Full kitchen & bathroom sanitation",
-        "Bed making with hotel-fold finish",
-        "Floors, surfaces & high-touch points",
-        "Trash removal & odor neutralization",
+        "Kitchen & bathroom sanitation",
+        "Dusting, vacuuming & mopping",
+        "Beds made & rooms reset",
+        "Bins emptied & surfaces polished",
       ],
     },
     2: {
-      name: "Linen Management",
-      tagline: "Hotel-grade linen, always fresh",
+      name: "Deep Cleaning",
+      tagline: "For when it needs more than a once-over",
       description:
-        "Commercial laundering, par-level tracking and swap-on-arrival linen so every guest sleeps on crisp, fresh sheets.",
+        "An intensive top-to-bottom clean — inside appliances, limescale, grout and all the spots a regular clean doesn't reach.",
       features: [
-        "Commercial wash & press",
-        "Par-level inventory tracking",
-        "Stain & wear replacement",
-        "Fresh sets delivered per turnover",
+        "Inside oven, fridge & cabinets",
+        "Limescale, grout & tile treatment",
+        "Skirting boards, doors & vents",
+        "Under & behind furniture",
       ],
     },
     3: {
-      name: "Supply Restocking",
-      tagline: "Never run out of the essentials",
+      name: "Office Cleaning",
+      tagline: "A workspace your team enjoys",
       description:
-        "We monitor and replenish consumables — from coffee to toiletries — so your listing is always fully stocked.",
+        "Reliable cleaning for offices, studios and shops — scheduled around your working hours, with one simple monthly invoice.",
       features: [
-        "Toiletries & bathroom amenities",
-        "Kitchen & coffee consumables",
-        "Cleaning & paper supplies",
-        "Automated low-stock alerts",
+        "Desks, meeting rooms & kitchens",
+        "High-touch points sanitized",
+        "Evening & early-morning slots",
+        "Monthly invoicing available",
       ],
     },
     4: {
-      name: "Property Inspection",
-      tagline: "A 50-point check, every visit",
+      name: "Move-In / Move-Out Cleaning",
+      tagline: "Leave nothing behind but shine",
       description:
-        "Photo-documented inspections catch damage, maintenance issues and missing items before your next guest does.",
+        "A rigorous end-of-lease clean that helps deposits come back in full and new chapters start fresh — landlord-checklist thorough.",
       features: [
-        "50-point quality checklist",
-        "Timestamped photo report",
-        "Damage & maintenance flagging",
-        "Lost-and-found handling",
+        "Full-property deep clean",
+        "Inside all appliances & storage",
+        "Windows, frames & doors",
+        "Deposit-friendly documentation",
       ],
     },
     5: {
-      name: "Deep Cleaning",
-      tagline: "A seasonal reset that shows",
+      name: "Laundry & Ironing",
+      tagline: "Fresh, folded and put away",
       description:
-        "An exhaustive top-to-bottom clean — appliances, grout, baseboards and the spots a standard turnover skips.",
+        "Add washing, ironing and folding to any cleaning visit — or book it on its own. Your wardrobe and linen cupboard, handled.",
       features: [
-        "Inside appliances & cabinets",
-        "Grout, baseboards & vents",
-        "Window interiors & tracks",
-        "Upholstery & soft furnishings",
+        "Wash, dry & fold",
+        "Ironing & garment care",
+        "Bed linen & towel rotation",
+        "Add-on to any cleaning",
       ],
     },
     6: {
-      name: "Guest-Ready Prep",
-      tagline: "The finishing touches that earn 5 stars",
+      name: "Sanitization & Disinfection",
+      tagline: "Certified clean, down to the details",
       description:
-        "Staging, welcome setup and a final walkthrough so your space photographs and reviews as well as it cleans.",
+        "Professional-grade disinfection of high-touch surfaces for homes and workplaces — ideal after illness, tenants or renovations.",
       features: [
-        "Welcome amenity staging",
-        "Lighting & ambiance setup",
-        "Final styling walkthrough",
-        "Listing-photo consistency check",
+        "Certified professional disinfectants",
+        "High-touch surface treatment",
+        "Kitchen & bathroom focus",
+        "Suitable for homes & offices",
       ],
     },
   },
@@ -461,49 +461,49 @@ export default {
     },
     items: {
       q1: {
-        question: "How quickly can you turn over my property?",
+        question: "Do I need to be home during the cleaning?",
         answer:
-          "Most turnovers are completed within 3–4 hours of guest checkout. With a confirmed schedule, we can have your property guest-ready the same day — even for back-to-back bookings.",
+          "It's completely up to you. Many customers hand over keys, use a smart lock or leave them with a concierge. Your cleaner confirms arrival and completion, so you always know where things stand.",
       },
       q2: {
-        question: "Which areas do you currently serve?",
+        question: "Which cities do you serve?",
         answer:
-          "We operate across major Italian short-term rental markets including Rome, Florence, Milan, Naples and Venice, and we add new cities every quarter. Enter your address at booking to confirm coverage.",
+          "We currently operate in 12 Italian cities including Rome, Milan, Florence, Naples and Venice — and we expand every quarter. Enter your address at booking to confirm coverage.",
       },
       q3: {
-        question: "Do I need to be present for the cleaning?",
+        question: "Does my cleaner bring supplies and equipment?",
         answer:
-          "No. The vast majority of our hosts use smart locks or key handoffs. We document entry and exit with timestamped photos, so you always have a record without lifting a finger.",
+          "Yes — by default your cleaner arrives with professional products and equipment at no extra cost. Prefer your own eco-friendly or specific products? Just leave a note in your booking.",
       },
       q4: {
         question: "How does pricing work?",
         answer:
-          "You can pay per turnover or save with a managed monthly plan. Per-turnover pricing is based on property size and the services you select — there are no contracts and no hidden fees.",
+          "Pricing is hourly and depends on the size of your place and the service you choose. You see the exact price before you confirm — no contracts, no hidden fees, and regular plans save 20%.",
       },
       q5: {
-        question: "Are supplies and linens included?",
+        question: "How can I pay?",
         answer:
-          "You choose. We can use your supplies and linens, or provide hotel-grade linens and consumables as an add-on. Restocking is tracked automatically so you never run out.",
+          "You pay securely online by card when you book — all major cards are accepted through Stripe. If you cancel in time, the payment is refunded in full automatically.",
       },
       q6: {
-        question: "Is there a cancellation fee?",
+        question: "What is your cancellation policy?",
         answer:
-          "Cancellations made more than 24 hours before a scheduled turnover are free. Inside 24 hours, a 50% fee applies to cover the reserved crew slot.",
+          "Cancel free of charge up to 24 hours before your appointment. Inside 24 hours a 50% fee applies, since your cleaner has reserved that time for you.",
       },
       q7: {
-        question: "What if I'm not satisfied with a clean?",
+        question: "What if I'm not happy with my clean?",
         answer:
-          "Every turnover is backed by our Guest-Ready Guarantee. If something isn't right, we'll re-clean within 24 hours at no charge — or refund the visit.",
+          "Every visit is covered by our Spotless Guarantee: tell us within 48 hours and we'll send a cleaner back to make it right for free — or refund the visit.",
       },
       q8: {
         question: "Are your cleaners vetted and insured?",
         answer:
-          "Yes. Every professional is background-checked, trained on our 50-point standard, and fully insured. We carry liability coverage on every visit for your peace of mind.",
+          "Yes. Every professional is identity-verified, background-checked, trained on our 50-point standard, and covered by liability insurance on every single visit.",
       },
       q9: {
-        question: "How do you handle damage or lost items?",
+        question: "Can I have the same cleaner every time?",
         answer:
-          "Our inspection reports flag damage with photos the moment it's found, and lost-and-found items are logged and stored. You'll have documentation before your next guest arrives.",
+          "Yes — with a regular weekly or bi-weekly plan you keep the same trusted cleaner, who learns exactly how you like your home. If they're ever unavailable, we propose a vetted stand-in you can accept or decline.",
       },
     },
   },
@@ -512,9 +512,9 @@ export default {
   pages: {
     services: {
       heroEyebrow: "Our services",
-      heroTitle: "Full-service operations for short-term rentals",
+      heroTitle: "Professional cleaning for every space and situation",
       heroSubtitle:
-        "From a single turnover to fully managed linens, restocking and inspections — choose exactly what your listings need.",
+        "One-off, regular, deep, office or end-of-lease — book exactly the clean you need, delivered by vetted professionals.",
       emptyTitle: "Services coming soon",
       emptyDescription:
         "We're putting the finishing touches on our service lineup. Get in touch and we'll tailor a plan for you.",
@@ -522,68 +522,68 @@ export default {
       processEyebrow: "The process",
       processTitle: "Effortless from the first booking",
       processSubtitle:
-        "However many services you choose, the experience is the same: simple, reliable, documented.",
+        "Whichever service you choose, the experience is the same: simple, reliable, guaranteed.",
       includedEyebrow: "Always included",
-      includedTitle: "Every turnover, guaranteed",
-      includedSubtitle: "No matter which services you book, these come standard.",
+      includedTitle: "Every visit, guaranteed",
+      includedSubtitle: "No matter which service you book, these come standard.",
       included: [
         "Vetted, background-checked professionals",
-        "50-point quality checklist",
-        "Timestamped photo completion report",
+        "Professional supplies & equipment included",
+        "Our 50-point quality checklist",
         "Full liability insurance on every visit",
-        "Damage & lost-item documentation",
-        "Guest-Ready Guarantee or we re-clean free",
+        "Secure online payment & receipts",
+        "Spotless Guarantee — or we re-clean free",
       ],
-      ctaTitle: "Build the turnover plan your listings deserve",
+      ctaTitle: "Not sure which clean you need?",
       ctaSubtitle:
-        "Tell us about your property and we'll recommend the right mix of services.",
+        "Tell us about your place and we'll recommend the right service and duration.",
     },
     pricing: {
       heroEyebrow: "Pricing",
       heroTitle: "Simple pricing that scales with you",
       heroSubtitle:
-        "Pay per turnover or save with a managed plan. No contracts, no setup fees, no surprises.",
+        "Pay per visit or save with a regular plan. No contracts, no setup fees, no surprises.",
       disclaimer:
         "Prices shown are starting points and vary by property size. You'll see an exact quote before you confirm any booking.",
       addonsEyebrow: "Add-ons",
-      addonsTitle: "Tailor any plan with extras",
-      addonsSubtitle: "Layer on exactly what a listing needs, when it needs it.",
+      addonsTitle: "Tailor any clean with extras",
+      addonsSubtitle: "Layer on exactly what your place needs, when it needs it.",
       faqEyebrow: "Pricing FAQ",
       faqTitle: "Good to know",
-      ctaTitle: "Start with a single turnover",
+      ctaTitle: "Start with a single clean",
       ctaSubtitle:
-        "No plan required. Book one clean, see the difference, scale when you're ready.",
+        "No plan required. Book one visit, see the difference, then decide.",
     },
     about: {
       heroEyebrow: "Our story",
-      heroTitle: "We built the operations partner we wished we had",
+      heroTitle: "We started CasaClean to make great cleaning simple to book",
       heroSubtitle:
-        "CasaClean started with three crews and a five-star obsession. Today we keep thousands of listings guest-ready across Italy.",
+        "What began with three cleaners and a borrowed van is now a vetted team keeping thousands of homes and workplaces spotless across Italy.",
       missionLabel: "Our mission",
       mission:
-        "To make running a short-term rental feel effortless — so hosts can grow their business while every guest walks into a flawless space.",
+        "To give people their time back — by making professional, trustworthy cleaning as easy to book as a taxi, for every home and workplace.",
       valuesEyebrow: "What we value",
-      valuesTitle: "The principles behind every turnover",
+      valuesTitle: "The principles behind every visit",
       milestonesEyebrow: "Milestones",
       milestonesTitle: "How we got here",
       teamEyebrow: "Leadership",
       teamTitle: "The people behind CasaClean",
-      ctaTitle: "Join thousands of hosts who trust CasaClean",
-      ctaSubtitle: "Experience the operations partner built for short-term rentals.",
+      ctaTitle: "Join thousands of customers who trust CasaClean",
+      ctaSubtitle: "Experience a clean you can count on — at home and at work.",
     },
     contact: {
       heroEyebrow: "Contact",
-      heroTitle: "Let's get your turnovers handled",
+      heroTitle: "Let's get your place spotless",
       heroSubtitle:
-        "Questions about coverage, pricing or onboarding a portfolio? We're here to help.",
+        "Questions about coverage, pricing or cleaning for your office? We're here to help, 7 days a week.",
       emailLabel: "Email us",
       emailNote: "We reply within one business day",
       phoneLabel: "Call us",
       phoneNote: "Mon–Sat, 9:00–18:00 CET",
       visitLabel: "Visit",
       visitNote: "By appointment",
-      pmTitle: "Property manager?",
-      pmNote: "Ask about volume pricing and our multi-property dashboard.",
+      pmTitle: "Office or multiple properties?",
+      pmNote: "Ask about business plans, monthly invoicing and volume pricing.",
       formTitle: "Send us a message",
       formSubtitle: "Fill in the form and we'll be in touch shortly.",
       successTitle: "Message sent",
@@ -595,14 +595,14 @@ export default {
         phone: "Phone",
         topic: "Topic",
         message: "How can we help?",
-        messagePlaceholder: "Tell us about your property and what you need…",
+        messagePlaceholder: "Tell us about your place and what you need…",
         topicPlaceholder: "Select a topic",
       },
       topics: {
         general: "General enquiry",
-        booking: "Booking a turnover",
+        booking: "Booking a cleaning",
         pricing: "Pricing & plans",
-        partnership: "Property manager / partnership",
+        partnership: "Offices / business cleaning",
         support: "Existing customer support",
       },
     },
@@ -610,7 +610,7 @@ export default {
       heroEyebrow: "Help center",
       heroTitle: "Frequently asked questions",
       heroSubtitle:
-        "Everything you need to know about working with CasaClean. Still stuck? Reach out anytime.",
+        "Everything you need to know about booking with CasaClean. Still stuck? Reach out anytime.",
       ctaEyebrow: "Still have questions?",
       ctaTitle: "We're a message away",
       ctaSubtitle:
@@ -618,9 +618,9 @@ export default {
     },
     careers: {
       heroEyebrow: "Careers",
-      heroTitle: "Build the operating system for short-term rentals",
+      heroTitle: "Do work you're proud of — and get valued for it",
       heroSubtitle:
-        "We're a team that takes pride in the craft of hospitality operations. Come do the best work of your career.",
+        "We believe cleaning is skilled work that deserves fair pay, real training and respect. Come build the most trusted cleaning company in Italy.",
       seeRoles: "See open roles",
       perksEyebrow: "Why join us",
       perksTitle: "More than a job — a place to grow",
@@ -640,9 +640,9 @@ export default {
     },
     blog: {
       heroEyebrow: "The CasaClean blog",
-      heroTitle: "Playbooks for flawless rental operations",
+      heroTitle: "Practical guides for a cleaner home and office",
       heroSubtitle:
-        "Checklists, data and hard-won lessons to help you run a five-star short-term rental.",
+        "Checklists, room-by-room guides and honest advice from professional cleaners.",
       searchPlaceholder: "Search articles…",
       noResultsTitle: "No articles found",
       noResultsBody: "Try a different category or search term.",
@@ -654,12 +654,12 @@ export default {
       notFoundBody: "This post may have been moved or removed.",
       backToBlog: "Back to blog",
       ctaEyebrow: "Put it into practice",
-      ctaTitle: "Stop reading about great turnovers. Book one.",
-      ctaSubtitle: "See the CasaClean standard on your own listing.",
+      ctaTitle: "Stop reading about spotless homes. Book one.",
+      ctaSubtitle: "See the CasaClean standard in your own space.",
     },
     notFound: {
       code: "404",
-      title: "This page checked out early",
+      title: "This page has been swept away",
       subtitle:
         "The page you're looking for doesn't exist or has moved. Let's get you back to a clean space.",
       home: "Back home",
@@ -671,68 +671,68 @@ export default {
   // ----- Pricing plans (keyed by plan id) -----
   pricingPlans: {
     payg: {
-      name: "Pay As You Go",
-      description: "Perfect for occasional hosts who want flexibility.",
-      cadence: "Billed per clean",
-      cta: "Book a turnover",
+      name: "One-Time Clean",
+      description: "Perfect for a one-off refresh, a special occasion or a trial run.",
+      cadence: "Billed per visit",
+      cta: "Book a cleaning",
       features: [
-        "Standard turnover cleaning",
-        "Bed making & tidy",
-        "Trash removal",
-        "Photo completion report",
-        "Guest-Ready Guarantee",
+        "Standard home cleaning",
+        "Professional supplies included",
+        "Vetted, insured professional",
+        "Secure online payment",
+        "Spotless Guarantee",
       ],
     },
     host: {
-      name: "Host",
-      description: "For active hosts running one to three listings.",
+      name: "Regular Clean",
+      description: "For homes cleaned weekly or every two weeks — our most popular plan.",
       cadence: "Billed monthly · save 20%",
       badge: "Most popular",
-      cta: "Start with Host",
+      cta: "Start a regular plan",
       features: [
-        "Everything in Pay As You Go",
-        "Priority same-day scheduling",
-        "Linen management included",
-        "Supply restocking & alerts",
-        "50-point inspection reports",
+        "Everything in One-Time Clean",
+        "The same trusted cleaner each visit",
+        "Priority & same-day scheduling",
+        "Skip or reschedule anytime",
+        "Laundry & ironing add-on discount",
         "Dedicated support line",
       ],
     },
     portfolio: {
-      name: "Portfolio",
-      description: "Managed operations for 4+ units and property managers.",
-      cadence: "Tailored to your portfolio",
+      name: "Business & Offices",
+      description: "Tailored cleaning for offices, studios, shops and landlords.",
+      cadence: "Tailored to your spaces",
       unit: "Custom",
       cta: "Talk to sales",
       features: [
-        "Everything in Host",
-        "Volume pricing across units",
-        "Single multi-property dashboard",
+        "Everything in Regular Clean",
+        "Out-of-hours scheduling",
+        "One monthly invoice",
         "Dedicated account manager",
-        "API & PMS integrations",
+        "Multiple locations, one contact",
         "Custom SLAs & reporting",
       ],
     },
   },
 
   pricingAddons: {
-    deep: { label: "Deep clean", note: "Seasonal top-to-bottom reset" },
-    linen: { label: "Hotel-grade linens", note: "Per turnover, swapped on arrival" },
-    restock: { label: "Supply restocking", note: "Consumables tracked & replenished" },
-    staging: { label: "Guest-ready staging", note: "Welcome setup & final styling" },
+    deep: { label: "Deep clean", note: "Intensive top-to-bottom reset" },
+    linen: { label: "Laundry & ironing", note: "Washed, ironed and folded" },
+    restock: { label: "Inside fridge & oven", note: "Degreased and descaled, inside and out" },
+    staging: { label: "Interior windows", note: "Glass, frames and sills" },
   },
 
   // ----- Company (values, milestones, leadership) -----
   values: {
     hospitality: {
-      title: "Hospitality first",
+      title: "Care in every corner",
       description:
-        "We treat every property like a five-star stay — because your guests' reviews depend on it.",
+        "We clean every home as if the owner were watching — because trust is earned in the details.",
     },
     accountability: {
       title: "Radical accountability",
       description:
-        "Photo reports on every visit. If we miss something, we own it and make it right, fast.",
+        "Clear checklists and honest feedback loops. If we miss something, we own it and make it right, fast.",
     },
     craft: {
       title: "Pride in the craft",
@@ -740,34 +740,34 @@ export default {
         "Cleaning is a skill. We train, certify and reward the professionals who do it brilliantly.",
     },
     scale: {
-      title: "Built to scale with you",
+      title: "Built to grow with you",
       description:
-        "From one listing to a hundred, our operations and tooling grow without dropping a turnover.",
+        "From a studio apartment to a chain of offices, our team and tooling scale without dropping a visit.",
     },
   },
 
   milestones: {
-    m1: { title: "Founded in Rome", description: "Started with three crews and a five-star obsession." },
-    m2: { title: "1,000th turnover", description: "Expanded to Florence and Milan within the first year." },
-    m3: { title: "Inspection platform", description: "Launched photo-documented 50-point inspections." },
-    m4: { title: "12 cities, 48k+ cleans", description: "Became the operations partner of choice for managers." },
+    m1: { title: "Founded in Rome", description: "Started with three cleaners and one promise: cleaning people can rely on." },
+    m2: { title: "1,000th booking", description: "Word of mouth carried us to Florence and Milan within the first year." },
+    m3: { title: "The Spotless Guarantee", description: "Launched our 50-point standard and re-clean-for-free guarantee." },
+    m4: { title: "12 cities, 48k+ cleans", description: "Became the go-to cleaning partner for homes and offices alike." },
   },
 
   leadership: {
-    founder: { role: "Co-founder & CEO", bio: "Former hospitality operations lead who scaled turnover teams across 200+ short-term rentals." },
+    founder: { role: "Co-founder & CEO", bio: "Former hotel housekeeping director who led cleaning teams across 200+ rooms and suites." },
     ops: { role: "Co-founder & COO", bio: "Built and ran multi-city field operations for an on-demand logistics company." },
-    product: { role: "Head of Product", bio: "Product leader focused on tools that make complex operations feel effortless." },
-    quality: { role: "Head of Quality", bio: "Defined the 50-point standard that every CasaClean turnover is measured against." },
+    product: { role: "Head of Product", bio: "Product leader focused on tools that make booking and managing a clean feel effortless." },
+    quality: { role: "Head of Quality", bio: "Defined the 50-point standard that every CasaClean visit is measured against." },
   },
 
   // ----- Careers (perks + roles) -----
   perks: {
     p1: { title: "Above-market pay", description: "Competitive base, performance bonuses and paid travel time." },
     p2: { title: "Flexible scheduling", description: "Choose shifts that fit your life — full-time or part-time." },
-    p3: { title: "Paid training", description: "Get certified on our 50-point standard, fully paid." },
+    p3: { title: "Paid training", description: "Get certified on our 50-point cleaning standard, fully paid." },
     p4: { title: "Health & insurance", description: "Coverage and full liability insurance on every visit." },
-    p5: { title: "Real growth paths", description: "Crew lead, trainer and regional ops roles, promoted from within." },
-    p6: { title: "A team that has your back", description: "Supportive crews and responsive ops support, always." },
+    p5: { title: "Real growth paths", description: "Team lead, trainer and regional ops roles, promoted from within." },
+    p6: { title: "A team that has your back", description: "Supportive colleagues and responsive ops support, always." },
   },
 
   roleTypes: {
@@ -785,15 +785,15 @@ export default {
   // ----- Booking wizard -----
   booking: {
     backToSite: "Back to site",
-    title: "Book your turnover",
+    title: "Book your cleaning",
     subtitle:
-      "A guest-ready clean in a few quick steps. Pay securely to confirm — your card is charged when you book, and fully refunded if you cancel.",
+      "A spotless place in a few quick steps. Pay securely to confirm — your card is charged when you book, and fully refunded if you cancel.",
     continue: "Continue",
     back: "Back",
     confirm: "Confirm booking",
     steps: {
       property: { title: "Property details", subtitle: "Where are we cleaning?" },
-      preferences: { title: "Cleaning preferences", subtitle: "Tailor the turnover" },
+      preferences: { title: "Cleaning preferences", subtitle: "Tailor your clean" },
       schedule: { title: "Schedule", subtitle: "Pick a date and time" },
       contact: { title: "Your details", subtitle: "Where to reach you" },
       review: { title: "Review", subtitle: "Confirm everything looks right" },
@@ -817,12 +817,12 @@ export default {
       empty: "Select a service to see your estimate.",
       total: "Estimated total",
       guarantee:
-        "Backed by the Guest-Ready Guarantee. Free cancellation up to 24h before.",
+        "Backed by the Spotless Guarantee. Free cancellation up to 24h before.",
     },
     confirmation: {
       title: "Booking confirmed!",
       body:
-        "your turnover is booked. We've emailed your confirmation and we'll be in touch with the crew's arrival window.",
+        "your cleaning is booked. We've emailed your confirmation and we'll be in touch with your cleaner's arrival window.",
       reference: "Booking reference",
       total: "total",
       home: "Back to home",
@@ -1003,7 +1003,7 @@ export default {
         imageHint: "Shown on the service card. A wide (16:10) photo works best.",
         subtitle: "Sub-title",
         subtitleHint: "A short tagline shown under the name.",
-        subtitlePlaceholder: "e.g. Guest-ready in hours, not days",
+        subtitlePlaceholder: "e.g. Your regular clean, made effortless",
         includes: "What's included",
         includesHint: "Bullet points listing what this service covers.",
         includesPlaceholder: "e.g. Full kitchen & bathroom sanitation",
@@ -1163,6 +1163,7 @@ export default {
     nav: {
       dashboard: "Dashboard",
       bookings: "Bookings",
+      calendar: "Calendar",
       services: "Services",
       specialRequests: "Special requests",
       cities: "Cities",
@@ -1170,6 +1171,17 @@ export default {
       workers: "Workers",
       quality: "Quality",
       users: "Users",
+    },
+    calendar: {
+      title: "Calendar",
+      description:
+        "Every booking placed on its scheduled date. Click an entry to open the booking details.",
+      today: "Today",
+      prevMonth: "Previous month",
+      nextMonth: "Next month",
+      monthCount: "{count} booking(s) this month",
+      more: "+{count} more",
+      dayCount: "{count} booking(s)",
     },
     coverage: {
       title: "Bookings map",

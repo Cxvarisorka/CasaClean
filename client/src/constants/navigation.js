@@ -29,10 +29,10 @@ export const FOOTER_NAV = [
   {
     title: "Services",
     links: [
-      { label: "Turnover cleaning", href: ROUTES.services },
-      { label: "Linen management", href: ROUTES.services },
-      { label: "Restocking", href: ROUTES.services },
-      { label: "Inspections", href: ROUTES.services },
+      { label: "Home cleaning", href: ROUTES.services },
+      { label: "Deep cleaning", href: ROUTES.services },
+      { label: "Office cleaning", href: ROUTES.services },
+      { label: "Move-out cleaning", href: ROUTES.services },
     ],
   },
   {
@@ -40,7 +40,7 @@ export const FOOTER_NAV = [
     links: [
       { label: "Pricing", href: ROUTES.pricing },
       { label: "FAQ", href: ROUTES.faq },
-      { label: "Book a turnover", href: ROUTES.booking },
+      { label: "Book a cleaning", href: ROUTES.booking },
     ],
   },
   {

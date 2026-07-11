@@ -8,9 +8,9 @@
 export const SITE = {
   name: "CasaClean",
   legalName: "CasaClean S.r.l.",
-  tagline: "Premium turnover cleaning for vacation rentals",
+  tagline: "Professional home & office cleaning across Italy",
   description:
-    "CasaClean delivers guest-ready turnovers for Airbnb hosts, vacation rental owners and property managers — cleaning, inspections, linens and restocking, on schedule, every time.",
+    "CasaClean connects you with vetted, insured cleaning professionals for homes and offices — regular cleaning, deep cleans, move-outs, laundry and more, booked online in about a minute.",
   url: import.meta.env.VITE_SITE_URL || "https://casaclean.com",
   locale: "en_US",
   email: "hello@casaclean.com",
@@ -30,56 +30,56 @@ export const SITE = {
 /** Per-page SEO presets keyed by a stable id used in each page component. */
 export const PAGE_META = {
   home: {
-    title: "CasaClean — Premium Turnover Cleaning for Vacation Rentals",
+    title: "CasaClean — Professional Home & Office Cleaning in Italy",
     description: SITE.description,
     path: "/",
   },
   services: {
-    title: "Services — Turnovers, Linens, Restocking & Inspections",
+    title: "Services — Home, Deep, Office & Move-Out Cleaning",
     description:
-      "Full-service short-term rental operations: guest-ready turnovers, hotel-grade linen, supply restocking, and 50-point inspections handled by vetted professionals.",
+      "Every kind of clean under one roof: regular home cleaning, deep cleans, office cleaning, move-in/move-out, laundry & ironing and disinfection — by vetted professionals.",
     path: "/services",
   },
   pricing: {
-    title: "Pricing — Transparent Per-Turnover Plans",
+    title: "Pricing — Transparent Hourly Rates & Plans",
     description:
-      "Simple, transparent pricing for vacation rental turnovers. No contracts, no surprises — pay per clean or save with a managed plan.",
+      "Simple, transparent cleaning prices. Pay per visit or save 20% with a regular plan — no contracts, no hidden fees, exact price shown before you book.",
     path: "/pricing",
   },
   about: {
-    title: "About CasaClean — Operations Built for Hosts",
+    title: "About CasaClean — Cleaning You Can Count On",
     description:
-      "We're a team of hospitality and operations specialists obsessed with five-star guest-ready turnovers for short-term rentals.",
+      "We're on a mission to make professional, trustworthy cleaning as easy to book as a taxi — for every home and workplace in Italy.",
     path: "/about",
   },
   contact: {
     title: "Contact CasaClean — Talk to Our Team",
     description:
-      "Questions about turnovers, coverage areas or pricing? Reach the CasaClean team and we'll respond within one business day.",
+      "Questions about coverage, pricing or cleaning for your office? Reach the CasaClean team and we'll respond within one business day.",
     path: "/contact",
   },
   faq: {
-    title: "FAQ — Answers for Hosts & Property Managers",
+    title: "FAQ — Answers About Booking, Pricing & Quality",
     description:
-      "Everything you need to know about CasaClean turnovers: scheduling, pricing, supplies, linens, damage reporting and guarantees.",
+      "Everything you need to know about CasaClean: booking, supplies, payment, cancellation, vetting and our Spotless Guarantee.",
     path: "/faq",
   },
   careers: {
     title: "Careers — Join the CasaClean Team",
     description:
-      "Build the operating system for short-term rental operations. Explore open roles across cleaning operations, engineering and customer success.",
+      "Fair pay, paid training and real growth paths. Explore open roles across cleaning operations, engineering and customer success.",
     path: "/careers",
   },
   booking: {
-    title: "Book a Turnover — Get a Guest-Ready Clean",
+    title: "Book a Cleaning — Vetted Professionals, Instant Price",
     description:
-      "Schedule a professional vacation rental turnover in minutes. Tell us about your property, pick a time, and we'll handle the rest.",
+      "Schedule a professional cleaning in minutes. Tell us about your place, pick a time, see the exact price and confirm — it's that simple.",
     path: "/booking",
   },
   blog: {
-    title: "Blog — Short-Term Rental Operations & Insights",
+    title: "Blog — Home Care Tips & Cleaning Guides",
     description:
-      "Playbooks, checklists and data-driven insights to help hosts and property managers run flawless short-term rental operations.",
+      "Checklists, room-by-room guides and honest advice from professional cleaners for a cleaner home and office.",
     path: "/blog",
   },
   notFound: {

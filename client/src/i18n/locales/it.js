@@ -6,7 +6,7 @@
 
 export default {
   common: {
-    bookTurnover: "Prenota un riassetto",
+    bookTurnover: "Prenota una pulizia",
     callUs: "Chiamaci",
     getStarted: "Inizia ora",
     learnMore: "Scopri di più",
@@ -30,7 +30,7 @@ export default {
     talkToTeam: "Parla con il nostro team",
     talkToSales: "Contatta le vendite",
     from: "Da",
-    perTurnover: "/ riassetto",
+    perTurnover: "/ visita",
   },
 
   language: { label: "Lingua", select: "Seleziona lingua" },
@@ -56,6 +56,31 @@ export default {
     noBookings: "Nessuna prenotazione",
     noBookingsHint: "Quando prenoti una pulizia, apparirà qui.",
     bookNow: "Prenota una pulizia",
+    cancelBooking: "Annulla",
+    cancelTitle: "Annullare questa prenotazione?",
+    cancelBody: "Verrà annullata la tua pulizia {service} del {date}. L'azione è irreversibile.",
+    cancelConfirm: "Sì, annulla la prenotazione",
+    keepBooking: "Mantieni la prenotazione",
+    cancelError: "Non siamo riusciti ad annullare la prenotazione. Riprova.",
+    rate: "Valuta",
+    yourRating: "La tua valutazione",
+    rateTitle: "Valuta la tua prenotazione",
+    rateSubtitle: "Com'è andata la tua pulizia {service} del {date}?",
+    ratingLabel: "La tua valutazione",
+    rateStars: "Valutazione di {count} stelle",
+    commentLabel: "La tua recensione",
+    commentPlaceholder: "Raccontaci com'è andata…",
+    submitReview: "Invia recensione",
+    reviewError: "Non siamo riusciti a inviare la recensione. Riprova.",
+    payments: {
+      title: "Metodi di pagamento",
+      add: "Aggiungi carta",
+      addTitle: "Aggiungi un metodo di pagamento",
+      save: "Salva carta",
+      empty: "Nessuna carta salvata.",
+      remove: "Rimuovi carta",
+      error: "Non siamo riusciti a salvare la carta. Riprova.",
+    },
   },
 
   nav: {
@@ -71,8 +96,8 @@ export default {
 
   footer: {
     blurb:
-      "Pulizie premium tra un ospite e l'altro per case vacanza. Scelti da host e property manager in oltre 12 città per mantenere ogni alloggio pronto all'ospite.",
-    newsletterTitle: "Ricevi consigli per host, ogni mese",
+      "Pulizie professionali per case e uffici in tutta Italia. Addetti selezionati e assicurati, prezzi trasparenti e una garanzia dietro ogni visita.",
+    newsletterTitle: "Ricevi consigli per la casa, ogni mese",
     subscribe: "Iscriviti",
     subscribed: "Iscrizione completata — controlla la tua casella.",
     emailPlaceholder: "tu@email.com",
@@ -88,31 +113,31 @@ export default {
       Careers: "Lavora con noi",
       Blog: "Blog",
       Contact: "Contatti",
-      "Turnover cleaning": "Pulizie tra ospiti",
-      "Linen management": "Gestione biancheria",
-      Restocking: "Rifornimento scorte",
-      Inspections: "Ispezioni",
+      "Home cleaning": "Pulizie di casa",
+      "Deep cleaning": "Pulizia profonda",
+      "Office cleaning": "Pulizie uffici",
+      "Move-out cleaning": "Pulizie di fine locazione",
       Pricing: "Prezzi",
       FAQ: "FAQ",
-      "Book a turnover": "Prenota un riassetto",
+      "Book a cleaning": "Prenota una pulizia",
       "Privacy policy": "Informativa privacy",
       "Terms of service": "Termini di servizio",
     },
   },
 
   auth: {
-    panelTitle: "Riassetti, gestiti.",
+    panelTitle: "Pulizie, gestite.",
     panelSubtitle:
-      "Unisciti a migliaia di host che si affidano a CasaClean per tenere ogni alloggio pronto all'ospite.",
-    panelStat1: "48.000+ riassetti completati",
-    panelStat2: "4,97★ valutazione media degli host",
+      "Unisciti a migliaia di clienti che si affidano a CasaClean per case e uffici impeccabili.",
+    panelStat1: "48.000+ pulizie completate",
+    panelStat2: "4,97★ valutazione media dei clienti",
     panelStat3: "99,6% di arrivi puntuali",
     orContinueWith: "oppure continua con",
     google: "Continua con Google",
     backToSite: "Torna al sito",
     signin: {
       title: "Bentornato",
-      subtitle: "Accedi per gestire i tuoi riassetti e le tue proprietà.",
+      subtitle: "Accedi per gestire le tue prenotazioni e preferenze.",
       submit: "Accedi",
       forgot: "Password dimenticata?",
       noAccount: "Nuovo su CasaClean?",
@@ -121,7 +146,7 @@ export default {
     },
     signup: {
       title: "Crea il tuo account",
-      subtitle: "Inizia a prenotare riassetti pronti all'ospite in pochi minuti.",
+      subtitle: "Prenota la tua prima pulizia in pochi minuti.",
       submit: "Crea account",
       haveAccount: "Hai già un account?",
       signInInstead: "Accedi",
@@ -159,29 +184,29 @@ export default {
 
   hero: {
     badge: "Ora in 12 città in tutta Italia",
-    titleA: "Riassetti pronti all'ospite,",
-    titleHighlight: "ogni singola volta",
+    titleA: "Una casa impeccabile,",
+    titleHighlight: "senza muovere un dito",
     subtitle:
-      "CasaClean gestisce pulizie, biancheria, rifornimenti e ispezioni per i tuoi affitti brevi — così ogni ospite entra in uno spazio a cinque stelle e tu non muovi un dito.",
-    ctaPrimary: "Prenota un riassetto",
+      "Prenota un professionista delle pulizie selezionato e assicurato per la tua casa o il tuo ufficio in circa 60 secondi. Prezzi trasparenti, la tua lingua parlata e ogni visita coperta dalla nostra Garanzia Impeccabile.",
+    ctaPrimary: "Prenota una pulizia",
     ctaSecondary: "Scopri come funziona",
-    ratingText: "da oltre 1.280 host",
-    guarantee: "Garanzia Pronto all'Ospite",
-    cardLabel: "Riassetto proprietà",
-    cardStatus: "Pronto all'ospite ✓",
+    ratingText: "da oltre 1.280 clienti",
+    guarantee: "Garanzia Impeccabile",
+    cardLabel: "Pulizia di casa",
+    cardStatus: "Impeccabile ✓",
     cardStatusLabel: "Stato",
-    cardRatingLabel: "Pulizia media ospiti",
+    cardRatingLabel: "Valutazione media clienti",
   },
 
   trustedBy: {
-    label: "Scelti da host e manager sulle piattaforme che già usi",
+    label: "Valutati eccellente dai clienti sulle piattaforme che già conosci",
   },
 
   servicesSection: {
     eyebrow: "Cosa facciamo",
-    title: "Tutto ciò che serve a un riassetto, sotto un unico tetto",
+    title: "Ogni tipo di pulizia, un unico team di fiducia",
     subtitle:
-      "Combina i servizi di cui i tuoi alloggi hanno bisogno. Un solo fornitore, una sola dashboard, un solo standard.",
+      "Dal riordino settimanale di casa ai contratti per uffici e alle pulizie di fine locazione — scegli ciò che ti serve, al resto pensiamo noi.",
     exploreAll: "Esplora tutti i servizi",
     bookNow: "Prenota ora",
     mostBooked: "Più richiesto",
@@ -189,97 +214,97 @@ export default {
 
   why: {
     eyebrow: "Perché CasaClean",
-    title: "L'affidabilità di un team interno, senza i costi fissi",
+    title: "Pulizie a cui puoi finalmente smettere di pensare",
     subtitle:
-      "Ci occupiamo dei dettagli operativi così le tue recensioni restano a cinque stelle e il tuo tempo resta tuo.",
+      "Ci occupiamo noi dei dettagli — selezione, pianificazione, qualità — così prenotare una pulizia diventa facile come chiamare un taxi.",
     items: {
       reliability: {
-        title: "Affidabilità su cui puoi pianificare",
+        title: "Puntuali, ogni volta",
         description:
-          "Squadre selezionate, sincronizzazione del calendario e un tasso di puntualità del 99,6% — anche per i riassetti in giornata back-to-back.",
+          "Professionisti puntuali, pianificazione in tempo reale e un tasso di arrivi puntuali del 99,6% — anche per richieste in giornata.",
       },
       standards: {
-        title: "Uno standard che puoi dimostrare",
+        title: "Professionisti con verifiche approfondite",
         description:
-          "Ogni pulizia segue una checklist di 50 punti e termina con un report fotografico: la qualità è documentata, non presunta.",
+          "Ogni addetto è identificato, sottoposto a controlli, assicurato e formato sul nostro standard di 50 punti prima della prima visita.",
       },
       allinone: {
-        title: "Un fornitore, ogni attività di riassetto",
+        title: "Un solo team per casa e ufficio",
         description:
-          "Pulizie, biancheria, rifornimenti e ispezioni sotto un unico tetto — e un'unica dashboard per tutti i tuoi alloggi.",
+          "Pulizie regolari, pulizie profonde, uffici, fine locazione, lavanderia e disinfezione — una prenotazione, una fattura, un unico standard.",
       },
       guarantee: {
-        title: "La Garanzia Pronto all'Ospite",
+        title: "La Garanzia Impeccabile",
         description:
-          "Se un riassetto non è perfetto, ripuliamo entro 24 ore o rimborsiamo la visita. Le tue recensioni sono protette.",
+          "Non sei soddisfatto di una pulizia? Comunicacelo entro 48 ore e ripuliamo gratis — oppure rimborsiamo la visita.",
       },
     },
   },
 
   workflow: {
     eyebrow: "Come funziona",
-    title: "Dalla prenotazione al pronto all'ospite in quattro passi",
+    title: "Dalla prenotazione allo splendore in quattro passi",
     subtitle:
-      "Un flusso di riassetto pensato per sparire sullo sfondo della tua attività di host.",
+      "Prenotare una pulizia non deve essere una fatica. Ecco tutta l'esperienza.",
     items: {
       book: {
-        title: "Prenota in pochi minuti",
+        title: "Prenota online in 60 secondi",
         description:
-          "Raccontaci della tua proprietà e scegli un orario. Sincronizza il calendario per pianificare i riassetti dopo ogni check-out.",
+          "Scegli il servizio, raccontaci del tuo spazio e seleziona un orario. Vedi il prezzo esatto prima di confermare.",
       },
       clean: {
-        title: "Pensiamo noi al riassetto",
+        title: "Ti abbiniamo a un professionista",
         description:
-          "Una squadra selezionata arriva puntuale e riporta lo spazio al nostro standard di ospitalità a cinque stelle e 50 punti.",
+          "Assegniamo un addetto selezionato e verificato compatibile con i tuoi orari — tenendo conto di lingua e preferenze.",
       },
       inspect: {
-        title: "Ispezione e documentazione",
+        title: "Facciamo splendere tutto",
         description:
-          "Ogni visita termina con un report fotografico con data e ora — danni segnalati, scorte registrate, oggetti smarriti annotati.",
+          "Il tuo addetto segue la nostra checklist di 50 punti, partendo dalle priorità indicate nella prenotazione.",
       },
       relax: {
-        title: "Pronto all'ospite, garantito",
+        title: "Valuta — è garantito",
         description:
-          "Il tuo alloggio è allestito, rifornito e impeccabile. Se qualcosa non va, ripuliamo entro 24 ore — senza costi.",
+          "Valuta la pulizia al termine. Se qualcosa non va, ripuliamo entro 48 ore senza costi.",
       },
     },
   },
 
   timeline: {
     eyebrow: "Processo in loco",
-    title: "Una cronologia documentata, ad ogni visita",
+    title: "Cosa succede durante la tua pulizia",
     subtitle:
-      "Nessun dubbio su cosa viene fatto. Ecco esattamente come si svolge un riassetto CasaClean.",
+      "Nessun mistero su dove finiscono le ore. Ecco come si svolge una tipica visita CasaClean.",
     items: {
       arrival: {
         title: "Arrivo e sopralluogo",
         description:
-          "La squadra effettua il check-in, documenta le condizioni della proprietà all'ingresso e rivede le note dell'host.",
+          "Il tuo addetto arriva puntuale, rivede le note della prenotazione e conferma priorità ed eventuali zone da evitare.",
       },
       strip: {
-        title: "Sbiancatura e lavanderia",
+        title: "Riordino e spolveratura",
         description:
-          "Biancheria e asciugamani usati vengono rimossi, set freschi di qualità alberghiera vengono preparati e la lavanderia avviata.",
+          "Le superfici vengono riordinate e spolverate dall'alto in basso — mensole, cornici, battiscopa e gli angoli dimenticati.",
       },
       "kitchen-bath": {
         title: "Cucina e bagni",
         description:
-          "Sanificazione profonda degli ambienti più importanti: elettrodomestici, sanitari, superfici e punti di contatto.",
+          "Gli ambienti che contano di più: sgrassatura, decalcificazione e sanificazione di elettrodomestici, sanitari e superfici di contatto.",
       },
       living: {
-        title: "Zone giorno e letti",
+        title: "Camere e zone giorno",
         description:
-          "Pavimenti, spolveratura, rifacimento letti con piega alberghiera e un attento riordino di ogni spazio comune.",
+          "Letti rifatti, specchi lucidati, mobili puliti e ogni stanza riportata alla calma.",
       },
       restock: {
-        title: "Rifornimento e allestimento",
+        title: "Pavimenti e tocchi finali",
         description:
-          "Consumabili reintegrati, kit di benvenuto allestiti, illuminazione e atmosfera pronte per l'arrivo.",
+          "Aspirapolvere e lavaggio ovunque, cestini svuotati e ogni cosa rimessa al suo posto.",
       },
       inspect: {
-        title: "Ispezione e report",
+        title: "Controllo finale e feedback",
         description:
-          "Controllo finale dei 50 punti, foto con data e ora, e invio della conferma di pronto all'ospite.",
+          "Un ultimo passaggio sulla checklist, poi valuti la visita — il tuo feedback migliora ogni pulizia successiva.",
       },
     },
   },
@@ -288,140 +313,140 @@ export default {
     eyebrow: "La differenza CasaClean",
     title: "Guarda la trasformazione",
     subtitle:
-      "Trascina per confrontare uno spazio dopo il check-out con un riassetto CasaClean pronto all'ospite.",
+      "Trascina per confrontare una stanza vissuta di tutti i giorni con lo stesso spazio dopo una visita CasaClean.",
     before: "Prima",
     after: "Dopo",
   },
 
   stats: {
-    turnovers: "Riassetti completati",
-    rating: "Valutazione media degli host",
+    turnovers: "Pulizie completate",
+    rating: "Valutazione media dei clienti",
     ontime: "Tasso di arrivi puntuali",
     cities: "Città servite",
   },
 
   testimonialsSection: {
-    eyebrow: "Amato dagli host",
-    title: "Gli host non ci apprezzano soltanto — riprenotano",
+    eyebrow: "Amato dai clienti",
+    title: "I clienti non si limitano ad apprezzarci — riprenotano",
     subtitle:
-      "Parole reali dagli operatori che affidano a CasaClean i propri ospiti.",
+      "Parole reali dalle case e dagli uffici che si affidano a CasaClean.",
   },
 
   testimonials: {
     t1: {
       quote:
-        "CasaClean ha trasformato il caos dei riassetti in un non-evento. Pulizie in giornata, report fotografici prima di ogni ospite, e i nostri punteggi non sono mai stati così alti.",
-      metric: "4,97★ valutazione media",
+        "Tornare a casa il venerdì e trovare l'appartamento impeccabile ha davvero cambiato la nostra settimana. La stessa addetta ad ogni visita, e sa esattamente come ci piace.",
+      metric: "Cliente settimanale da 2 anni",
     },
     t2: {
       quote:
-        "Abbiamo sostituito tre fornitori con un'unica piattaforma. Le sole foto delle ispezioni ci hanno fatto risparmiare migliaia in contestazioni di danni.",
-      metric: "31% di reclami in meno",
+        "Il nostro studio viene pulito prima dell'arrivo del team, con una fattura al mese e zero solleciti. Passare a CasaClean mi ha tolto un intero compito dal lavoro.",
+      metric: "3 sedi, una sola fattura",
     },
     t3: {
       quote:
-        "Prenoto un riassetto in meno di un minuto e me ne dimentico. Biancheria, rifornimenti, tutto — i miei ospiti pensano che io abbia una governante a tempo pieno.",
-      metric: "12 ore/settimana risparmiate",
+        "Ho prenotato in inglese in circa un minuto, e anche la mia addetta parlava inglese — niente app di traduzione imbarazzanti. Il mio appartamento non è mai stato così bello.",
+      metric: "Prenotato in meno di un minuto",
     },
     t4: {
       quote:
-        "L'affidabilità è tutto quando cresci. CasaClean non ha mai saltato un riassetto in 14 mesi — quella costanza vale un sovrapprezzo.",
-      metric: "100% riassetti puntuali",
+        "Le loro pulizie di fine locazione sono così accurate che i miei inquilini riottengono la caparra senza una sola contestazione. Ora ne prenoto una ad ogni cambio.",
+      metric: "Caparre restituite per intero",
     },
     t5: {
       quote:
-        "La dashboard mi dà una visione unica su ogni proprietà. Aggiungere un nuovo alloggio ora richiede minuti invece di un pomeriggio.",
-      metric: "9 alloggi, un solo accesso",
+        "La pulizia profonda è arrivata dove io non riuscivo da anni — dentro il forno, dietro i mobili, tutto. Persone gentili e attente.",
+      metric: "4,97★ dopo oltre 40 visite",
     },
   },
 
   faqSection: {
     eyebrow: "Risposte alle domande",
-    title: "Le cose che gli host ci chiedono di più",
+    title: "Le cose che i clienti ci chiedono di più",
     subtitle: "Non trovi ciò che cerchi? Il nostro team è a un messaggio di distanza.",
     readAll: "Leggi tutte le FAQ",
   },
 
   cta: {
     eyebrow: "Pronti quando vuoi",
-    title: "Il tuo prossimo ospite merita uno spazio impeccabile.",
+    title: "Hai di meglio da fare che sfregare.",
     subtitle:
-      "Prenota un riassetto in meno di due minuti — niente contratti, niente vincoli, solo una casa pronta all'ospite.",
-    primary: "Prenota un riassetto",
+      "Prenota un addetto selezionato in circa un minuto — niente contratti, niente vincoli, solo uno spazio impeccabile.",
+    primary: "Prenota una pulizia",
     secondary: "Parla con il nostro team",
   },
 
   services: {
     1: {
-      name: "Pulizia tra Ospiti",
-      tagline: "Pronto all'ospite in ore, non giorni",
+      name: "Pulizie di Casa",
+      tagline: "La tua pulizia di routine, senza pensieri",
       description:
-        "Un riassetto completo tra un ospite e l'altro — ogni superficie, ogni stanza, secondo uno standard di ospitalità a cinque stelle.",
+        "Una pulizia accurata di tutta la casa — cucina, bagni, camere e zone giorno — una tantum o con la frequenza che preferisci.",
       features: [
-        "Sanificazione completa di cucina e bagno",
-        "Rifacimento letti con piega alberghiera",
-        "Pavimenti, superfici e punti di contatto",
-        "Rimozione rifiuti e neutralizzazione odori",
+        "Sanificazione di cucina e bagno",
+        "Spolveratura, aspirapolvere e lavaggio",
+        "Letti rifatti e stanze riordinate",
+        "Cestini svuotati e superfici lucidate",
       ],
     },
     2: {
-      name: "Gestione Biancheria",
-      tagline: "Biancheria di qualità alberghiera, sempre fresca",
+      name: "Pulizia Profonda",
+      tagline: "Per quando serve più di una passata",
       description:
-        "Lavanderia professionale, gestione delle scorte e biancheria sostituita all'arrivo, così ogni ospite dorme su lenzuola fresche e curate.",
+        "Una pulizia intensiva dall'alto in basso — interno degli elettrodomestici, calcare, fughe e tutti i punti che una pulizia normale non raggiunge.",
       features: [
-        "Lavaggio e stiratura professionale",
-        "Monitoraggio delle scorte minime",
-        "Sostituzione per macchie e usura",
-        "Set freschi consegnati ad ogni riassetto",
+        "Interno di forno, frigo e mobili",
+        "Trattamento calcare, fughe e piastrelle",
+        "Battiscopa, porte e bocchette",
+        "Sotto e dietro i mobili",
       ],
     },
     3: {
-      name: "Rifornimento Scorte",
-      tagline: "Mai più senza l'essenziale",
+      name: "Pulizie Uffici",
+      tagline: "Uno spazio di lavoro che il team apprezza",
       description:
-        "Monitoriamo e reintegriamo i consumabili — dal caffè ai prodotti da bagno — così il tuo alloggio è sempre rifornito.",
+        "Pulizie affidabili per uffici, studi e negozi — programmate intorno ai tuoi orari di lavoro, con un'unica semplice fattura mensile.",
       features: [
-        "Prodotti da bagno e cortesie",
-        "Consumabili per cucina e caffè",
-        "Materiali per pulizia e carta",
-        "Avvisi automatici scorte basse",
+        "Scrivanie, sale riunioni e cucine",
+        "Punti di contatto sanificati",
+        "Fasce serali e mattutine",
+        "Fatturazione mensile disponibile",
       ],
     },
     4: {
-      name: "Ispezione Proprietà",
-      tagline: "Un controllo di 50 punti, ad ogni visita",
+      name: "Pulizie Trasloco / Fine Locazione",
+      tagline: "Lascia dietro di te solo splendore",
       description:
-        "Ispezioni documentate con foto individuano danni, manutenzioni e oggetti mancanti prima del tuo prossimo ospite.",
+        "Una pulizia di fine locazione rigorosa che aiuta a riottenere la caparra per intero e a iniziare da zero — accurata come la checklist di un proprietario.",
       features: [
-        "Checklist di qualità di 50 punti",
-        "Report fotografico con data e ora",
-        "Segnalazione danni e manutenzioni",
-        "Gestione oggetti smarriti",
+        "Pulizia profonda dell'intero immobile",
+        "Interno di elettrodomestici e armadi",
+        "Finestre, infissi e porte",
+        "Documentazione utile per la caparra",
       ],
     },
     5: {
-      name: "Pulizia Profonda",
-      tagline: "Un reset stagionale che si vede",
+      name: "Lavanderia e Stiratura",
+      tagline: "Fresco, piegato e riposto",
       description:
-        "Una pulizia esaustiva dall'alto in basso — elettrodomestici, fughe, battiscopa e i punti che un riassetto standard salta.",
+        "Aggiungi lavaggio, stiratura e piegatura a qualsiasi pulizia — o prenotalo da solo. Il tuo guardaroba e la tua biancheria, gestiti.",
       features: [
-        "Interno di elettrodomestici e armadi",
-        "Fughe, battiscopa e bocchette",
-        "Interni e binari delle finestre",
-        "Tappezzeria e tessili d'arredo",
+        "Lavaggio, asciugatura e piegatura",
+        "Stiratura e cura dei capi",
+        "Rotazione di lenzuola e asciugamani",
+        "Extra abbinabile a ogni pulizia",
       ],
     },
     6: {
-      name: "Preparazione all'Ospite",
-      tagline: "I tocchi finali che valgono 5 stelle",
+      name: "Sanificazione e Disinfezione",
+      tagline: "Pulizia certificata, fin nei dettagli",
       description:
-        "Allestimento, set di benvenuto e un controllo finale, così il tuo spazio appare e viene recensito bene come è pulito.",
+        "Disinfezione di livello professionale delle superfici di contatto per case e luoghi di lavoro — ideale dopo malattie, inquilini o ristrutturazioni.",
       features: [
-        "Allestimento kit di benvenuto",
-        "Illuminazione e atmosfera",
-        "Controllo finale dello styling",
-        "Coerenza con le foto dell'annuncio",
+        "Disinfettanti professionali certificati",
+        "Trattamento delle superfici di contatto",
+        "Focus su cucina e bagni",
+        "Adatta a case e uffici",
       ],
     },
   },
@@ -434,49 +459,49 @@ export default {
     },
     items: {
       q1: {
-        question: "Quanto velocemente potete riassettare la mia proprietà?",
+        question: "Devo essere a casa durante la pulizia?",
         answer:
-          "La maggior parte dei riassetti viene completata entro 3–4 ore dal check-out dell'ospite. Con un calendario confermato, possiamo rendere la tua proprietà pronta all'ospite in giornata — anche per prenotazioni consecutive.",
+          "Dipende solo da te. Molti clienti consegnano le chiavi, usano una serratura smart o le lasciano al portiere. Il tuo addetto conferma arrivo e completamento, così sai sempre a che punto siamo.",
       },
       q2: {
-        question: "Quali zone coprite attualmente?",
+        question: "In quali città operate?",
         answer:
-          "Operiamo nei principali mercati italiani degli affitti brevi, tra cui Roma, Firenze, Milano, Napoli e Venezia, e aggiungiamo nuove città ogni trimestre. Inserisci il tuo indirizzo in fase di prenotazione per confermare la copertura.",
+          "Operiamo attualmente in 12 città italiane tra cui Roma, Milano, Firenze, Napoli e Venezia — e ci espandiamo ogni trimestre. Inserisci il tuo indirizzo in fase di prenotazione per confermare la copertura.",
       },
       q3: {
-        question: "Devo essere presente durante la pulizia?",
+        question: "L'addetto porta prodotti e attrezzatura?",
         answer:
-          "No. La grande maggioranza dei nostri host usa serrature smart o consegne di chiavi. Documentiamo ingresso e uscita con foto con data e ora, così hai sempre una traccia senza muovere un dito.",
+          "Sì — di norma il tuo addetto arriva con prodotti professionali e attrezzatura senza costi aggiuntivi. Preferisci i tuoi prodotti ecologici o specifici? Basta lasciare una nota nella prenotazione.",
       },
       q4: {
         question: "Come funzionano i prezzi?",
         answer:
-          "Puoi pagare a riassetto o risparmiare con un piano mensile gestito. Il prezzo a riassetto si basa sulle dimensioni della proprietà e sui servizi scelti — niente contratti né costi nascosti.",
+          "Il prezzo è orario e dipende dalle dimensioni del tuo spazio e dal servizio scelto. Vedi il prezzo esatto prima di confermare — niente contratti, niente costi nascosti, e i piani regolari fanno risparmiare il 20%.",
       },
       q5: {
-        question: "Scorte e biancheria sono incluse?",
+        question: "Come posso pagare?",
         answer:
-          "Scegli tu. Possiamo usare le tue scorte e biancheria, oppure fornire biancheria e consumabili di qualità alberghiera come extra. Il rifornimento è monitorato automaticamente così non resti mai senza.",
+          "Paghi online in modo sicuro con carta al momento della prenotazione — accettiamo tutte le principali carte tramite Stripe. Se annulli in tempo, il pagamento viene rimborsato per intero automaticamente.",
       },
       q6: {
-        question: "C'è una penale di cancellazione?",
+        question: "Qual è la politica di cancellazione?",
         answer:
-          "Le cancellazioni effettuate più di 24 ore prima di un riassetto programmato sono gratuite. Entro le 24 ore si applica una penale del 50% per coprire lo slot riservato alla squadra.",
+          "Puoi annullare gratuitamente fino a 24 ore prima dell'appuntamento. Entro le 24 ore si applica una penale del 50%, perché il tuo addetto ha riservato quel tempo per te.",
       },
       q7: {
-        question: "Cosa succede se non sono soddisfatto di una pulizia?",
+        question: "E se non sono soddisfatto della pulizia?",
         answer:
-          "Ogni riassetto è coperto dalla nostra Garanzia Pronto all'Ospite. Se qualcosa non va, ripuliamo entro 24 ore senza costi — oppure rimborsiamo la visita.",
+          "Ogni visita è coperta dalla nostra Garanzia Impeccabile: comunicacelo entro 48 ore e rimanderemo un addetto a sistemare tutto gratuitamente — oppure rimborsiamo la visita.",
       },
       q8: {
         question: "I vostri addetti sono selezionati e assicurati?",
         answer:
-          "Sì. Ogni professionista è sottoposto a controlli, formato sul nostro standard di 50 punti e pienamente assicurato. Garantiamo copertura di responsabilità ad ogni visita, per la tua tranquillità.",
+          "Sì. Ogni professionista è identificato, sottoposto a controlli, formato sul nostro standard di 50 punti e coperto da assicurazione di responsabilità ad ogni singola visita.",
       },
       q9: {
-        question: "Come gestite danni o oggetti smarriti?",
+        question: "Posso avere sempre lo stesso addetto?",
         answer:
-          "I nostri report di ispezione segnalano i danni con foto nel momento in cui vengono trovati, e gli oggetti smarriti vengono registrati e conservati. Avrai la documentazione prima dell'arrivo del prossimo ospite.",
+          "Sì — con un piano regolare settimanale o quindicinale mantieni lo stesso addetto di fiducia, che impara esattamente come ti piace la casa. Se non è disponibile, ti proponiamo un sostituto verificato che puoi accettare o rifiutare.",
       },
     },
   },
@@ -484,9 +509,9 @@ export default {
   pages: {
     services: {
       heroEyebrow: "I nostri servizi",
-      heroTitle: "Operazioni complete per gli affitti brevi",
+      heroTitle: "Pulizie professionali per ogni spazio e situazione",
       heroSubtitle:
-        "Da un singolo riassetto alla gestione completa di biancheria, rifornimenti e ispezioni — scegli esattamente ciò che serve ai tuoi alloggi.",
+        "Una tantum, regolare, profonda, per l'ufficio o di fine locazione — prenota esattamente la pulizia che ti serve, da professionisti selezionati.",
       emptyTitle: "Servizi in arrivo",
       emptyDescription:
         "Stiamo ultimando la nostra gamma di servizi. Contattaci e creeremo un piano su misura per te.",
@@ -494,69 +519,69 @@ export default {
       processEyebrow: "Il processo",
       processTitle: "Semplice fin dalla prima prenotazione",
       processSubtitle:
-        "Per quanti servizi tu scelga, l'esperienza è la stessa: semplice, affidabile, documentata.",
+        "Qualunque servizio tu scelga, l'esperienza è la stessa: semplice, affidabile, garantita.",
       includedEyebrow: "Sempre incluso",
-      includedTitle: "Ogni riassetto, garantito",
+      includedTitle: "Ogni visita, garantita",
       includedSubtitle: "Qualunque servizio prenoti, questi sono di serie.",
       included: [
         "Professionisti selezionati e verificati",
-        "Checklist di qualità di 50 punti",
-        "Report fotografico di completamento",
+        "Prodotti e attrezzatura professionali inclusi",
+        "La nostra checklist di qualità di 50 punti",
         "Assicurazione completa ad ogni visita",
-        "Documentazione di danni e oggetti smarriti",
-        "Garanzia Pronto all'Ospite o ripuliamo gratis",
+        "Pagamento online sicuro e ricevute",
+        "Garanzia Impeccabile — o ripuliamo gratis",
       ],
-      ctaTitle: "Costruisci il piano di riassetto che i tuoi alloggi meritano",
+      ctaTitle: "Non sai quale pulizia ti serve?",
       ctaSubtitle:
-        "Raccontaci della tua proprietà e ti consiglieremo il giusto mix di servizi.",
+        "Raccontaci del tuo spazio e ti consiglieremo il servizio e la durata giusti.",
     },
     pricing: {
       heroEyebrow: "Prezzi",
       heroTitle: "Prezzi semplici che crescono con te",
       heroSubtitle:
-        "Paga a riassetto o risparmia con un piano gestito. Niente contratti, niente costi di attivazione, nessuna sorpresa.",
+        "Paga a visita o risparmia con un piano regolare. Niente contratti, niente costi di attivazione, nessuna sorpresa.",
       disclaimer:
-        "I prezzi indicati sono di partenza e variano in base alle dimensioni della proprietà. Vedrai un preventivo esatto prima di confermare qualsiasi prenotazione.",
+        "I prezzi indicati sono di partenza e variano in base alle dimensioni dell'immobile. Vedrai un preventivo esatto prima di confermare qualsiasi prenotazione.",
       addonsEyebrow: "Extra",
-      addonsTitle: "Personalizza ogni piano con gli extra",
-      addonsSubtitle: "Aggiungi esattamente ciò che serve a un alloggio, quando serve.",
+      addonsTitle: "Personalizza ogni pulizia con gli extra",
+      addonsSubtitle: "Aggiungi esattamente ciò che serve al tuo spazio, quando serve.",
       faqEyebrow: "FAQ sui prezzi",
       faqTitle: "Buono a sapersi",
-      ctaTitle: "Inizia con un singolo riassetto",
+      ctaTitle: "Inizia con una singola pulizia",
       ctaSubtitle:
-        "Nessun piano richiesto. Prenota una pulizia, vedi la differenza, cresci quando sei pronto.",
+        "Nessun piano richiesto. Prenota una visita, vedi la differenza, poi decidi.",
     },
     about: {
       heroEyebrow: "La nostra storia",
-      heroTitle: "Abbiamo creato il partner operativo che avremmo voluto avere",
+      heroTitle: "Abbiamo creato CasaClean per rendere semplici le grandi pulizie",
       heroSubtitle:
-        "CasaClean è nata con tre squadre e un'ossessione per le cinque stelle. Oggi manteniamo migliaia di alloggi pronti all'ospite in tutta Italia.",
+        "Ciò che è iniziato con tre addetti e un furgone in prestito è oggi un team selezionato che mantiene impeccabili migliaia di case e luoghi di lavoro in tutta Italia.",
       missionLabel: "La nostra missione",
       mission:
-        "Rendere la gestione di un affitto breve un'esperienza senza sforzo — così gli host possono far crescere la loro attività mentre ogni ospite entra in uno spazio impeccabile.",
+        "Restituire alle persone il loro tempo — rendendo le pulizie professionali e affidabili facili da prenotare come un taxi, per ogni casa e luogo di lavoro.",
       valuesEyebrow: "I nostri valori",
-      valuesTitle: "I principi dietro ogni riassetto",
+      valuesTitle: "I principi dietro ogni visita",
       milestonesEyebrow: "Tappe",
       milestonesTitle: "Come siamo arrivati fin qui",
       teamEyebrow: "Leadership",
       teamTitle: "Le persone dietro CasaClean",
-      ctaTitle: "Unisciti a migliaia di host che si affidano a CasaClean",
+      ctaTitle: "Unisciti a migliaia di clienti che si affidano a CasaClean",
       ctaSubtitle:
-        "Scopri il partner operativo creato per gli affitti brevi.",
+        "Scopri una pulizia su cui puoi contare — a casa e al lavoro.",
     },
     contact: {
       heroEyebrow: "Contatti",
-      heroTitle: "Affidaci i tuoi riassetti",
+      heroTitle: "Rendiamo impeccabile il tuo spazio",
       heroSubtitle:
-        "Domande su copertura, prezzi o gestione di un portfolio? Siamo qui per aiutarti.",
+        "Domande su copertura, prezzi o pulizie per il tuo ufficio? Siamo qui per aiutarti, 7 giorni su 7.",
       emailLabel: "Scrivici",
       emailNote: "Rispondiamo entro un giorno lavorativo",
       phoneLabel: "Chiamaci",
       phoneNote: "Lun–Sab, 9:00–18:00 CET",
       visitLabel: "Vieni a trovarci",
       visitNote: "Su appuntamento",
-      pmTitle: "Sei un property manager?",
-      pmNote: "Chiedi dei prezzi per volumi e della dashboard multi-proprietà.",
+      pmTitle: "Ufficio o più immobili?",
+      pmNote: "Chiedi dei piani business, della fatturazione mensile e dei prezzi per volumi.",
       formTitle: "Inviaci un messaggio",
       formSubtitle: "Compila il modulo e ti ricontatteremo a breve.",
       successTitle: "Messaggio inviato",
@@ -568,22 +593,22 @@ export default {
         phone: "Telefono",
         topic: "Argomento",
         message: "Come possiamo aiutarti?",
-        messagePlaceholder: "Raccontaci della tua proprietà e di ciò che ti serve…",
+        messagePlaceholder: "Raccontaci del tuo spazio e di ciò che ti serve…",
         topicPlaceholder: "Seleziona un argomento",
       },
       topics: {
         general: "Richiesta generale",
-        booking: "Prenotare un riassetto",
+        booking: "Prenotare una pulizia",
         pricing: "Prezzi e piani",
-        partnership: "Property manager / partnership",
-        support: "Assistenza clienti esistenti",
+        partnership: "Uffici / pulizie aziendali",
+        support: "Assistenza per clienti esistenti",
       },
     },
     faq: {
       heroEyebrow: "Centro assistenza",
       heroTitle: "Domande frequenti",
       heroSubtitle:
-        "Tutto ciò che devi sapere su come lavorare con CasaClean. Ancora dubbi? Contattaci quando vuoi.",
+        "Tutto ciò che devi sapere per prenotare con CasaClean. Ancora dubbi? Contattaci quando vuoi.",
       ctaEyebrow: "Hai ancora domande?",
       ctaTitle: "Siamo a un messaggio di distanza",
       ctaSubtitle:
@@ -591,9 +616,9 @@ export default {
     },
     careers: {
       heroEyebrow: "Lavora con noi",
-      heroTitle: "Costruisci il sistema operativo degli affitti brevi",
+      heroTitle: "Fai un lavoro di cui essere orgoglioso — e vieni valorizzato",
       heroSubtitle:
-        "Siamo un team che è orgoglioso dell'arte delle operazioni di ospitalità. Vieni a fare il miglior lavoro della tua carriera.",
+        "Crediamo che pulire sia un lavoro qualificato che merita una paga equa, formazione vera e rispetto. Vieni a costruire l'azienda di pulizie più affidabile d'Italia.",
       seeRoles: "Vedi le posizioni aperte",
       perksEyebrow: "Perché unirti a noi",
       perksTitle: "Più di un lavoro — un posto dove crescere",
@@ -613,9 +638,9 @@ export default {
     },
     blog: {
       heroEyebrow: "Il blog di CasaClean",
-      heroTitle: "Guide pratiche per operazioni impeccabili",
+      heroTitle: "Guide pratiche per una casa e un ufficio più puliti",
       heroSubtitle:
-        "Checklist, dati e lezioni concrete per gestire un affitto breve a cinque stelle.",
+        "Checklist, guide stanza per stanza e consigli onesti da addetti alle pulizie professionisti.",
       searchPlaceholder: "Cerca articoli…",
       noResultsTitle: "Nessun articolo trovato",
       noResultsBody: "Prova una categoria o un termine di ricerca diverso.",
@@ -627,12 +652,12 @@ export default {
       notFoundBody: "Questo articolo potrebbe essere stato spostato o rimosso.",
       backToBlog: "Torna al blog",
       ctaEyebrow: "Mettilo in pratica",
-      ctaTitle: "Smetti di leggere di ottimi riassetti. Prenotane uno.",
-      ctaSubtitle: "Vedi lo standard CasaClean sul tuo alloggio.",
+      ctaTitle: "Smetti di leggere di case impeccabili. Prenotane una.",
+      ctaSubtitle: "Scopri lo standard CasaClean nel tuo spazio.",
     },
     notFound: {
       code: "404",
-      title: "Questa pagina ha fatto il check-out in anticipo",
+      title: "Questa pagina è stata spazzata via",
       subtitle:
         "La pagina che cerchi non esiste o è stata spostata. Torniamo a uno spazio pulito.",
       home: "Torna alla home",
@@ -643,67 +668,67 @@ export default {
 
   pricingPlans: {
     payg: {
-      name: "Paga a Consumo",
-      description: "Perfetto per host occasionali che vogliono flessibilità.",
-      cadence: "Fatturato per pulizia",
-      cta: "Prenota un riassetto",
+      name: "Pulizia Singola",
+      description: "Perfetta per un riordino una tantum, un'occasione speciale o una prova.",
+      cadence: "Fatturata a visita",
+      cta: "Prenota una pulizia",
       features: [
-        "Pulizia standard tra ospiti",
-        "Rifacimento letti e riordino",
-        "Rimozione rifiuti",
-        "Report fotografico di completamento",
-        "Garanzia Pronto all'Ospite",
+        "Pulizia standard della casa",
+        "Prodotti professionali inclusi",
+        "Professionista selezionato e assicurato",
+        "Pagamento online sicuro",
+        "Garanzia Impeccabile",
       ],
     },
     host: {
-      name: "Host",
-      description: "Per host attivi con uno o tre alloggi.",
+      name: "Pulizia Regolare",
+      description: "Per case pulite ogni settimana o ogni due — il nostro piano più popolare.",
       cadence: "Fatturato mensile · risparmia 20%",
       badge: "Più popolare",
-      cta: "Inizia con Host",
+      cta: "Inizia un piano regolare",
       features: [
-        "Tutto di Paga a Consumo",
-        "Pianificazione prioritaria in giornata",
-        "Gestione biancheria inclusa",
-        "Rifornimento scorte e avvisi",
-        "Report di ispezione di 50 punti",
+        "Tutto quanto incluso in Pulizia Singola",
+        "Lo stesso addetto di fiducia ad ogni visita",
+        "Priorità e pianificazione in giornata",
+        "Salta o riprogramma quando vuoi",
+        "Sconto sull'extra lavanderia e stiratura",
         "Linea di supporto dedicata",
       ],
     },
     portfolio: {
-      name: "Portfolio",
-      description: "Operazioni gestite per 4+ unità e property manager.",
-      cadence: "Su misura per il tuo portfolio",
+      name: "Aziende e Uffici",
+      description: "Pulizie su misura per uffici, studi, negozi e proprietari.",
+      cadence: "Su misura per i tuoi spazi",
       unit: "Personalizzato",
       cta: "Contatta le vendite",
       features: [
-        "Tutto di Host",
-        "Prezzi per volumi su tutte le unità",
-        "Un'unica dashboard multi-proprietà",
+        "Tutto quanto incluso in Pulizia Regolare",
+        "Pianificazione fuori orario",
+        "Un'unica fattura mensile",
         "Account manager dedicato",
-        "Integrazioni API e PMS",
+        "Più sedi, un solo referente",
         "SLA e reportistica personalizzati",
       ],
     },
   },
 
   pricingAddons: {
-    deep: { label: "Pulizia profonda", note: "Reset stagionale completo" },
-    linen: { label: "Biancheria alberghiera", note: "Per riassetto, sostituita all'arrivo" },
-    restock: { label: "Rifornimento scorte", note: "Consumabili monitorati e reintegrati" },
-    staging: { label: "Allestimento pronto all'ospite", note: "Set di benvenuto e styling finale" },
+    deep: { label: "Pulizia profonda", note: "Reset intensivo dall'alto in basso" },
+    linen: { label: "Lavanderia e stiratura", note: "Lavato, stirato e piegato" },
+    restock: { label: "Interno frigo e forno", note: "Sgrassati e decalcificati, dentro e fuori" },
+    staging: { label: "Vetri interni", note: "Vetri, infissi e davanzali" },
   },
 
   values: {
     hospitality: {
-      title: "Prima l'ospitalità",
+      title: "Cura in ogni angolo",
       description:
-        "Trattiamo ogni proprietà come un soggiorno a cinque stelle — perché le recensioni dei tuoi ospiti dipendono da questo.",
+        "Puliamo ogni casa come se il proprietario ci stesse guardando — perché la fiducia si guadagna nei dettagli.",
     },
     accountability: {
       title: "Responsabilità radicale",
       description:
-        "Report fotografici ad ogni visita. Se ci sfugge qualcosa, ce ne assumiamo la responsabilità e la sistemiamo, in fretta.",
+        "Checklist chiare e feedback onesti. Se ci sfugge qualcosa, ce ne assumiamo la responsabilità e la sistemiamo, in fretta.",
     },
     craft: {
       title: "Orgoglio del mestiere",
@@ -713,31 +738,31 @@ export default {
     scale: {
       title: "Creato per crescere con te",
       description:
-        "Da un alloggio a cento, le nostre operazioni e i nostri strumenti crescono senza saltare un riassetto.",
+        "Da un monolocale a una catena di uffici, il nostro team e i nostri strumenti crescono senza saltare una visita.",
     },
   },
 
   milestones: {
-    m1: { title: "Fondata a Roma", description: "Iniziata con tre squadre e un'ossessione per le cinque stelle." },
-    m2: { title: "Millesimo riassetto", description: "Espansione a Firenze e Milano nel primo anno." },
-    m3: { title: "Piattaforma di ispezione", description: "Lanciate le ispezioni di 50 punti documentate con foto." },
-    m4: { title: "12 città, 48k+ pulizie", description: "Diventati il partner operativo preferito dai manager." },
+    m1: { title: "Fondata a Roma", description: "Iniziata con tre addetti e una promessa: pulizie su cui contare." },
+    m2: { title: "Millesima prenotazione", description: "Il passaparola ci ha portati a Firenze e Milano nel primo anno." },
+    m3: { title: "La Garanzia Impeccabile", description: "Lanciati il nostro standard di 50 punti e la garanzia di ripulitura gratuita." },
+    m4: { title: "12 città, 48k+ pulizie", description: "Diventati il partner di pulizie di riferimento per case e uffici." },
   },
 
   leadership: {
-    founder: { role: "Co-fondatrice e CEO", bio: "Ex responsabile operazioni di ospitalità, ha scalato squadre di riassetto su oltre 200 affitti brevi." },
+    founder: { role: "Co-fondatrice e CEO", bio: "Ex direttrice housekeeping d'albergo, ha guidato squadre di pulizia su oltre 200 camere e suite." },
     ops: { role: "Co-fondatore e COO", bio: "Ha costruito e gestito operazioni sul campo multi-città per un'azienda di logistica on-demand." },
-    product: { role: "Head of Product", bio: "Leader di prodotto focalizzato su strumenti che rendono semplici le operazioni complesse." },
-    quality: { role: "Head of Quality", bio: "Ha definito lo standard di 50 punti con cui viene misurato ogni riassetto CasaClean." },
+    product: { role: "Head of Product", bio: "Leader di prodotto focalizzato su strumenti che rendono semplice prenotare e gestire una pulizia." },
+    quality: { role: "Head of Quality", bio: "Ha definito lo standard di 50 punti con cui viene misurata ogni visita CasaClean." },
   },
 
   perks: {
     p1: { title: "Retribuzione sopra la media", description: "Base competitiva, bonus sulle prestazioni e tempo di viaggio retribuito." },
     p2: { title: "Orari flessibili", description: "Scegli i turni adatti alla tua vita — tempo pieno o parziale." },
-    p3: { title: "Formazione retribuita", description: "Ottieni la certificazione sul nostro standard di 50 punti, interamente pagata." },
+    p3: { title: "Formazione retribuita", description: "Ottieni la certificazione sul nostro standard di pulizia di 50 punti, interamente pagata." },
     p4: { title: "Salute e assicurazione", description: "Copertura e assicurazione completa ad ogni visita." },
     p5: { title: "Veri percorsi di crescita", description: "Ruoli di caposquadra, formatore e ops regionali, promossi dall'interno." },
-    p6: { title: "Un team che ti sostiene", description: "Squadre di supporto e assistenza operativa reattiva, sempre." },
+    p6: { title: "Un team che ti sostiene", description: "Colleghi di supporto e assistenza operativa reattiva, sempre." },
   },
 
   roleTypes: { "Full-time": "Tempo pieno", "Part-time": "Tempo parziale" },
@@ -751,18 +776,31 @@ export default {
 
   booking: {
     backToSite: "Torna al sito",
-    title: "Prenota il tuo riassetto",
+    title: "Prenota la tua pulizia",
     subtitle:
-      "Una pulizia pronta all'ospite in pochi rapidi passaggi. Nessun pagamento richiesto per la richiesta — confermerai i dettagli con il nostro team.",
+      "Uno spazio impeccabile in pochi rapidi passaggi. Paga in modo sicuro per confermare — la carta viene addebitata alla prenotazione e rimborsata per intero se annulli.",
     continue: "Continua",
     back: "Indietro",
     confirm: "Conferma prenotazione",
     steps: {
       property: { title: "Dettagli proprietà", subtitle: "Dove dobbiamo pulire?" },
-      preferences: { title: "Preferenze di pulizia", subtitle: "Personalizza il riassetto" },
+      preferences: { title: "Preferenze di pulizia", subtitle: "Personalizza la tua pulizia" },
       schedule: { title: "Calendario", subtitle: "Scegli data e ora" },
       contact: { title: "I tuoi dati", subtitle: "Come contattarti" },
       review: { title: "Riepilogo", subtitle: "Conferma che sia tutto corretto" },
+      payment: { title: "Pagamento", subtitle: "Checkout sicuro per confermare la prenotazione" },
+    },
+    payment: {
+      heading: "Paga per confermare la prenotazione",
+      newCard: "Paga con una nuova carta",
+      savedCards: "Le tue carte salvate",
+      saveCard: "Salva questa carta per prenotazioni future più rapide",
+      pay: "Paga {amount}",
+      processing: "Pagamento in corso…",
+      securedByStripe: "I pagamenti sono protetti da Stripe. La carta viene addebitata ora e rimborsata per intero se annulli.",
+      unavailable: "I pagamenti online non sono al momento disponibili. Riprova più tardi.",
+      error: "Non siamo riusciti a completare il pagamento. Controlla i dati della carta e riprova.",
+      continueToPayment: "Continua al pagamento sicuro",
     },
     quote: {
       title: "Il tuo preventivo",
@@ -770,15 +808,16 @@ export default {
       empty: "Seleziona un servizio per vedere la stima.",
       total: "Totale stimato",
       guarantee:
-        "Coperto dalla Garanzia Pronto all'Ospite. Cancellazione gratuita fino a 24h prima.",
+        "Coperta dalla Garanzia Impeccabile. Cancellazione gratuita fino a 24h prima.",
     },
     confirmation: {
       title: "Prenotazione confermata!",
       body:
-        "il tuo riassetto è prenotato. Ti abbiamo inviato la conferma via email e ti contatteremo con la finestra di arrivo della squadra.",
+        "la tua pulizia è prenotata. Ti abbiamo inviato la conferma via email e ti contatteremo con la finestra di arrivo del tuo addetto.",
       reference: "Riferimento prenotazione",
       total: "totale",
       home: "Torna alla home",
+      profile: "Vai al mio profilo",
       more: "Esplora altri servizi",
     },
   },
@@ -787,12 +826,25 @@ export default {
   admin: {
     manage: "Gestione",
     backToSite: "Torna al sito",
+    login: {
+      badge: "Area riservata",
+      title: "Console Admin",
+      subtitle: "Accedi con il tuo account amministratore per continuare.",
+      email: "Email",
+      emailPlaceholder: "tu@casaclean.com",
+      password: "Password",
+      passwordPlaceholder: "••••••••",
+      submit: "Accedi come admin",
+      notAdmin: "Questo account non ha accesso amministratore.",
+      backToSite: "Torna al sito",
+    },
     topbar: {
       console: "Console admin",
       administrator: "Amministratore",
       signOut: "Esci",
       openNav: "Apri navigazione",
       adminFallback: "Admin",
+      viewLive: "Vedi il sito online",
     },
     table: {
       actions: "Azioni",
@@ -837,6 +889,12 @@ export default {
       completed: "Completata",
       cancelled: "Annullata",
     },
+    payment: {
+      paid: "Pagato",
+      refunded: "Rimborsato",
+      manual: "Manuale / contanti",
+      unpaid: "Non pagato",
+    },
     dashboard: {
       welcome: "Bentornato, {name}",
       subtitle: "Ecco cosa sta succedendo oggi in CasaClean.",
@@ -860,6 +918,7 @@ export default {
       emptyTitle: "Nessuna prenotazione",
       emptyDescription: "Le prenotazioni dal sito appariranno qui.",
       allStatuses: "Tutti gli stati",
+      noAccount: "— Nessun account collegato —",
       addTitle: "Aggiungi prenotazione",
       editTitle: "Modifica prenotazione",
       deleteTitle: "Elimina prenotazione",
@@ -869,6 +928,7 @@ export default {
         serviceCity: "Servizio / città",
         schedule: "Programmazione",
         total: "Totale",
+        payment: "Pagamento",
         status: "Stato",
       },
       detail: {
@@ -881,22 +941,30 @@ export default {
         dateTime: "Data e ora",
         hoursCleaners: "Ore / addetti",
         propertySize: "Dimensione immobile",
+        workers: "Addetti assegnati",
         notes: "Note",
       },
       field: {
+        linkAccount: "Collega a un account (facoltativo)",
         customerName: "Nome cliente",
         email: "Email",
         phone: "Telefono",
         service: "Servizio",
         city: "Città",
+        serviceId: "ID servizio",
+        serviceIdHint: "Riferimento numerico del servizio (id di catalogo).",
+        cityId: "ID città",
         date: "Data",
         time: "Ora",
         street: "Via",
         houseNo: "Civico",
+        doorbell: "Nome sul citofono",
         hours: "Ore",
         cleaners: "Addetti",
         total: "Totale (€)",
         status: "Stato",
+        workers: "Addetti assegnati",
+        workersHint: "Personale di pulizia assegnato a questa prenotazione.",
         notes: "Note",
       },
     },
@@ -911,6 +979,7 @@ export default {
       editTitle: "Modifica servizio",
       deleteTitle: "Elimina servizio",
       popular: "Popolare",
+      allCitiesBadge: "Tutte le città",
       col: {
         service: "Servizio",
         pricePerHr: "Prezzo / ora",
@@ -924,7 +993,7 @@ export default {
         imageHint: "Mostrata sulla scheda del servizio. Ideale una foto panoramica (16:10).",
         subtitle: "Sottotitolo",
         subtitleHint: "Un breve slogan mostrato sotto il nome.",
-        subtitlePlaceholder: "es. Pronto per gli ospiti in poche ore",
+        subtitlePlaceholder: "es. La tua pulizia di routine, senza pensieri",
         includes: "Cosa è incluso",
         includesHint: "Punti elenco che descrivono cosa copre questo servizio.",
         includesPlaceholder: "es. Sanificazione completa di cucina e bagno",
@@ -935,10 +1004,38 @@ export default {
         nameKa: "Nome (georgiano)",
         descriptionIt: "Descrizione (italiano)",
         descriptionKa: "Descrizione (georgiano)",
+        allCities: "Disponibile in tutte le città",
+        allCitiesHint: "Se attivo, il servizio è offerto ovunque e l'elenco delle città qui sotto viene ignorato.",
         cities: "Disponibile nelle città",
         citiesHint: "Seleziona le città in cui è offerto questo servizio.",
+        allSpecialRequests: "Abilita tutte le richieste speciali",
+        allSpecialRequestsHint: "Se attivo, ogni richiesta speciale è disponibile per questo servizio e l'elenco qui sotto viene ignorato.",
+        specialRequests: "Richieste speciali abilitate per questo servizio",
+        specialRequestsHint: "Seleziona quali extra i clienti possono aggiungere prenotando questo servizio.",
         popular: "Segna come popolare",
         enabled: "Attivo (visibile sul sito)",
+      },
+    },
+    specialRequests: {
+      title: "Richieste speciali",
+      description: "Gestisci gli extra che i clienti possono aggiungere a una prenotazione.",
+      add: "Aggiungi richiesta speciale",
+      search: "Cerca richieste speciali…",
+      emptyTitle: "Nessuna richiesta speciale",
+      emptyDescription: "Aggiungi il tuo primo extra così i clienti potranno selezionarlo al checkout.",
+      addTitle: "Aggiungi richiesta speciale",
+      editTitle: "Modifica richiesta speciale",
+      deleteTitle: "Elimina richiesta speciale",
+      col: {
+        name: "Extra",
+        price: "Prezzo",
+        status: "Stato",
+      },
+      field: {
+        name: "Nome",
+        price: "Sovrapprezzo (€)",
+        description: "Descrizione",
+        enabled: "Disponibile per prenotazioni",
       },
     },
     cities: {
@@ -995,13 +1092,89 @@ export default {
         verified: "Email verificata",
       },
     },
+    workers: {
+      title: "Addetti",
+      description: "Gestisci il personale di pulizia da assegnare alle prenotazioni.",
+      add: "Aggiungi addetto",
+      search: "Cerca addetti…",
+      emptyTitle: "Nessun addetto",
+      emptyDescription: "Aggiungi un addetto per poterlo assegnare alle prenotazioni.",
+      addTitle: "Aggiungi addetto",
+      editTitle: "Modifica addetto",
+      deleteTitle: "Elimina addetto",
+      col: {
+        worker: "Addetto",
+        contact: "Contatto",
+        status: "Stato",
+      },
+      field: {
+        fullname: "Nome completo",
+        email: "Email (facoltativa)",
+        phone: "Telefono (facoltativo)",
+        enabled: "Disponibile per assegnazione",
+      },
+    },
+    quality: {
+      title: "Qualità e recensioni",
+      description:
+        "Punteggi e commenti dei clienti. Le recensioni possono essere lasciate solo dai clienti dopo una prenotazione completata.",
+      search: "Cerca recensioni…",
+      emptyTitle: "Nessuna recensione",
+      emptyDescription:
+        "Le recensioni appaiono qui quando i clienti valutano le prenotazioni completate.",
+      deleteTitle: "Elimina recensione",
+      deleteConfirm: "Eliminare questa recensione di {name}? L'azione è irreversibile.",
+      distribution: "Distribuzione delle valutazioni",
+      distributionSub: "Come si distribuiscono i punteggi",
+      stat: {
+        avg: "Valutazione media",
+        avgHint: "Su {count} recensioni",
+        total: "Recensioni totali",
+        totalHint: "Da sempre",
+        positive: "Positive (4–5★)",
+        positiveHint: "{count} su {total}",
+      },
+      col: {
+        customer: "Cliente",
+        service: "Servizio",
+        booking: "Prenotazione",
+        rating: "Valutazione",
+        comment: "Commento",
+        date: "Data",
+      },
+      detail: {
+        title: "Dettaglio recensione",
+        booking: "Prenotazione valutata",
+        date: "Data e ora",
+        location: "Luogo",
+        property: "Dimensione immobile",
+        duration: "Durata",
+        durationValue: "{hours} h · {cleaners} addetto/i",
+        total: "Totale",
+      },
+    },
     nav: {
       dashboard: "Dashboard",
       bookings: "Prenotazioni",
+      calendar: "Calendario",
       services: "Servizi",
+      specialRequests: "Richieste speciali",
       cities: "Città",
       coverage: "Mappa prenotazioni",
+      workers: "Addetti",
+      quality: "Qualità",
       users: "Utenti",
+    },
+    calendar: {
+      title: "Calendario",
+      description:
+        "Ogni prenotazione collocata alla sua data programmata. Clicca una voce per aprire i dettagli della prenotazione.",
+      today: "Oggi",
+      prevMonth: "Mese precedente",
+      nextMonth: "Mese successivo",
+      monthCount: "{count} prenotazione/i questo mese",
+      more: "+{count} altre",
+      dayCount: "{count} prenotazione/i",
     },
     coverage: {
       title: "Mappa prenotazioni",
