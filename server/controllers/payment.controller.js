@@ -113,6 +113,9 @@ const promotePendingBooking = async (paymentIntentId, paymentIntent = null) => {
   await PendingBooking.deleteOne({ paymentIntentId }).catch(() => {});
 
   // Confirmation email is best-effort — never fail a paid booking over email.
+  // Deliberately NOT awaited: this runs inside the Stripe webhook (and the
+  // finalize request), and a slow/unreachable SMTP host must not delay the
+  // response past Stripe's delivery timeout.
   try {
     const { subject, html, text } = renderBookingConfirmationEmail({
       customerName: d.customerName,
@@ -125,7 +128,9 @@ const promotePendingBooking = async (paymentIntentId, paymentIntent = null) => {
       houseNumber: d.houseNumber,
       totalAmount: d.totalAmount
     });
-    await sendEmail({ email: d.customerEmail, subject, html, text });
+    sendEmail({ email: d.customerEmail, subject, html, text }).catch((emailError) => {
+      console.error('Email send error:', emailError.message);
+    });
   } catch (emailError) {
     console.error('Email send error:', emailError.message);
   }
