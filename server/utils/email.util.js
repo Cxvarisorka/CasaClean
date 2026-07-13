@@ -17,13 +17,27 @@ let transporter;
 const getTransporter = () => {
     if (transporter) return transporter;
 
+    const port = Number(process.env.MAIL_PORT) || 587;
+
     transporter = nodemailer.createTransport({
         host: process.env.MAIL_HOST,
-        port: Number(process.env.MAIL_PORT) || 587,
+        port,
+        // Port 465 is implicit TLS; 587/25 negotiate via STARTTLS. Getting this
+        // wrong doesn't error — the connection hangs until timeout — so derive
+        // it from the port (override with MAIL_SECURE=true/false if needed).
+        secure: process.env.MAIL_SECURE
+            ? process.env.MAIL_SECURE === 'true'
+            : port === 465,
         auth: {
             user: process.env.MAIL_USERNAME,
             pass: process.env.MAIL_PASSWORD
-        }
+        },
+        // Fail fast instead of nodemailer's defaults (up to 2 min to connect,
+        // 10 min socket) — an unreachable SMTP host must never stall a request
+        // or a Stripe webhook for minutes.
+        connectionTimeout: 10_000,
+        greetingTimeout: 10_000,
+        socketTimeout: 20_000
     });
 
     return transporter;
