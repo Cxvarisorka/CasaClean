@@ -2,6 +2,8 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const compression = require('compression');
+const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 
 // Env config (load before anything reads process.env)
@@ -77,11 +79,35 @@ app.use(helmet({
 // off the global rate limiter so Stripe's retry bursts are never throttled.
 app.post('/webhooks/stripe', express.raw({ type: 'application/json' }), handleStripeWebhook);
 
+// Health check for load balancers / uptime monitors. Mounted before the rate
+// limiter (a probe every few seconds must never eat into user quota) and
+// before auth — it exposes nothing but liveness and DB readiness.
+app.get('/healthz', (req, res) => {
+    const dbReady = mongoose.connection.readyState === 1; // 1 = connected
+    res.status(dbReady ? 200 : 503).json({
+        status: dbReady ? 'ok' : 'degraded',
+        db: dbReady ? 'connected' : 'disconnected'
+    });
+});
+
+// Compress JSON responses (catalogue/admin lists are chatty). Mounted after the
+// webhook (raw bytes must stay untouched for signature verification).
+app.use(compression());
+
 // CORS — credentials:true is required so the browser sends/stores the auth
 // cookie. The origin is an explicit allow-list (assertEnv guarantees
 // CLIENT_URL is set, so this can never silently become reflect-any-origin);
 // unknown origins get no CORS headers and their preflights fail.
-const allowedOrigins = [process.env.CLIENT_URL];
+// CLIENT_URL stays a single canonical origin (it's also used to build
+// redirects/links); EXTRA_CORS_ORIGINS (comma-separated, optional) admits
+// additional first-party origins such as the www. variant.
+const allowedOrigins = [
+    process.env.CLIENT_URL,
+    ...(process.env.EXTRA_CORS_ORIGINS || '')
+        .split(',')
+        .map((o) => o.trim())
+        .filter(Boolean)
+];
 app.use(cors({
     origin: (origin, callback) => {
         // Allow non-browser/same-origin requests (no Origin header) and
@@ -162,9 +188,31 @@ const start = async () => {
             console.error("syncIndexes failed (non-fatal):", indexErr.message);
         }
 
-        app.listen(process.env.PORT, () => {
+        const server = app.listen(process.env.PORT, () => {
             console.log(`Server is running on port ${process.env.PORT}`);
         });
+
+        // Graceful shutdown: on SIGTERM/SIGINT (deploys, Ctrl-C, platform
+        // restarts) stop accepting new connections, let in-flight requests —
+        // including webhook processing — finish, then close the DB connection.
+        // The 10s timer is a hard backstop so a stuck connection can't block
+        // the deploy forever.
+        const shutdown = (signal) => {
+            console.log(`${signal} received — shutting down gracefully...`);
+            server.close(async () => {
+                try {
+                    await mongoose.connection.close();
+                } finally {
+                    process.exit(0);
+                }
+            });
+            setTimeout(() => {
+                console.error("Forced shutdown: open connections didn't close in time.");
+                process.exit(1);
+            }, 10_000).unref();
+        };
+        process.on("SIGTERM", () => shutdown("SIGTERM"));
+        process.on("SIGINT", () => shutdown("SIGINT"));
     } catch (err) {
         console.error("Failed to start server:", err);
         process.exit(1);
