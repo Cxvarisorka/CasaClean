@@ -58,6 +58,8 @@ export default function BookingsPage() {
     [services]
   );
   const [statusFilter, setStatusFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [editing, setEditing] = useState(undefined);
   const [viewing, setViewing] = useState(null);
   const [deleting, setDeleting] = useState(null);
@@ -159,15 +161,20 @@ export default function BookingsPage() {
   );
 
   const data = useMemo(() => {
-    const base = statusFilter
-      ? items.filter((b) => b.status === statusFilter)
-      : items;
+    // booking_date is a "YYYY-MM-DD" string, so lexicographic comparison is
+    // equivalent to a date comparison (same trick the API uses server-side).
+    const base = items.filter(
+      (b) =>
+        (!statusFilter || b.status === statusFilter) &&
+        (!dateFrom || b.booking_date >= dateFrom) &&
+        (!dateTo || b.booking_date <= dateTo)
+    );
     return base.map((b) => ({
       ...b,
       service_name: serviceNameById[String(b.service_id)] || b.service_name,
       city_name: cityNameById[String(b.city_id)] || b.city_name,
     }));
-  }, [items, statusFilter, serviceNameById, cityNameById]);
+  }, [items, statusFilter, dateFrom, dateTo, serviceNameById, cityNameById]);
 
   const handleSubmit = async (values) => {
     const ok = editing
@@ -258,12 +265,32 @@ export default function BookingsPage() {
         emptyTitle={t("admin.bookings.emptyTitle")}
         emptyDescription={t("admin.bookings.emptyDescription")}
         filters={
-          <Select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            options={[{ value: "", label: t("admin.bookings.allStatuses") }, ...statusOptions]}
-            className="h-11 min-w-[10rem]"
-          />
+          <>
+            <Select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              options={[{ value: "", label: t("admin.bookings.allStatuses") }, ...statusOptions]}
+              className="h-11 min-w-[10rem]"
+            />
+            <input
+              type="date"
+              value={dateFrom}
+              max={dateTo || undefined}
+              onChange={(e) => setDateFrom(e.target.value)}
+              aria-label={t("admin.bookings.dateFrom")}
+              title={t("admin.bookings.dateFrom")}
+              className="h-11 rounded-xl border border-ink-200 bg-surface px-3 text-body-sm text-ink-800 focus:border-brand-500 focus:outline-none"
+            />
+            <input
+              type="date"
+              value={dateTo}
+              min={dateFrom || undefined}
+              onChange={(e) => setDateTo(e.target.value)}
+              aria-label={t("admin.bookings.dateTo")}
+              title={t("admin.bookings.dateTo")}
+              className="h-11 rounded-xl border border-ink-200 bg-surface px-3 text-body-sm text-ink-800 focus:border-brand-500 focus:outline-none"
+            />
+          </>
         }
         actions={(b) => (
           <>

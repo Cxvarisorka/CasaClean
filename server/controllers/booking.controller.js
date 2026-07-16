@@ -63,16 +63,37 @@ const resolveWorkers = async (ids) => {
   return foundDocs.map((w) => w._id);
 };
 
-// GET /api/v1/booking (admin) — paginated list, newest first
+// GET /api/v1/booking (admin) — paginated list, newest first.
+// Optional filters: ?status=confirmed  ?from=2026-07-01  ?to=2026-07-31
+// (from/to bound bookingDate; "YYYY-MM-DD" strings compare lexicographically).
 const getBookings = catchAsync(async (req, res, next) => {
   // Query params arrive as strings; sanitise into safe, bounded numbers so a
   // missing/garbage value can't turn the skip/limit maths into NaN.
   const page = Math.max(1, Number(req.query.page) || 1);
   const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 10));
 
+  // Filters are whitelisted/format-checked at the point of use (req.query is
+  // not covered by sanitizeMongo) — never passed into the filter raw.
+  const filter = {};
+  const VALID_STATUSES = ['pending', 'confirmed', 'cancelled', 'completed'];
+  if (VALID_STATUSES.includes(req.query.status)) {
+    filter.status = req.query.status;
+  }
+  const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+  const from = DATE_RE.test(String(req.query.from)) ? req.query.from : null;
+  const to = DATE_RE.test(String(req.query.to)) ? req.query.to : null;
+  if (from || to) {
+    filter.bookingDate = {
+      ...(from ? { $gte: from } : {}),
+      ...(to ? { $lte: to } : {})
+    };
+  }
+
+  const hasFilter = Object.keys(filter).length > 0;
+
   // Run the page query and the total count in parallel (independent reads).
   const [bookings, bookingCount] = await Promise.all([
-    Booking.find()
+    Booking.find(filter)
       .populate('serviceId', 'name')
       .populate('cityId', 'name')
       .populate('specialRequests')
@@ -84,7 +105,7 @@ const getBookings = catchAsync(async (req, res, next) => {
       .lean(),
     // No filter -> estimatedDocumentCount reads collection metadata (O(1))
     // instead of scanning every document like countDocuments() would.
-    Booking.estimatedDocumentCount()
+    hasFilter ? Booking.countDocuments(filter) : Booking.estimatedDocumentCount()
   ]);
 
   res.status(200).json({
