@@ -349,6 +349,36 @@ const createSetupIntent = catchAsync(async (req, res, next) => {
   });
 });
 
+// PATCH /api/v1/payment/methods/:id/default — mark a saved card as the default
+// for one-click future bookings (ownership-checked, same rules as delete).
+const setDefaultPaymentMethod = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+
+  const fresh = await User.findById(req.user._id).select('stripeCustomerId');
+  if (!fresh?.stripeCustomerId) {
+    return next(new AppError("No saved cards yet.", 404));
+  }
+
+  let pm;
+  try {
+    pm = await stripe.paymentMethods.retrieve(id);
+  } catch {
+    return next(new AppError("Card not found.", 404));
+  }
+
+  // Never point the default at a card that isn't this user's.
+  if (pm.customer !== fresh.stripeCustomerId) {
+    return next(new AppError("Card not found.", 404));
+  }
+
+  await User.findByIdAndUpdate(req.user._id, { defaultPaymentMethodId: id });
+
+  res.status(200).json({
+    status: "success",
+    message: "Default card updated successfully!"
+  });
+});
+
 // DELETE /api/v1/payment/methods/:id — remove a saved card (ownership-checked).
 const deletePaymentMethod = catchAsync(async (req, res, next) => {
   const { id } = req.params;
@@ -388,6 +418,7 @@ module.exports = {
   finalizeBooking,
   listPaymentMethods,
   createSetupIntent,
+  setDefaultPaymentMethod,
   deletePaymentMethod,
   // Shared with the webhook handler and booking controller.
   promotePendingBooking,

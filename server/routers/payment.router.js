@@ -7,6 +7,7 @@ const {
   finalizeBooking,
   listPaymentMethods,
   createSetupIntent,
+  setDefaultPaymentMethod,
   deletePaymentMethod
 } = require('../controllers/payment.controller');
 
@@ -33,6 +34,7 @@ paymentRouter.post('/booking/finalize', protect, validate(finalizeBookingSchema)
 // Saved cards.
 paymentRouter.get('/methods', protect, listPaymentMethods);
 paymentRouter.post('/methods/setup-intent', paymentLimiter, protect, createSetupIntent);
+paymentRouter.patch('/methods/:id/default', protect, setDefaultPaymentMethod);
 paymentRouter.delete('/methods/:id', protect, deletePaymentMethod);
 
 module.exports = paymentRouter;

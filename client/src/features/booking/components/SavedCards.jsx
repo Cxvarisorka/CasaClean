@@ -1,14 +1,15 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
-import { CreditCard, Plus, Trash2, AlertCircle } from "lucide-react";
+import { CreditCard, Plus, Trash2, AlertCircle, Star } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Spinner } from "@/components/ui/Spinner";
 import { useTranslation } from "@/i18n";
 import { stripePromise, isStripeConfigured } from "@/services/stripe";
-import { listSavedCards, createSetupIntent, deleteSavedCard } from "../api/paymentApi";
+import { listSavedCards, createSetupIntent, deleteSavedCard, setDefaultCard } from "../api/paymentApi";
 
 /*
  * SavedCards
@@ -87,6 +88,11 @@ export function SavedCards() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["saved-cards"] }),
   });
 
+  const defaultMutation = useMutation({
+    mutationFn: (id) => setDefaultCard(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["saved-cards"] }),
+  });
+
   const openAddCard = async () => {
     setOpening(true);
     try {
@@ -146,15 +152,34 @@ export function SavedCards() {
                 <span className="text-caption text-ink-400">
                   {String(card.expMonth).padStart(2, "0")}/{card.expYear}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => removeMutation.mutate(card.id)}
-                  disabled={removeMutation.isPending}
-                  aria-label={t("profile.payments.remove")}
-                  className="ml-auto rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-red-500/10 hover:text-red-600 disabled:opacity-50"
-                >
-                  <Trash2 className="size-4.5" />
-                </button>
+                {card.isDefault && (
+                  <Badge variant="success" size="sm">
+                    {t("profile.payments.default")}
+                  </Badge>
+                )}
+                <span className="ml-auto flex items-center gap-1">
+                  {!card.isDefault && (
+                    <button
+                      type="button"
+                      onClick={() => defaultMutation.mutate(card.id)}
+                      disabled={defaultMutation.isPending}
+                      aria-label={t("profile.payments.makeDefault")}
+                      title={t("profile.payments.makeDefault")}
+                      className="rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-amber-500/10 hover:text-amber-600 disabled:opacity-50"
+                    >
+                      <Star className="size-4.5" />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => removeMutation.mutate(card.id)}
+                    disabled={removeMutation.isPending}
+                    aria-label={t("profile.payments.remove")}
+                    className="rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-red-500/10 hover:text-red-600 disabled:opacity-50"
+                  >
+                    <Trash2 className="size-4.5" />
+                  </button>
+                </span>
               </li>
             ))}
           </ul>

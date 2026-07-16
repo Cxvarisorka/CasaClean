@@ -67,3 +67,8 @@ export async function createSetupIntent() {
 export async function deleteSavedCard(id) {
   return request({ method: "DELETE", url: `/payment/methods/${id}` });
 }
+
+/** Mark a saved card as the default for future bookings. */
+export async function setDefaultCard(id) {
+  return request({ method: "PATCH", url: `/payment/methods/${id}/default` });
+}
