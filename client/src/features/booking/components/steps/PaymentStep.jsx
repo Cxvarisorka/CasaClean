@@ -9,6 +9,7 @@ import { formatCurrency } from "@/utils/formatCurrency";
 import { stripePromise, isStripeConfigured } from "@/services/stripe";
 import { useServices } from "@/features/services";
 import { useSpecialRequests } from "../../hooks/useSpecialRequests";
+import { useCleaningTools } from "../../hooks/useCleaningTools";
 import { computeQuote } from "../../utils/pricing";
 import { toBookingPayload } from "../../api/bookingApi";
 import { createBookingIntent, finalizeBooking, listSavedCards } from "../../api/paymentApi";
@@ -98,8 +99,9 @@ export function PaymentStep({ onConfirmed }) {
   const values = useWatch({ control });
 
   const { data: addons = [] } = useSpecialRequests();
+  const { data: tools = [] } = useCleaningTools();
   const { services } = useServices();
-  const quote = computeQuote(values, { addons, services });
+  const quote = computeQuote(values, { addons, tools, services });
 
   const { data: savedCards = [] } = useQuery({
     queryKey: ["saved-cards"],

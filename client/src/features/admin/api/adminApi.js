@@ -205,6 +205,61 @@ export const specialRequestApi = {
   remove: (id) => request({ method: "DELETE", url: `/special-request/${id}` }),
 };
 
+/* ----------------------------------------------------------- Cleaning tools */
+
+// Physical tools/supplies (mop, vacuum, …) an admin manages centrally. Each
+// tool carries a flat surcharge and the services it can be used on — an empty
+// `services` array means the tool is available for every service.
+const cleaningToolFromApi = (t) => ({
+  _id: t._id,
+  name: t.name,
+  description: t.description ?? "",
+  price: t.price,
+  // May arrive populated (objects) or as raw ids — normalise to id strings
+  // for the services multiselect.
+  services: (t.services ?? []).map((s) => (s && s._id ? s._id : s)),
+  enabled: t.enabled,
+  createdAt: t.createdAt,
+});
+
+export const cleaningToolApi = {
+  async list() {
+    const data = await request({
+      method: "GET",
+      url: `/cleaning-tool${CATALOGUE_QS}`,
+    });
+    return (data.cleaningTools ?? []).map(cleaningToolFromApi);
+  },
+  async create(v) {
+    const data = await request({
+      method: "POST",
+      url: "/cleaning-tool",
+      data: {
+        name: v.name,
+        description: v.description,
+        price: Number(v.price),
+        services: v.services ?? [],
+      },
+    });
+    return cleaningToolFromApi(data.cleaningTool);
+  },
+  async update(id, patch) {
+    const data = await request({
+      method: "PATCH",
+      url: `/cleaning-tool/${id}`,
+      data: definedOnly({
+        name: patch.name,
+        description: patch.description,
+        price: patch.price !== undefined ? Number(patch.price) : undefined,
+        services: patch.services,
+        enabled: patch.enabled,
+      }),
+    });
+    return cleaningToolFromApi(data.cleaningTool);
+  },
+  remove: (id) => request({ method: "DELETE", url: `/cleaning-tool/${id}` }),
+};
+
 /* ------------------------------------------------------------------ Workers */
 
 const workerFromApi = (w) => ({
@@ -295,6 +350,9 @@ const bookingFromApi = (b) => ({
   notes: b.notes ?? "",
   supplies: b.supplies ?? [],
   special_requests: b.specialRequests ?? [],
+  // Requested cleaning tools arrive populated ({ _id, name, price }) from the
+  // admin booking feed.
+  cleaning_tools: b.cleaningTools ?? [],
   // Assigned staff arrive populated as { _id, fullname } objects (or raw ids).
   // Keep the ids for the assignment multiselect and the names for display.
   workers: (b.workers ?? []).map((w) => (w && w._id ? w._id : w)),
@@ -482,6 +540,7 @@ export const RESOURCES = {
   cities: cityApi,
   services: serviceApi,
   specialRequests: specialRequestApi,
+  cleaningTools: cleaningToolApi,
   bookings: bookingApi,
   users: userApi,
   workers: workerApi,

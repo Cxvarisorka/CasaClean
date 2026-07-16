@@ -27,6 +27,8 @@ const EMPTY_DB = {
   cities: [],
   services: [],
   specialRequests: [],
+  // Physical tools (mop, vacuum, …) with a surcharge and per-service availability.
+  cleaningTools: [],
   bookings: [],
   // Loaded from the admin-only GET /auth/users endpoint (read-only).
   users: [],
@@ -46,7 +48,7 @@ export function AdminDataProvider({ children }) {
   // (e.g. bookings, which needs the admin role) doesn't blank the whole panel.
   const refresh = useCallback(async () => {
     setLoading(true);
-    const names = ["cities", "services", "specialRequests", "bookings", "users", "workers", "reviews"];
+    const names = ["cities", "services", "specialRequests", "cleaningTools", "bookings", "users", "workers", "reviews"];
     const results = await Promise.allSettled(
       names.map((name) => RESOURCES[name].list())
     );
@@ -166,6 +168,7 @@ export function AdminDataProvider({ children }) {
       cities: db.cities.length,
       activeCities: db.cities.filter((c) => c.enabled).length,
       specialRequests: db.specialRequests.length,
+      cleaningTools: db.cleaningTools.length,
       users: db.users.length,
       byStatus,
       reviews: reviewCount,

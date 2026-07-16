@@ -39,6 +39,7 @@ const AdminBookingsPage = lazy(() => import("@/pages/Admin/BookingsPage"));
 const AdminCalendarPage = lazy(() => import("@/pages/Admin/CalendarPage"));
 const AdminServicesPage = lazy(() => import("@/pages/Admin/ServicesPage"));
 const AdminSpecialRequestsPage = lazy(() => import("@/pages/Admin/SpecialRequestsPage"));
+const AdminCleaningToolsPage = lazy(() => import("@/pages/Admin/CleaningToolsPage"));
 const AdminCitiesPage = lazy(() => import("@/pages/Admin/CitiesPage"));
 const AdminCoverageMapPage = lazy(() => import("@/pages/Admin/CoverageMapPage"));
 const AdminUsersPage = lazy(() => import("@/pages/Admin/UsersPage"));
@@ -88,6 +89,7 @@ export const ADMIN_ROUTES = [
   { path: "calendar", element: AdminCalendarPage },
   { path: "services", element: AdminServicesPage },
   { path: "special-requests", element: AdminSpecialRequestsPage },
+  { path: "cleaning-tools", element: AdminCleaningToolsPage },
   { path: "cities", element: AdminCitiesPage },
   { path: "coverage", element: AdminCoverageMapPage },
   { path: "workers", element: AdminWorkersPage },

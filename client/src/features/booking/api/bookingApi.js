@@ -33,6 +33,9 @@ export function toBookingPayload(values) {
     notes: values.notes || null,
     // Add-ons are SpecialRequest ids (validated server-side against enabled items).
     specialRequests: values.additionalServices || [],
+    // Requested tools are CleaningTool ids (validated server-side against
+    // enabled tools usable on the chosen service).
+    cleaningTools: values.cleaningTools || [],
     supplies: values.supplies || [],
   };
 }

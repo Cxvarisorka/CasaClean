@@ -32,6 +32,7 @@ export const ROUTES = {
     calendar: "/admin/calendar",
     services: "/admin/services",
     specialRequests: "/admin/special-requests",
+    cleaningTools: "/admin/cleaning-tools",
     cities: "/admin/cities",
     coverage: "/admin/coverage",
     users: "/admin/users",

@@ -8,6 +8,7 @@ import { useServices } from "@/features/services";
 import { OptionGroup } from "../fields/OptionGroup";
 import { ToggleCard } from "../fields/ToggleCard";
 import { useSpecialRequests } from "../../hooks/useSpecialRequests";
+import { useCleaningTools } from "../../hooks/useCleaningTools";
 import { SUPPLY_OPTIONS, HOURS_RANGE } from "../../constants";
 
 /*
@@ -31,6 +32,7 @@ export function PreferencesStep() {
   } = useFormContext();
   const { services } = useServices();
   const { data: addons = [] } = useSpecialRequests();
+  const { data: cleaningTools = [] } = useCleaningTools();
 
   // The city is chosen in the previous step; only services available in that
   // city may be offered. Static (non-DB) services and services set to "all
@@ -82,6 +84,30 @@ export function PreferencesStep() {
       setValue("additionalServices", pruned, { shouldValidate: true });
     }
   }, [visibleAddons, getValues, setValue]);
+
+  // Only offer the cleaning tools usable on the chosen service. The restriction
+  // lives on the TOOL side (mirror of the add-ons): a tool with an empty
+  // `services` list works everywhere, otherwise the chosen service must be
+  // listed. Static (non-DB) services offer every tool — a restricted tool can't
+  // reference them anyway. Nothing is offered before a service is picked.
+  const visibleTools = useMemo(() => {
+    if (!selectedService) return [];
+    if (!selectedService.fromDb) return cleaningTools;
+    return cleaningTools.filter(
+      (t) =>
+        t.services.length === 0 || t.services.includes(String(selectedService.id))
+    );
+  }, [cleaningTools, selectedService]);
+
+  // Same staleness guard for the tools after switching services.
+  useEffect(() => {
+    const allowed = new Set(visibleTools.map((t) => t.value));
+    const current = getValues("cleaningTools") || [];
+    const pruned = current.filter((v) => allowed.has(v));
+    if (pruned.length !== current.length) {
+      setValue("cleaningTools", pruned, { shouldValidate: true });
+    }
+  }, [visibleTools, getValues, setValue]);
 
   return (
     <div className="space-y-8">
@@ -200,6 +226,33 @@ export function PreferencesStep() {
                     description={addon.description}
                     selected={(field.value || []).includes(addon.value)}
                     onToggle={() => field.onChange(toggleInArray(field.value, addon.value))}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        />
+      )}
+
+      {/* Cleaning tools — catalogue-backed equipment usable on the chosen service */}
+      {visibleTools.length > 0 && (
+        <Controller
+          control={control}
+          name="cleaningTools"
+          render={({ field }) => (
+            <div>
+              <p className="mb-3 text-body-sm font-semibold text-ink-800">
+                Cleaning tools <span className="font-normal text-ink-400">(optional)</span>
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {visibleTools.map((tool) => (
+                  <ToggleCard
+                    key={tool.value}
+                    title={tool.label}
+                    price={tool.price}
+                    description={tool.description}
+                    selected={(field.value || []).includes(tool.value)}
+                    onToggle={() => field.onChange(toggleInArray(field.value, tool.value))}
                   />
                 ))}
               </div>

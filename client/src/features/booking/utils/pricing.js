@@ -5,14 +5,14 @@ import { SERVICES } from "@/data/services";
  * --------------------
  * Pure pricing logic, isolated so it can be unit-tested and reused by the
  * summary, review step and submission payload. Total = base service rate ×
- * hours × cleaners + any selected add-ons.
+ * hours × cleaners + any selected add-ons + any requested cleaning tools.
  *
- * The service catalogue and the add-on catalogue are passed in (they come from
- * the database now); `services` defaults to the static list so existing callers
- * and tests keep working, and `addons` defaults to empty.
+ * The service, add-on and tool catalogues are passed in (they come from the
+ * database now); `services` defaults to the static list so existing callers
+ * and tests keep working, and `addons`/`tools` default to empty.
  */
 
-export function computeQuote(values, { addons = [], services = SERVICES } = {}) {
+export function computeQuote(values, { addons = [], tools = [], services = SERVICES } = {}) {
   const service = services.find(
     (s) => String(s.id) === String(values.serviceId)
   );
@@ -33,7 +33,18 @@ export function computeQuote(values, { addons = [], services = SERVICES } = {}) 
     0
   );
 
-  const subtotal = labor + addonsTotal;
+  // Same resolution for the requested cleaning tools (mop, vacuum, …) — each
+  // adds its flat surcharge from the live catalogue.
+  const selectedTools = (values.cleaningTools || [])
+    .map((id) => tools.find((t) => t.value === id))
+    .filter(Boolean);
+
+  const toolsTotal = selectedTools.reduce(
+    (sum, t) => sum + (Number(t.price) || 0),
+    0
+  );
+
+  const subtotal = labor + addonsTotal + toolsTotal;
 
   return {
     service,
@@ -42,6 +53,7 @@ export function computeQuote(values, { addons = [], services = SERVICES } = {}) 
     cleaners,
     labor,
     addons: addonsTotal,
+    tools: toolsTotal,
     subtotal,
     total: subtotal,
     lineItems: [
@@ -52,6 +64,10 @@ export function computeQuote(values, { addons = [], services = SERVICES } = {}) 
       ...selectedAddons.map((a) => ({
         label: a.label,
         amount: Number(a.price) || 0,
+      })),
+      ...selectedTools.map((t) => ({
+        label: t.label,
+        amount: Number(t.price) || 0,
       })),
     ].filter(Boolean),
   };
