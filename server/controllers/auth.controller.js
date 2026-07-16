@@ -3,12 +3,19 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 
 const User = require("../models/user.model");
-const { VERIFICATION_TOKEN_TTL_HOURS } = require("../models/user.model");
+const {
+    VERIFICATION_TOKEN_TTL_HOURS,
+    PASSWORD_RESET_TTL_MINUTES,
+    MAX_LOGIN_ATTEMPTS,
+    LOCK_TIME_MINUTES
+} = require("../models/user.model");
+const Booking = require("../models/booking.model");
+const Review = require("../models/review.model");
 const { isProduction } = require("../utils/env.util");
 const AppError = require("../utils/appError.util");
 const catchAsync = require("../utils/catchAsync.util");
 const sendEmail = require("../utils/email.util");
-const { verificationEmail } = require("../utils/emailTemplates.util");
+const { verificationEmail, passwordResetEmail } = require("../utils/emailTemplates.util");
 
 // Cost-12 hash of a random value, computed once at boot. signin compares
 // against it when the email doesn't exist so both branches do the same bcrypt
@@ -57,12 +64,16 @@ const sendVerificationEmail = async (user) => {
 
 /**
  * Signs a JWT for a given user.
- * Only the user id goes into the payload. Deliberately NO role claim: the
- * protect middleware re-loads the user and authorizes on the DB role, so a
- * role in the token would only be a stale value waiting to be misused.
+ * Only the user id and the session-revocation counter go into the payload.
+ * Deliberately NO role claim: the protect middleware re-loads the user and
+ * authorizes on the DB role, so a role in the token would only be a stale
+ * value waiting to be misused. The `v` claim mirrors user.tokenVersion —
+ * bumping the DB value invalidates every token minted before the bump.
+ * Callers must load the user WITH tokenVersion (it's select:false) so a
+ * post-change login doesn't mint an already-dead token.
  */
 const signToken = (user) => {
-    return jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+    return jwt.sign({ id: user._id, v: user.tokenVersion ?? 0 }, process.env.JWT_SECRET, {
         expiresIn: process.env.JWT_EXPIRES_IN
     });
 };
@@ -104,8 +115,12 @@ const setTokenCookie = (user, res, remember = true) => {
 const createSendToken = (user, res, statusCode = 200, remember = true) => {
     setTokenCookie(user, res, remember);
 
-    // Never leak the password hash, even though it's select:false by default.
+    // Never leak the password hash or the internal auth counters, even though
+    // they're select:false by default (signin opts back in to read them).
     user.password = undefined;
+    user.tokenVersion = undefined;
+    user.failedLoginAttempts = undefined;
+    user.lockUntil = undefined;
 
     res.status(statusCode).json({
         status: "success",
@@ -156,8 +171,18 @@ const signin = catchAsync(async (req, res, next) => {
         return next(new AppError("Please provide email and password!", 400));
     }
 
-    // password is select:false on the schema, so opt back in for comparison.
-    const user = await User.findOne({ email }).select("+password");
+    // password/lock fields are select:false on the schema, so opt back in.
+    // tokenVersion is needed so the issued JWT carries the live `v` claim.
+    const user = await User.findOne({ email })
+        .select("+password +tokenVersion +failedLoginAttempts +lockUntil");
+
+    // Per-ACCOUNT lockout (complements the per-IP signinLimiter, which a
+    // distributed credential-stuffing run can sidestep). Still burn one bcrypt
+    // compare so a locked account isn't distinguishable by response timing.
+    if (user?.lockUntil && user.lockUntil > Date.now()) {
+        await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
+        return next(new AppError("Too many failed sign-in attempts. Please try again later.", 429));
+    }
 
     // Constant-work comparison: ALWAYS run one bcrypt compare, even when the
     // email doesn't exist (against a dummy hash). Short-circuiting would make
@@ -174,7 +199,29 @@ const signin = catchAsync(async (req, res, next) => {
     // Use one generic message for both branches so we don't reveal whether
     // an email exists (prevents user enumeration).
     if (!user || !passwordMatches) {
+        // Count the failure against the account and lock it after too many.
+        // Atomic $inc (no read-modify-write race between parallel attempts);
+        // fire-and-forget correctness isn't enough here, so we await it.
+        if (user) {
+            const attempts = (user.failedLoginAttempts || 0) + 1;
+            await User.updateOne(
+                { _id: user._id },
+                attempts >= MAX_LOGIN_ATTEMPTS
+                    ? {
+                        $set: { lockUntil: new Date(Date.now() + LOCK_TIME_MINUTES * 60 * 1000), failedLoginAttempts: 0 }
+                    }
+                    : { $inc: { failedLoginAttempts: 1 } }
+            );
+        }
         return next(new AppError("Credentials are incorrect!", 401));
+    }
+
+    // Successful sign-in clears any accumulated failure state.
+    if (user.failedLoginAttempts || user.lockUntil) {
+        await User.updateOne(
+            { _id: user._id },
+            { $set: { failedLoginAttempts: 0 }, $unset: { lockUntil: "" } }
+        );
     }
 
     // Block local accounts that haven't confirmed their email yet. (Google
@@ -318,7 +365,12 @@ const updateUser = catchAsync(async (req, res, next) => {
     if (role === "user" || role === "admin") user.role = role;
     if (isVerified === true || isVerified === false) user.isVerified = isVerified;
     // Only set a new password when one is provided; the pre-save hook hashes it.
-    if (password) user.password = password;
+    // Bumping tokenVersion revokes every outstanding session for the account —
+    // an admin rotating a compromised password must also kick the attacker out.
+    if (password) {
+        user.password = password;
+        await User.updateOne({ _id: user._id }, { $inc: { tokenVersion: 1 } });
+    }
 
     await user.save();
 
@@ -353,7 +405,11 @@ const deleteUser = catchAsync(async (req, res, next) => {
 });
 
 const googleCallback = catchAsync(async (req, res, next) => {
-    setTokenCookie(req.user, res);
+    // Passport loads the user without tokenVersion (select:false); re-read it so
+    // the issued JWT carries the live `v` claim — signing with a defaulted 0
+    // would mint an instantly-dead token for anyone who ever reset a password.
+    const fresh = await User.findById(req.user._id).select("+tokenVersion").lean();
+    setTokenCookie(fresh || req.user, res);
     res.redirect(`${process.env.CLIENT_URL}/`);
 });
 
@@ -372,7 +428,7 @@ const verifyEmail = catchAsync(async (req, res, next) => {
     const user = await User.findOne({
         verificationToken: hashedToken,
         verificationTokenExpires: { $gt: Date.now() }
-    }).select("+verificationToken +verificationTokenExpires");
+    }).select("+verificationToken +verificationTokenExpires +tokenVersion");
 
     if (!user) {
         return res.redirect(`${process.env.CLIENT_URL}/signin?verified=failed`);
@@ -418,4 +474,205 @@ const resendVerificationEmail = catchAsync(async (req, res, next) => {
     res.status(200).json(genericResponse);
 });
 
-module.exports = { signup, signin, logout, getMe, getAllUsers, createUser, updateUser, deleteUser, googleCallback, verifyEmail, resendVerificationEmail };
+// POST /api/v1/auth/forgot-password -> emails a one-time reset link.
+// Mirrors the anti-enumeration posture of resend-verification: the response is
+// IDENTICAL whether the email exists, is a Google account, or is unknown.
+const forgotPassword = catchAsync(async (req, res, next) => {
+    const { email } = req.body;
+
+    const genericResponse = {
+        status: "success",
+        message: "If an account exists for that email, a password-reset link has been sent."
+    };
+
+    const user = await User.findOne({ email });
+
+    // Google-only accounts have no local password to reset; unknown emails
+    // no-op. Both reply identically to prevent user enumeration.
+    if (!user || user.provider !== "local") {
+        return res.status(200).json(genericResponse);
+    }
+
+    // Raw token goes in the URL; only its hash is stored on the user.
+    const rawToken = user.createPasswordResetToken();
+    await user.save({ validateBeforeSave: false });
+
+    // The link opens the client's reset page, which collects the new password
+    // and POSTs it to /auth/reset-password/:token.
+    const resetUrl = `${process.env.CLIENT_URL}/reset-password/${rawToken}`;
+
+    const { subject, html, text } = passwordResetEmail({
+        fullname: user.fullname,
+        url: resetUrl,
+        expiresInMinutes: PASSWORD_RESET_TTL_MINUTES
+    });
+
+    try {
+        await sendEmail({ email: user.email, subject, html, text });
+    } catch (err) {
+        // Undo the token so the user can cleanly request a new one later.
+        user.passwordResetToken = undefined;
+        user.passwordResetExpires = undefined;
+        await user.save({ validateBeforeSave: false });
+
+        return next(new AppError("We couldn't send the password-reset email. Please try again later.", 502));
+    }
+
+    res.status(200).json(genericResponse);
+});
+
+// POST /api/v1/auth/reset-password/:token -> sets a new password.
+// Consumes the one-time token, revokes every outstanding session (tokenVersion
+// bump), clears any signin lockout, and signs the user straight in.
+const resetPassword = catchAsync(async (req, res, next) => {
+    const hashedToken = crypto
+        .createHash("sha256")
+        .update(req.params.token)
+        .digest("hex");
+
+    const user = await User.findOne({
+        passwordResetToken: hashedToken,
+        passwordResetExpires: { $gt: Date.now() }
+    }).select("+passwordResetToken +passwordResetExpires +tokenVersion");
+
+    if (!user) {
+        return next(new AppError("The reset link is invalid or has expired. Please request a new one.", 400));
+    }
+
+    user.password = req.body.password; // pre-save hook hashes it
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    // Revoke all existing sessions and clear any failed-attempt lockout.
+    user.tokenVersion = (user.tokenVersion ?? 0) + 1;
+    user.failedLoginAttempts = 0;
+    user.lockUntil = undefined;
+    // Owning the inbox proves the address — a still-unverified account is
+    // implicitly verified by completing the reset.
+    user.isVerified = true;
+    await user.save();
+
+    createSendToken(user, res, 200);
+});
+
+// PATCH /api/v1/auth/me -> a user edits their own profile (name/phone only;
+// email changes would need a re-verification flow and are not supported here).
+const updateMe = catchAsync(async (req, res, next) => {
+    const { fullname, phone } = req.body;
+
+    if (fullname === undefined && phone === undefined) {
+        return next(new AppError("Please provide a field to update (fullname or phone).", 400));
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+        return next(new AppError("The user for this session no longer exists!", 401));
+    }
+
+    if (phone && phone !== user.phone) {
+        if (await User.findOne({ phone, _id: { $ne: user._id } })) {
+            return next(new AppError("An account with that phone number already exists.", 409));
+        }
+        user.phone = phone;
+    }
+    if (fullname) user.fullname = fullname;
+
+    await user.save();
+
+    res.status(200).json({
+        status: "success",
+        message: "Profile updated successfully!",
+        data: { user }
+    });
+});
+
+// PATCH /api/v1/auth/me/password -> change own password (requires the current
+// one). Revokes every other session and re-issues this one's cookie.
+const updateMyPassword = catchAsync(async (req, res, next) => {
+    const { currentPassword, newPassword } = req.body;
+
+    const user = await User.findById(req.user._id).select("+password +tokenVersion");
+    if (!user) {
+        return next(new AppError("The user for this session no longer exists!", 401));
+    }
+
+    if (!user.password) {
+        return next(new AppError("This account signs in with Google and has no password to change.", 400));
+    }
+
+    if (!(await user.comparePassword(currentPassword))) {
+        return next(new AppError("Your current password is incorrect!", 401));
+    }
+
+    user.password = newPassword; // pre-save hook hashes it
+    // Kill every other session (stolen cookies included); the fresh cookie
+    // below keeps THIS session alive with the new version.
+    user.tokenVersion = (user.tokenVersion ?? 0) + 1;
+    await user.save();
+
+    createSendToken(user, res, 200);
+});
+
+// DELETE /api/v1/auth/me -> a user deletes their own account.
+// Local accounts must confirm with their password (a hijacked session alone
+// can't destroy the account); Google accounts have none to confirm.
+// Blocked while the user still has upcoming (pending/confirmed) bookings —
+// those hold money/scheduling and must be cancelled first.
+const deleteMe = catchAsync(async (req, res, next) => {
+    const user = await User.findById(req.user._id).select("+password");
+    if (!user) {
+        return next(new AppError("The user for this session no longer exists!", 401));
+    }
+
+    if (user.password) {
+        if (!req.body.password || !(await user.comparePassword(req.body.password))) {
+            return next(new AppError("Please confirm your password to delete your account.", 401));
+        }
+    }
+
+    const activeBookings = await Booking.countDocuments({
+        user: user._id,
+        status: { $in: ["pending", "confirmed"] }
+    });
+    if (activeBookings > 0) {
+        return next(new AppError("Please cancel your upcoming bookings before deleting your account.", 409));
+    }
+
+    // Reviews are the user's own content — remove them. Past bookings are kept
+    // as business/financial records (they already carry the customer details
+    // they need) but are detached from the deleted account.
+    await Review.deleteMany({ user: user._id });
+    await Booking.updateMany({ user: user._id }, { $unset: { user: "" } });
+    await User.deleteOne({ _id: user._id });
+
+    // Clear the session cookie.
+    res.cookie("lt", "", {
+        maxAge: 0,
+        httpOnly: true,
+        sameSite: isProduction ? "None" : "Lax",
+        secure: isProduction
+    });
+
+    res.status(200).json({
+        status: "success",
+        message: "Your account has been deleted."
+    });
+});
+
+module.exports = {
+    signup,
+    signin,
+    logout,
+    getMe,
+    getAllUsers,
+    createUser,
+    updateUser,
+    deleteUser,
+    googleCallback,
+    verifyEmail,
+    resendVerificationEmail,
+    forgotPassword,
+    resetPassword,
+    updateMe,
+    updateMyPassword,
+    deleteMe
+};

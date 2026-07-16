@@ -45,6 +45,19 @@ passport.use(
                         user.googleId = profile.id;
                         if (photo && !user.avatar) user.avatar = photo;
 
+                        // Pre-registration takeover defence: if the local
+                        // account was never verified, its password was chosen
+                        // by whoever originally signed the email up — possibly
+                        // NOT the person now proving ownership via Google.
+                        // Drop that password (a fresh one can be set via
+                        // forgot-password) and honour Google's verification.
+                        if (!user.isVerified) {
+                            user.password = undefined;
+                            user.verificationToken = undefined;
+                            user.verificationTokenExpires = undefined;
+                            user.isVerified = true;
+                        }
+
                         await user.save({ validateBeforeSave: false });
                     };
                 } else if (photo && user.avatar !== photo) {

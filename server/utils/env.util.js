@@ -37,7 +37,11 @@ const assertEnv = () => {
         // Stripe: the secret API key (server-side calls) and the webhook signing
         // secret (HMAC verification). Both are required — payments are now a core
         // part of the booking flow, so a server without them is misconfigured.
-        "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"
+        "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET",
+        // Google OAuth: the strategy is registered unconditionally at boot, and a
+        // missing value would only surface when a user clicks "Sign in with
+        // Google" — fail at startup instead.
+        "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_CALLBACK_URL"
     ];
     for (const name of required) {
         if (!process.env[name]) {

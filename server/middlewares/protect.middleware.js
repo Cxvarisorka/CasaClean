@@ -24,11 +24,21 @@ const protect = catchAsync(async (req, res, next) => {
     // This runs on every authenticated request. .lean() returns a plain object
     // (no Mongoose hydration) — req.user is only ever read (never .save()'d or
     // used to call instance methods), so the lighter object is all we need.
-    const user = await User.findById(payload.id).lean();
+    // tokenVersion is select:false, so opt back in for the revocation check.
+    const user = await User.findById(payload.id).select("+tokenVersion").lean();
 
     if (!user) {
         return next(new AppError("The user for this token no longer exists!", 401));
     }
+
+    // Session revocation: a password change/reset bumps the user's tokenVersion,
+    // which must match the token's `v` claim — tokens minted before the bump die
+    // here, killing every outstanding session at once. Tokens issued before this
+    // claim existed carry no `v`; both sides default to 0 so they stay valid.
+    if ((payload.v ?? 0) !== (user.tokenVersion ?? 0)) {
+        return next(new AppError("Your session is no longer valid. Please log in again!", 401));
+    }
+    delete user.tokenVersion; // internal counter — keep it off req.user/API responses
 
     req.user = user;
     next();
@@ -48,8 +58,12 @@ const attachUser = async (req, res, next) => {
         const token = req.cookies?.lt;
         if (token) {
             const payload = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
-            const user = await User.findById(payload.id).lean();
-            if (user) req.user = user;
+            const user = await User.findById(payload.id).select("+tokenVersion").lean();
+            // Same revocation rule as protect — a stale token is anonymous here.
+            if (user && (payload.v ?? 0) === (user.tokenVersion ?? 0)) {
+                delete user.tokenVersion;
+                req.user = user;
+            }
         }
     } catch (err) {
         // Invalid/expired token on a public route -> treat as anonymous.
