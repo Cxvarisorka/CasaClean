@@ -24,6 +24,15 @@ const {
   renderRefundEmail
 } = require('../services/booking.service');
 
+// Refund policy: a customer self-cancellation gets an automatic full refund
+// only when made at least this many hours before the appointment starts.
+// Inside the window the booking is still cancelled, but the money is kept
+// (an admin can always refund manually via the admin cancel path).
+const CANCELLATION_WINDOW_HOURS =
+  Number(process.env.CANCELLATION_WINDOW_HOURS) >= 0
+    ? Number(process.env.CANCELLATION_WINDOW_HOURS)
+    : 24;
+
 // Refund helper lives in the payment controller (it talks to Stripe). Used when
 // a paid booking is cancelled (by the user or an admin).
 const { refundBookingPayment } = require('../controllers/payment.controller');
@@ -523,13 +532,28 @@ const cancelMyBooking = catchAsync(async (req, res, next) => {
     return next(new AppError("A completed booking can't be cancelled.", 400));
   }
 
+  // Refund policy: an automatic full refund only applies when the cancellation
+  // happens at least CANCELLATION_WINDOW_HOURS before the appointment starts.
+  // Inside the window the booking is still cancelled but the charge is kept —
+  // the message below tells the customer to contact support/an admin, who can
+  // refund case-by-case via the admin cancel path. The start moment is built
+  // from the stored local-format strings ("YYYY-MM-DD" + "HH:MM").
+  const [y, mo, d] = String(booking.bookingDate).split('-').map(Number);
+  const [hh, mm] = String(booking.bookingTime).split(':').map(Number);
+  const startsAt = new Date(y, mo - 1, d, hh, mm);
+  const withinWindow =
+    startsAt.getTime() - Date.now() < CANCELLATION_WINDOW_HOURS * 60 * 60 * 1000;
+
   // Release the money before marking the booking cancelled. refundBookingPayment
   // throws on a Stripe failure, which (via catchAsync) aborts the cancellation —
   // we never want a booking marked cancelled while the customer is still charged.
   // It's a no-op for manual/offline or unpaid bookings.
-  const refundUpdate = await refundBookingPayment(booking);
-  if (refundUpdate) {
-    Object.assign(booking, refundUpdate);
+  let refundUpdate = null;
+  if (!withinWindow) {
+    refundUpdate = await refundBookingPayment(booking);
+    if (refundUpdate) {
+      Object.assign(booking, refundUpdate);
+    }
   }
 
   booking.status = 'cancelled';
@@ -559,11 +583,20 @@ const cancelMyBooking = catchAsync(async (req, res, next) => {
     .populate('workers', 'fullname')
     .lean();
 
+  // Message reflects the money outcome: refunded, kept (late cancellation of a
+  // paid booking), or nothing to refund (manual/unpaid).
+  const wasPaidCard =
+    booking.paymentMethod === 'card' && ['paid', 'refunded'].includes(booking.paymentStatus);
+  let message = "Booking cancelled successfully!";
+  if (refundUpdate) {
+    message = "Booking cancelled and refunded successfully!";
+  } else if (withinWindow && wasPaidCard) {
+    message = `Booking cancelled. Cancellations within ${CANCELLATION_WINDOW_HOURS} hours of the appointment aren't automatically refunded — please contact support.`;
+  }
+
   res.status(200).json({
     status: "success",
-    message: refundUpdate
-      ? "Booking cancelled and refunded successfully!"
-      : "Booking cancelled successfully!",
+    message,
     data: { booking: populated }
   });
 });
