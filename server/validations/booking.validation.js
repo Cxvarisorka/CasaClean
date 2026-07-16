@@ -117,6 +117,13 @@ const createBookingSchema = z.object({
         .array(objectId)
         .optional(),
 
+    // Catalogue-backed tools (CleaningTool ids). Validated server-side against
+    // enabled tools usable on the chosen service.
+    cleaningTools: z
+        .array(objectId)
+        .max(50, { message: "Cleaning tools list can't exceed 50 items!" })
+        .optional(),
+
     // Assigned cleaning staff. Honoured by the controller only for admin
     // requests (a normal customer can't assign workers to their own booking).
     workers: z
@@ -216,6 +223,13 @@ const editBookingSchema = z.object({
 
     specialRequests: z
         .array(objectId)
+        .optional(),
+
+    // Catalogue-backed tools (CleaningTool ids). Sending an empty array clears
+    // the current selection; ids are re-validated against the booking's service.
+    cleaningTools: z
+        .array(objectId)
+        .max(50, { message: "Cleaning tools list can't exceed 50 items!" })
         .optional(),
 
     // Assigned cleaning staff (admin-managed). Sending an empty array clears the

@@ -39,6 +39,7 @@ const cityRouter = require('./routers/city.router');
 const serviceRouter = require('./routers/service.router');
 const bookingRouter = require('./routers/booking.router');
 const specialRequestRouter = require('./routers/specialRequest.router');
+const cleaningToolRouter = require('./routers/cleaningTool.router');
 const reviewRouter = require('./routers/review.router');
 const workerRouter = require('./routers/worker.router');
 const paymentRouter = require('./routers/payment.router');
@@ -119,6 +120,7 @@ app.use('/api/v1/city', cityRouter);
 app.use('/api/v1/service', serviceRouter);
 app.use('/api/v1/booking', bookingRouter)
 app.use('/api/v1/special-request', specialRequestRouter);
+app.use('/api/v1/cleaning-tool', cleaningToolRouter);
 app.use('/api/v1/review', reviewRouter);
 app.use('/api/v1/worker', workerRouter);
 app.use('/api/v1/payment', paymentRouter);

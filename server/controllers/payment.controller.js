@@ -89,6 +89,7 @@ const promotePendingBooking = async (paymentIntentId, paymentIntent = null) => {
       totalAmount: d.totalAmount,
       notes: d.notes ?? null,
       specialRequests: d.specialRequests || [],
+      cleaningTools: d.cleaningTools || [],
       supplies: d.supplies || [],
       status: 'confirmed',
       paymentIntentId,

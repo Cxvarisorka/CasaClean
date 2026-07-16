@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 // Models
 const Booking = require('../models/booking.model');
 const SpecialRequest = require('../models/specialRequest.model');
+const CleaningTool = require('../models/cleaningTool.model');
 const User = require('../models/user.model');
 const Worker = require('../models/worker.model');
 
@@ -17,6 +18,8 @@ const sendEmail = require('../utils/email.util');
 const {
   resolveServiceAndCity,
   resolveSpecialRequests,
+  resolveCleaningTools,
+  assertBookingWindow,
   renderBookingConfirmationEmail,
   renderRefundEmail
 } = require('../services/booking.service');
@@ -73,6 +76,7 @@ const getBookings = catchAsync(async (req, res, next) => {
       .populate('serviceId', 'name')
       .populate('cityId', 'name')
       .populate('specialRequests')
+      .populate('cleaningTools')
       .populate('workers', 'fullname')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
@@ -104,6 +108,7 @@ const getMyBookings = catchAsync(async (req, res, next) => {
       .populate('serviceId', 'name')
       .populate('cityId', 'name')
       .populate('specialRequests')
+      .populate('cleaningTools')
       .populate('workers', 'fullname')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
@@ -127,6 +132,7 @@ const getBookingById = catchAsync(async (req, res, next) => {
     .populate('serviceId', 'name')
     .populate('cityId', 'name')
     .populate('specialRequests')
+    .populate('cleaningTools')
     .populate('workers', 'fullname')
     .lean();
 
@@ -186,7 +192,7 @@ const createBooking = catchAsync(async (req, res, next) => {
   const {
     serviceId, cityId, streetName, houseNumber, propertySize,
     doorbellName, bookingDate, bookingTime, hours, cleaners,
-    notes, specialRequests, supplies, workers
+    notes, specialRequests, cleaningTools, supplies, workers
   } = req.body;
 
   // Required-field guard. Numeric fields are compared against undefined (not
@@ -212,24 +218,26 @@ const createBooking = catchAsync(async (req, res, next) => {
   // (for working-hours check). Fix 1 + Fix 3.
   const { service, city } = await resolveServiceAndCity(serviceId, cityId);
 
-  // Fix 3: reject bookingTime outside city working hours. Both values are
-  // zero-padded "HH:MM" strings so lexicographic comparison is equivalent
-  // to numeric comparison.
-  if (bookingTime < city.workingHourStarts || bookingTime >= city.workingHourEnds) {
-    return next(new AppError("Booking time is outside city working hours", 400));
-  }
+  // Start inside working hours, end before closing, and not in the past today.
+  assertBookingWindow(city, bookingDate, bookingTime, hours);
 
   // Make sure any selected add-ons are real, enabled, and offered by the
   // service. Returns full documents so we can sum prices (Fix 1).
   const resolvedSpecialRequests = await resolveSpecialRequests(specialRequests, service);
 
+  // Same fail-closed gate for the tool catalogue: every tool must be real,
+  // enabled and usable on the chosen service.
+  const resolvedCleaningTools = await resolveCleaningTools(cleaningTools, service);
+
   // Fix 1: compute the booking total on the server — never trust the client.
-  // specialRequests now contains full documents with a `price` field.
+  // specialRequests/cleaningTools now contain full documents with a `price` field.
   const computedTotal = service.pricePerHour * hours +
-    resolvedSpecialRequests.reduce((sum, sr) => sum + sr.price, 0);
+    resolvedSpecialRequests.reduce((sum, sr) => sum + sr.price, 0) +
+    resolvedCleaningTools.reduce((sum, ct) => sum + ct.price, 0);
 
   // Extract just the ids for storage (the Booking model stores ObjectId refs).
   const requestIds = resolvedSpecialRequests.map((sr) => sr._id);
+  const toolIds = resolvedCleaningTools.map((ct) => ct._id);
 
   // Worker assignment is an admin-only concern. A normal customer's `workers`
   // (even if smuggled past the optional schema) is ignored — only an admin
@@ -268,6 +276,7 @@ const createBooking = catchAsync(async (req, res, next) => {
     paymentStatus: 'manual',
     notes: notes ?? null,
     specialRequests: requestIds,
+    cleaningTools: toolIds,
     supplies: Array.isArray(supplies) ? supplies : [],
     workers: assignedWorkers
   });
@@ -317,18 +326,20 @@ const editBooking = catchAsync(async (req, res, next) => {
   }
 
   const srChanged = req.body.specialRequests !== undefined;
+  const ctChanged = req.body.cleaningTools !== undefined;
   const hoursChanged = updates.hours !== undefined;
   const timeChanged = updates.bookingTime !== undefined;
+  const dateChanged = updates.bookingDate !== undefined;
 
   // We only need the existing booking + its service/city when a change affects
-  // add-on eligibility, the price, or the working-hours window. For a pure
+  // add-on/tool eligibility, the price, or the working-hours window. For a pure
   // status/notes/address edit we skip the extra reads entirely.
   let existing = null;
   let service = null;
   let city = null;
-  if (srChanged || hoursChanged || timeChanged) {
+  if (srChanged || ctChanged || hoursChanged || timeChanged || dateChanged) {
     existing = await Booking.findById(id)
-      .select('serviceId cityId hours specialRequests')
+      .select('serviceId cityId hours bookingDate bookingTime specialRequests cleaningTools')
       .lean();
     if (!existing) {
       return next(new AppError("Booking not found!", 404));
@@ -341,12 +352,15 @@ const editBooking = catchAsync(async (req, res, next) => {
     ));
   }
 
-  // Re-validate the working-hours window when the time changes (the create-time
-  // guard otherwise wouldn't run on edits).
-  if (timeChanged && city) {
-    if (updates.bookingTime < city.workingHourStarts || updates.bookingTime >= city.workingHourEnds) {
-      return next(new AppError("Booking time is outside city working hours", 400));
-    }
+  // Re-validate the working-hours window when the date, time OR duration
+  // changes — a longer booking can run past closing even with the same start.
+  if ((timeChanged || hoursChanged || dateChanged) && city) {
+    assertBookingWindow(
+      city,
+      dateChanged ? updates.bookingDate : existing.bookingDate,
+      timeChanged ? updates.bookingTime : existing.bookingTime,
+      hoursChanged ? updates.hours : existing.hours
+    );
   }
 
   // Special requests being changed must still pass the service compatibility
@@ -357,24 +371,34 @@ const editBooking = catchAsync(async (req, res, next) => {
     updates.specialRequests = resolvedSpecialRequests.map((sr) => sr._id);
   }
 
+  // Cleaning tools being changed must still pass the tool-side service gate
+  // (a tool restricted to specific services can't be attached to others).
+  let resolvedCleaningTools = null;
+  if (ctChanged) {
+    resolvedCleaningTools = await resolveCleaningTools(req.body.cleaningTools, service);
+    updates.cleaningTools = resolvedCleaningTools.map((ct) => ct._id);
+  }
+
   // Worker (re)assignment — admin-only route, so no extra role check needed.
   // An empty array clears the current assignment; ids are validated fail-closed.
   if (req.body.workers !== undefined) {
     updates.workers = await resolveWorkers(req.body.workers);
   }
 
-  // Recompute the server-managed total whenever a price input (hours or add-ons)
-  // changes — otherwise the stored amount would drift out of sync with the
-  // booking. Price = pricePerHour * hours + sum(add-on prices).
-  if ((hoursChanged || srChanged) && service) {
+  // Recompute the server-managed total whenever a price input (hours, add-ons
+  // or tools) changes — otherwise the stored amount would drift out of sync
+  // with the booking. Price = pricePerHour * hours + sum(add-on prices) +
+  // sum(tool surcharges).
+  if ((hoursChanged || srChanged || ctChanged) && service) {
     const finalHours = hoursChanged ? updates.hours : existing.hours;
 
     let addOnTotal;
     if (srChanged) {
       addOnTotal = resolvedSpecialRequests.reduce((sum, sr) => sum + sr.price, 0);
     } else {
-      // Hours changed but the add-ons didn't — price the existing ones. Look up
-      // by id only (no `enabled` filter) so a since-disabled add-on still counts.
+      // Something else changed but the add-ons didn't — price the existing ones.
+      // Look up by id only (no `enabled` filter) so a since-disabled add-on
+      // still counts.
       const existingDocs = await SpecialRequest
         .find({ _id: { $in: existing.specialRequests || [] } })
         .select('price')
@@ -382,7 +406,20 @@ const editBooking = catchAsync(async (req, res, next) => {
       addOnTotal = existingDocs.reduce((sum, sr) => sum + sr.price, 0);
     }
 
-    updates.totalAmount = service.pricePerHour * finalHours + addOnTotal;
+    // Same pattern for the tools: price the incoming selection when it changed,
+    // otherwise the booking's existing ones (again without an `enabled` filter).
+    let toolTotal;
+    if (ctChanged) {
+      toolTotal = resolvedCleaningTools.reduce((sum, ct) => sum + ct.price, 0);
+    } else {
+      const existingTools = await CleaningTool
+        .find({ _id: { $in: existing.cleaningTools || [] } })
+        .select('price')
+        .lean();
+      toolTotal = existingTools.reduce((sum, ct) => sum + ct.price, 0);
+    }
+
+    updates.totalAmount = service.pricePerHour * finalHours + addOnTotal + toolTotal;
   }
 
   // An admin cancelling a booking must release the money too — a status flip to
@@ -426,6 +463,7 @@ const editBooking = catchAsync(async (req, res, next) => {
     .populate('serviceId', 'name')
     .populate('cityId', 'name')
     .populate('specialRequests')
+    .populate('cleaningTools')
     .populate('workers', 'fullname');
 
   if (!booking) {
@@ -496,6 +534,7 @@ const cancelMyBooking = catchAsync(async (req, res, next) => {
     .populate('serviceId', 'name')
     .populate('cityId', 'name')
     .populate('specialRequests')
+    .populate('cleaningTools')
     .populate('workers', 'fullname')
     .lean();
 

@@ -8,6 +8,7 @@
 const mongoose = require('mongoose');
 
 const SpecialRequest = require('../models/specialRequest.model');
+const CleaningTool = require('../models/cleaningTool.model');
 const City = require('../models/city.model');
 const Service = require('../models/service.model');
 
@@ -62,6 +63,56 @@ const resolveServiceAndCity = async (serviceId, cityId) => {
   return { service, city };
 };
 
+// "HH:MM" -> minutes since midnight. Inputs are zero-padded and pre-validated
+// (Zod TIME_REGEX / the city model's match rule), so a simple split is safe.
+const toMinutes = (hhmm) => {
+  const [h, m] = String(hhmm).split(":").map(Number);
+  return h * 60 + m;
+};
+
+/**
+ * Validate a booking's time window against the city's working hours.
+ *
+ * Fail-closed rules (shared by create, edit and the online-payment draft):
+ *   1. The START must fall inside the city's working hours.
+ *   2. The END (start + duration) must not run past closing time — checking
+ *      only the start would let a 16:30 booking for 8 hours through a
+ *      09:00–17:30 window.
+ *   3. A same-day booking can't start at a time that has already passed (the
+ *      Zod layer only validates the DATE is today-or-later, not the clock).
+ *
+ * @param {Object} city         city doc with workingHourStarts/workingHourEnds
+ * @param {string} bookingDate  "YYYY-MM-DD"
+ * @param {string} bookingTime  "HH:MM"
+ * @param {number} hours        duration in whole hours
+ */
+const assertBookingWindow = (city, bookingDate, bookingTime, hours) => {
+  const start = toMinutes(bookingTime);
+  const opens = toMinutes(city.workingHourStarts);
+  const closes = toMinutes(city.workingHourEnds);
+
+  if (start < opens || start >= closes) {
+    throw new AppError("Booking time is outside city working hours", 400);
+  }
+
+  if (start + Number(hours) * 60 > closes) {
+    throw new AppError(
+      `A ${hours}-hour booking starting at ${bookingTime} would run past the city's closing time (${city.workingHourEnds}).`,
+      400
+    );
+  }
+
+  const now = new Date();
+  const todayStr = [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, "0"),
+    String(now.getDate()).padStart(2, "0")
+  ].join("-");
+  if (bookingDate === todayStr && start <= now.getHours() * 60 + now.getMinutes()) {
+    throw new AppError("Booking time for today must be in the future!", 400);
+  }
+};
+
 /**
  * Validate the special-request add-ons selected for a booking.
  *
@@ -109,6 +160,57 @@ const resolveSpecialRequests = async (ids, service = null) => {
 };
 
 /**
+ * Validate the cleaning tools selected for a booking.
+ *
+ * Returns the full resolved CleaningTool documents (so callers can sum their
+ * `price`). All ids must resolve to real, *enabled* catalogue items. The
+ * service restriction lives on the TOOL side (the mirror of special requests):
+ * a tool with an explicit `services` list may only be booked with one of those
+ * services; an empty list means the tool is usable on every service.
+ */
+const resolveCleaningTools = async (ids, service = null) => {
+  // Nothing selected is perfectly valid — cleaning tools are optional.
+  if (!ids) return [];
+
+  if (!Array.isArray(ids)) {
+    throw new AppError("cleaningTools must be an array of ids!", 400);
+  }
+
+  if (ids.length === 0) return [];
+
+  // Drop duplicates (e.g. the same tool sent twice from the UI).
+  const uniqueIds = [...new Set(ids.map(String))];
+
+  if (!uniqueIds.every((id) => mongoose.Types.ObjectId.isValid(id))) {
+    throw new AppError("One or more cleaning tool ids are invalid!", 400);
+  }
+
+  const foundDocs = await CleaningTool.find({
+    _id: { $in: uniqueIds },
+    enabled: true
+  }).select("_id price services").lean();
+
+  if (foundDocs.length !== uniqueIds.length) {
+    throw new AppError("One or more selected cleaning tools do not exist or are unavailable!", 400);
+  }
+
+  // Service/tool compatibility: a tool that lists explicit services may only be
+  // used with one of them.
+  if (service) {
+    const incompatible = foundDocs.some(
+      (tool) =>
+        (tool.services || []).length > 0 &&
+        !tool.services.some((s) => String(s) === String(service._id))
+    );
+    if (incompatible) {
+      throw new AppError("One or more selected cleaning tools are not available for this service!", 400);
+    }
+  }
+
+  return foundDocs;
+};
+
+/**
  * Validate, resolve and PRICE a customer self-booking, returning a fully-formed
  * draft ready to store (PendingBooking) and later persist (Booking.create).
  *
@@ -125,7 +227,7 @@ const buildValidatedBookingDraft = async (payload, user) => {
   const {
     serviceId, cityId, streetName, houseNumber, propertySize,
     doorbellName, bookingDate, bookingTime, hours, cleaners,
-    notes, specialRequests, supplies
+    notes, specialRequests, cleaningTools, supplies
   } = payload;
 
   // Required-field guard (numeric fields checked against undefined so a legit 0
@@ -151,18 +253,17 @@ const buildValidatedBookingDraft = async (payload, user) => {
 
   const { service, city } = await resolveServiceAndCity(serviceId, cityId);
 
-  // Reject a bookingTime outside the city working hours. Both values are
-  // zero-padded "HH:MM" strings so lexicographic comparison equals numeric.
-  if (bookingTime < city.workingHourStarts || bookingTime >= city.workingHourEnds) {
-    throw new AppError("Booking time is outside city working hours", 400);
-  }
+  // Start inside working hours, end before closing, and not in the past today.
+  assertBookingWindow(city, bookingDate, bookingTime, hours);
 
   const resolvedSpecialRequests = await resolveSpecialRequests(specialRequests, service);
+  const resolvedCleaningTools = await resolveCleaningTools(cleaningTools, service);
 
-  // Server-side price: pricePerHour * hours + sum(add-on prices). Never trusted
-  // from the client.
+  // Server-side price: pricePerHour * hours + sum(add-on prices) + sum(tool
+  // surcharges). Never trusted from the client.
   const totalAmount = service.pricePerHour * hours +
-    resolvedSpecialRequests.reduce((sum, sr) => sum + sr.price, 0);
+    resolvedSpecialRequests.reduce((sum, sr) => sum + sr.price, 0) +
+    resolvedCleaningTools.reduce((sum, ct) => sum + ct.price, 0);
 
   return {
     user: user._id,
@@ -183,6 +284,7 @@ const buildValidatedBookingDraft = async (payload, user) => {
     totalAmount,
     notes: notes ?? null,
     specialRequests: resolvedSpecialRequests.map((sr) => sr._id),
+    cleaningTools: resolvedCleaningTools.map((ct) => ct._id),
     supplies: Array.isArray(supplies) ? supplies : []
   };
 };
@@ -371,6 +473,8 @@ const renderRefundEmail = ({ customerName, serviceName, bookingDate, amount }) =
 module.exports = {
   resolveServiceAndCity,
   resolveSpecialRequests,
+  resolveCleaningTools,
+  assertBookingWindow,
   buildValidatedBookingDraft,
   renderBookingConfirmationEmail,
   renderRefundEmail,

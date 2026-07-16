@@ -108,6 +108,14 @@ const bookingSchema = new mongoose.Schema({
     type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'SpecialRequest' }],
     default: []
   },
+  // Catalogue-backed tools the customer asks the cleaners to bring (e.g. "Mop",
+  // "Vacuum cleaner"). References to CleaningTool documents so each item is a
+  // real, priced entry — resolved fail-closed against the chosen service before
+  // the booking is created (resolveCleaningTools in booking.service.js).
+  cleaningTools: {
+    type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'CleaningTool' }],
+    default: []
+  },
   // Equipment/consumables the customer asks the cleaners to bring. Still a free
   // list of slugs from the UI (no catalogue model needed for these yet).
   supplies: {

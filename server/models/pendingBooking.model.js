@@ -59,6 +59,10 @@ const pendingBookingSchema = new mongoose.Schema({
       type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'SpecialRequest' }],
       default: []
     },
+    cleaningTools: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'CleaningTool' }],
+      default: []
+    },
     supplies: { type: [String], default: [] }
   }
 }, { timestamps: true, collection: 'pendingBookings' });
