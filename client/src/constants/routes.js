@@ -17,6 +17,8 @@ export const ROUTES = {
   booking: "/booking",
   signin: "/signin",
   signup: "/signup",
+  forgotPassword: "/forgot-password",
+  resetPassword: (token = ":token") => `/reset-password/${token}`,
   profile: "/profile",
   blog: "/blog",
   blogPost: (slug = ":slug") => `/blog/${slug}`,

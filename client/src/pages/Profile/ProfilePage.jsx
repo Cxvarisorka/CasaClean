@@ -28,6 +28,7 @@ import { Modal } from "@/components/ui/Modal";
 import { useAuth } from "@/features/admin/context";
 import { BOOKING_STATUS_META } from "@/features/admin/constants";
 import { updateProfile } from "@/features/auth/api/authApi";
+import { AccountSecurity } from "@/features/auth";
 import {
   getMyBookings,
   cancelMyBooking,
@@ -357,6 +358,9 @@ const ProfilePage = () => {
 
               {/* Saved cards (hidden when Stripe isn't configured) */}
               <SavedCards />
+
+              {/* Security: change password / delete account */}
+              <AccountSecurity />
 
               <Card className="p-6">
                 <Button

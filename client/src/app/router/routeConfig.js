@@ -24,6 +24,8 @@ const BlogPostPage = lazy(() => import("@/pages/Blog/BlogPostPage"));
 const BookingPage = lazy(() => import("@/pages/Booking/BookingPage"));
 const SignInPage = lazy(() => import("@/pages/Auth/SignInPage"));
 const SignUpPage = lazy(() => import("@/pages/Auth/SignUpPage"));
+const ForgotPasswordPage = lazy(() => import("@/pages/Auth/ForgotPasswordPage"));
+const ResetPasswordPage = lazy(() => import("@/pages/Auth/ResetPasswordPage"));
 const AdminLoginPage = lazy(() => import("@/pages/Auth/AdminLoginPage"));
 const ProfilePage = lazy(() => import("@/pages/Profile/ProfilePage"));
 const NotFoundPage = lazy(() => import("@/pages/NotFound/NotFoundPage"));
@@ -68,6 +70,10 @@ export const FOCUSED_ROUTES = [
 export const BARE_ROUTES = [
   { path: ROUTES.signin, element: SignInPage },
   { path: ROUTES.signup, element: SignUpPage },
+  // Password recovery — public by nature (the user can't sign in). The reset
+  // page is opened from the one-time link in the email.
+  { path: ROUTES.forgotPassword, element: ForgotPasswordPage },
+  { path: ROUTES.resetPassword(), element: ResetPasswordPage },
   // Dedicated admin login. Declared as a standalone full-path route (not a child
   // of the guarded /admin shell) so it stays reachable when AdminRoute redirects
   // an unauthenticated visitor here — otherwise the guard would loop.
