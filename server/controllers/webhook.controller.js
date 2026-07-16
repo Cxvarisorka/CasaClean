@@ -12,6 +12,8 @@
 const stripe = require('../config/stripe.config');
 const StripeEvent = require('../models/stripeEvent.model');
 const Booking = require('../models/booking.model');
+const PendingBooking = require('../models/pendingBooking.model');
+const sendEmail = require('../utils/email.util');
 const { promotePendingBooking } = require('./payment.controller');
 
 const handleStripeWebhook = async (req, res) => {
@@ -49,16 +51,41 @@ const handleStripeWebhook = async (req, res) => {
 
       case 'payment_intent.payment_failed': {
         // No booking is created on failure; the PendingBooking draft TTL-expires
-        // on its own. Nothing to do here (a notification could be added later).
+        // on its own. Best-effort heads-up to the customer so an abandoned
+        // decline doesn't just go silent — never awaited past the response and
+        // never allowed to fail the webhook.
+        const pi = event.data.object;
+        const pending = await PendingBooking.findOne({ paymentIntentId: pi.id })
+          .select('draft.customerEmail draft.customerName')
+          .lean()
+          .catch(() => null);
+        const email = pending?.draft?.customerEmail;
+        if (email) {
+          const name = pending.draft.customerName || 'there';
+          sendEmail({
+            email,
+            subject: 'CasaClean — Your payment didn\'t go through',
+            text:
+              `Hello ${name},\n\n` +
+              `Unfortunately your payment for a CasaClean booking didn't go through` +
+              `${pi.last_payment_error?.message ? ` (${pi.last_payment_error.message})` : ''}.\n` +
+              `No booking was created and you have not been charged.\n\n` +
+              `You can try again any time at ${process.env.CLIENT_URL}/booking.\n\n— CasaClean`,
+            html: undefined
+          }).catch((err) => console.error('Payment-failed email error:', err.message));
+        }
         break;
       }
 
       case 'charge.refunded': {
         const charge = event.data.object;
         const paymentIntentId = charge.payment_intent;
-        if (paymentIntentId) {
-          // Mark the booking refunded. Idempotent: re-applying the same fields is
-          // harmless if the cancel handler already set them.
+        // Only a FULL refund flips the booking's money state — this event also
+        // fires for partial refunds issued from the Stripe dashboard, and a
+        // €10 goodwill refund must not mark the whole booking as refunded.
+        if (paymentIntentId && charge.amount_refunded >= charge.amount) {
+          // Idempotent: re-applying the same fields is harmless if the cancel
+          // handler already set them.
           await Booking.findOneAndUpdate(
             { paymentIntentId },
             { paymentStatus: 'refunded', refundedAt: new Date(), stripeStatus: 'refunded' }

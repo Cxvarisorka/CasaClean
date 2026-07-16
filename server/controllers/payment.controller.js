@@ -188,6 +188,9 @@ const createBookingIntent = catchAsync(async (req, res, next) => {
     currency: CURRENCY,
     customer: customerId,
     automatic_payment_methods: { enabled: true, allow_redirects: 'never' },
+    // Stripe sends its own payment receipt on success (on top of our branded
+    // confirmation email) — an independent paper trail for the customer.
+    receipt_email: draft.customerEmail,
     metadata: { type: 'booking', userId: String(req.user._id) }
   };
 
@@ -283,8 +286,20 @@ const finalizeBooking = catchAsync(async (req, res, next) => {
   const booking = await promotePendingBooking(paymentIntentId, paymentIntent);
 
   if (!booking) {
-    // No draft and no booking — the draft likely expired before payment.
-    return next(new AppError("This booking could not be finalised. Please contact support.", 409));
+    // No draft and no booking: the draft TTL-expired before the payment landed.
+    // The customer HAS been charged, so never keep the money against nothing —
+    // refund immediately instead of parking it on "contact support".
+    try {
+      await stripe.refunds.create({ payment_intent: paymentIntentId });
+      return next(new AppError(
+        "Your booking request expired before the payment completed, so the charge has been refunded. Please book again.",
+        409
+      ));
+    } catch (refundErr) {
+      // Refund failed (or was already issued) — fall back to support.
+      console.error('Orphaned-payment refund error:', refundErr.message);
+      return next(new AppError("This booking could not be finalised. Please contact support.", 409));
+    }
   }
 
   // Only return the booking to its owner (a promoted webhook booking has a user).
