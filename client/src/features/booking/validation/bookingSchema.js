@@ -26,6 +26,7 @@ export const bookingSchema = z.object({
   hours: z.coerce.number().min(1, "Select hours").max(8),
   cleaners: z.coerce.number().min(1, "Select cleaners").max(3),
   additionalServices: z.array(z.string()).default([]),
+  cleaningTools: z.array(z.string()).default([]),
   supplies: z.array(z.string()).default([]),
 
   // Step 3 — schedule
@@ -55,6 +56,7 @@ export const bookingDefaults = {
   hours: 2,
   cleaners: 1,
   additionalServices: [],
+  cleaningTools: [],
   supplies: [],
   date: "",
   time: "",

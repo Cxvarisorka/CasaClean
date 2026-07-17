@@ -72,6 +72,58 @@ export function updateProfile(patch) {
   );
 }
 
+/*
+ * Password & account security operations.
+ * Deliberately NO graceful fallback here — simulating success for a password
+ * reset or an account deletion would be actively misleading; a real error
+ * (including "API unreachable") must surface to the user.
+ */
+
+/** Request a password-reset email. The API replies generically either way. */
+export function forgotPassword(email) {
+  return request({
+    method: "POST",
+    url: ENDPOINTS.auth.forgotPassword,
+    data: { email },
+  });
+}
+
+/**
+ * Consume a reset token and set a new password. On success the API signs the
+ * user in (sets the session cookie), so callers should refresh() afterwards.
+ */
+export function resetPassword({ token, password }) {
+  return request({
+    method: "POST",
+    url: ENDPOINTS.auth.resetPassword(token),
+    data: { password },
+  });
+}
+
+/**
+ * Change the signed-in user's password (requires the current one). The server
+ * revokes every other session and re-issues this one's cookie.
+ */
+export function changePassword({ currentPassword, newPassword }) {
+  return request({
+    method: "PATCH",
+    url: ENDPOINTS.auth.changePassword,
+    data: { currentPassword, newPassword },
+  });
+}
+
+/**
+ * Delete the signed-in user's account. Local accounts confirm with their
+ * password; Google accounts have none and send an empty body.
+ */
+export function deleteAccount(password) {
+  return request({
+    method: "DELETE",
+    url: ENDPOINTS.auth.deleteMe,
+    data: password ? { password } : {},
+  });
+}
+
 /**
  * Begin the Google OAuth redirect flow. The browser navigates to the API's
  * Google entry point, which (when implemented) redirects back with a session.

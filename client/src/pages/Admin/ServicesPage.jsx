@@ -15,9 +15,9 @@ import { useTranslation } from "@/i18n";
 /*
  * Services management
  * -------------------
- * Full CRUD over the service catalog: multilingual name/description, pricing,
- * the live enable/disable toggle, and the cities each service is offered in
- * (chosen from the cities collection).
+ * Full CRUD over the service catalog (backed by the real API): name,
+ * description, price per hour and coverage — either every city, or an explicit
+ * set chosen from the cities collection.
  */
 
 const eur = (n) =>
@@ -25,11 +25,10 @@ const eur = (n) =>
     n || 0
   );
 
-const API = import.meta.env.VITE_API_BASE_URL;
-
 export default function ServicesPage() {
   const { items, create, update, remove } = useCollection("services");
   const { items: cities } = useCollection("cities");
+  const { items: specialRequests } = useCollection("specialRequests");
   const { t } = useTranslation();
   const [editing, setEditing] = useState(undefined); // undefined=closed, null=create, obj=edit
   const [deleting, setDeleting] = useState(null);
@@ -44,15 +43,47 @@ export default function ServicesPage() {
     [cities]
   );
 
+  // Special-request add-ons offered as options for "enabled on this service".
+  const specialRequestOptions = useMemo(
+    () => specialRequests.map((s) => ({ value: s._id, label: s.name })),
+    [specialRequests]
+  );
+
   const fields = useMemo(
     () => [
+      {
+        name: "image",
+        label: t("admin.services.field.image"),
+        type: "image",
+        hint: t("admin.services.field.imageHint"),
+        full: true,
+      },
       { name: "name", label: t("admin.services.field.name"), required: true },
       { name: "price_per_hour", label: t("admin.services.field.pricePerHour"), type: "number", required: true },
+      {
+        name: "subtitle",
+        label: t("admin.services.field.subtitle"),
+        hint: t("admin.services.field.subtitleHint"),
+        placeholder: t("admin.services.field.subtitlePlaceholder"),
+        full: true,
+      },
       { name: "description", label: t("admin.services.field.description"), type: "textarea", required: true, full: true },
-      { name: "name_it", label: t("admin.services.field.nameIt") },
-      { name: "name_ka", label: t("admin.services.field.nameKa") },
-      { name: "description_it", label: t("admin.services.field.descriptionIt"), type: "textarea", full: true },
-      { name: "description_ka", label: t("admin.services.field.descriptionKa"), type: "textarea", full: true },
+      {
+        name: "includes",
+        label: t("admin.services.field.includes"),
+        type: "list",
+        hint: t("admin.services.field.includesHint"),
+        placeholder: t("admin.services.field.includesPlaceholder"),
+        addLabel: t("admin.services.field.includesAdd"),
+        full: true,
+      },
+      {
+        name: "all_cities",
+        label: t("admin.services.field.allCities"),
+        hint: t("admin.services.field.allCitiesHint"),
+        type: "switch",
+        full: true,
+      },
       {
         name: "cities",
         label: t("admin.services.field.cities"),
@@ -60,40 +91,41 @@ export default function ServicesPage() {
         options: cityOptions,
         hint: t("admin.services.field.citiesHint"),
         full: true,
+        // Only pick specific cities when "all cities" is off.
+        show: (v) => !v.all_cities,
       },
-      { name: "popular", label: t("admin.services.field.popular"), type: "switch" },
-      { name: "enabled", label: t("admin.services.field.enabled"), type: "switch" },
+      {
+        name: "all_special_requests",
+        label: t("admin.services.field.allSpecialRequests"),
+        hint: t("admin.services.field.allSpecialRequestsHint"),
+        type: "switch",
+        full: true,
+      },
+      {
+        name: "special_requests",
+        label: t("admin.services.field.specialRequests"),
+        type: "multiselect",
+        options: specialRequestOptions,
+        hint: t("admin.services.field.specialRequestsHint"),
+        full: true,
+        // Only pick specific add-ons when "all special requests" is off.
+        show: (v) => !v.all_special_requests,
+      },
+      {
+        name: "enabled",
+        label: t("admin.services.field.enabled"),
+        type: "switch",
+        full: true,
+      },
     ],
-    [cityOptions, t]
+    [cityOptions, specialRequestOptions, t]
   );
 
   const handleSubmit = async (values) => {
-
-    console.log(values);
-
-    try {
-      if (editing) { 
-
-        update(editing._id, values);
-
-      } else {
-          const req = await fetch(`${API}/service`, {
-            method: "POST",
-            credentials: "include",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(values)
-          })
-
-          const res = await req.json();
-
-          if (!req.ok) throw new Error(res.message || "Failed to create service");
-          create(values);
-      }
-      setEditing(undefined);
-    } catch(err) {
-      console.log(err);
-    }
-    
+    const ok = editing
+      ? await update(editing._id, values)
+      : await create(values);
+    if (ok) setEditing(undefined);
   };
 
   const columns = [
@@ -101,9 +133,24 @@ export default function ServicesPage() {
       key: "name",
       header: t("admin.services.col.service"),
       render: (s) => (
-        <div>
-          <p className="font-semibold text-ink-900">{s.name}</p>
-          {s.name_it && <p className="text-caption text-ink-400">{s.name_it}</p>}
+        <div className="flex items-center gap-3">
+          {s.image ? (
+            <img
+              src={s.image}
+              alt=""
+              className="size-11 shrink-0 rounded-lg object-cover"
+            />
+          ) : (
+            <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-ink-100 text-ink-300">
+              <Sparkles className="size-5" />
+            </span>
+          )}
+          <div className="min-w-0">
+            <p className="font-semibold text-ink-900">{s.name}</p>
+            {s.subtitle && (
+              <p className="truncate text-body-sm text-ink-500">{s.subtitle}</p>
+            )}
+          </div>
         </div>
       ),
     },
@@ -116,6 +163,12 @@ export default function ServicesPage() {
       key: "cities",
       header: t("admin.services.col.cities"),
       render: (s) => {
+        if (s.all_cities)
+          return (
+            <Badge variant="brand" size="sm">
+              {t("admin.services.allCitiesBadge")}
+            </Badge>
+          );
         const ids = Array.isArray(s.cities) ? s.cities : [];
         if (ids.length === 0) return <span className="text-ink-300">—</span>;
         const names = ids.map((id) => cityName[id]).filter(Boolean);
@@ -131,22 +184,11 @@ export default function ServicesPage() {
       },
     },
     {
-      key: "popular",
-      header: t("admin.services.col.popular"),
-      align: "center",
-      render: (s) =>
-        s.popular ? (
-          <Badge variant="accent" size="sm">
-            {t("admin.services.popular")}
-          </Badge>
-        ) : (
-          <span className="text-ink-300">—</span>
-        ),
-    },
-    {
       key: "enabled",
       header: t("admin.services.col.status"),
       align: "center",
+      // A disabled service is hidden from the public site (useServices filters
+      // on `enabled`) and can't be booked (the API rejects disabled services).
       render: (s) => (
         <Switch
           checked={Boolean(s.enabled)}
@@ -172,7 +214,7 @@ export default function ServicesPage() {
       <DataTable
         columns={columns}
         data={items}
-        searchKeys={["name", "name_it", "name_ka"]}
+        searchKeys={["name", "description"]}
         searchPlaceholder={t("admin.services.search")}
         emptyTitle={t("admin.services.emptyTitle")}
         emptyDescription={t("admin.services.emptyDescription")}
@@ -199,9 +241,19 @@ export default function ServicesPage() {
         onClose={() => setEditing(undefined)}
         onSubmit={handleSubmit}
         title={editing ? t("admin.services.editTitle") : t("admin.services.addTitle")}
-        description={t("admin.form.translationsFallback")}
         fields={fields}
-        initialValues={editing || { enabled: true, cities: [] }}
+        initialValues={
+          editing || {
+            image: "",
+            subtitle: "",
+            includes: [],
+            all_cities: true,
+            cities: [],
+            all_special_requests: false,
+            special_requests: [],
+            enabled: true,
+          }
+        }
         submitLabel={editing ? t("admin.form.saveChanges") : t("admin.form.create")}
       />
 

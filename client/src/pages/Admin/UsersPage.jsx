@@ -32,15 +32,26 @@ export default function UsersPage() {
     [t]
   );
 
+  // `editing` is null when creating, the record when editing. A password is
+  // required to create an account, but optional on edit (blank keeps the
+  // current one).
+  const isCreate = editing === null;
   const fields = useMemo(
     () => [
       { name: "fullname", label: t("admin.users.field.fullname"), required: true },
       { name: "email", label: t("admin.users.field.email"), type: "email", required: true },
-      { name: "phone", label: t("admin.users.field.phone") },
+      { name: "phone", label: t("admin.users.field.phone"), required: true },
+      {
+        name: "password",
+        label: t("admin.users.field.password"),
+        type: "password",
+        required: isCreate,
+        hint: isCreate ? undefined : t("admin.users.field.passwordEditHint"),
+      },
       { name: "role", label: t("admin.users.field.role"), type: "select", options: roleOptions, required: true },
       { name: "isVerified", label: t("admin.users.field.verified"), type: "switch" },
     ],
-    [t, roleOptions]
+    [t, roleOptions, isCreate]
   );
 
   const fmtDate = (iso) =>

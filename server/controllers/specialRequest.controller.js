@@ -4,10 +4,7 @@ const SpecialRequest = require("../models/specialRequest.model");
 // Utils
 const AppError = require("../utils/appError.util");
 const catchAsync = require("../utils/catchAsync.util");
-
-// "fRIDGE cleaning" -> "Fridge cleaning". Capitalise the first letter and
-// lowercase the rest so the same item can't be stored under different casings.
-const formatName = (name) => name[0].toUpperCase() + name.slice(1).toLowerCase();
+const formatName = require("../utils/formatName.util");
 
 // GET /api/v1/special-request -> paginated list (public, so the booking wizard
 // can show the available add-ons).
@@ -17,13 +14,22 @@ const getSpecialRequests = catchAsync(async (req, res, next) => {
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 10));
 
+    // Soft-disabled add-ons are an admin concern: the public list (booking
+    // wizard) only ever sees enabled records. An admin opts into the full
+    // catalogue with ?includeDisabled=true — honoured only when the live DB
+    // role is admin (req.user comes from the attachUser middleware).
+    const includeDisabled = req.query.includeDisabled === "true" && req.user?.role === "admin";
+    const filter = includeDisabled ? {} : { enabled: true };
+
+    // For the unfiltered admin view, estimatedDocumentCount reads collection
+    // metadata (O(1)) instead of scanning every document.
     const [specialRequests, specialRequestCount] = await Promise.all([
-        SpecialRequest.find()
+        SpecialRequest.find(filter)
             .sort({ createdAt: -1 })
             .skip((page - 1) * limit)
             .limit(limit)
             .lean(),
-        SpecialRequest.countDocuments()
+        includeDisabled ? SpecialRequest.estimatedDocumentCount() : SpecialRequest.countDocuments(filter)
     ]);
 
     res.status(200).json({
@@ -53,7 +59,7 @@ const getSpecialRequestById = catchAsync(async (req, res, next) => {
 
 // POST /api/v1/special-request -> create an add-on (admin only)
 const addSpecialRequest = catchAsync(async (req, res, next) => {
-    const { name, description, price } = req.body;
+    const { name, description, price, services } = req.body;
 
     // Guard required fields up-front so we never hit `name[0]` on undefined and
     // the client gets a clear 400. Price is compared against undefined so a
@@ -73,7 +79,8 @@ const addSpecialRequest = catchAsync(async (req, res, next) => {
     const specialRequest = await SpecialRequest.create({
         name: formattedName,
         description,
-        price
+        price,
+        services
     });
 
     res.status(201).json({
@@ -86,7 +93,7 @@ const addSpecialRequest = catchAsync(async (req, res, next) => {
 // PATCH /api/v1/special-request/:id -> partial update (admin only)
 const editSpecialRequest = catchAsync(async (req, res, next) => {
     const { id } = req.params;
-    const { name, description, price, enabled } = req.body;
+    const { name, description, price, enabled, services = [] } = req.body;
 
     const specialRequest = await SpecialRequest.findById(id);
 
@@ -112,6 +119,7 @@ const editSpecialRequest = catchAsync(async (req, res, next) => {
     if (price !== undefined) specialRequest.price = price;
     // Compared against undefined (not truthiness) so `enabled: false` is honoured.
     if (enabled === true || enabled === false) specialRequest.enabled = enabled;
+    if (services.length > 0) specialRequest.services = services;
 
     await specialRequest.save();
 

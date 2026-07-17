@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   User,
   Mail,
@@ -13,21 +13,35 @@ import {
   CalendarCheck,
   Clock,
   Sparkles,
+  XCircle,
+  Star,
 } from "lucide-react";
 import { Page } from "@/components/shared/Page";
 import { Container } from "@/components/ui/Container";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Textarea } from "@/components/ui/Textarea";
 import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
+import { Modal } from "@/components/ui/Modal";
 import { useAuth } from "@/features/admin/context";
 import { BOOKING_STATUS_META } from "@/features/admin/constants";
 import { updateProfile } from "@/features/auth/api/authApi";
-import { getMyBookings } from "@/features/booking";
+import { AccountSecurity } from "@/features/auth";
+import {
+  getMyBookings,
+  cancelMyBooking,
+  getMyReviews,
+  createBookingReview,
+} from "@/features/booking";
+import { useCities } from "@/features/booking/hooks/useCities";
+import { SavedCards } from "@/features/booking/components/SavedCards";
+import { useServices } from "@/features/services";
 import { Seo } from "@/seo";
 import { useTranslation } from "@/i18n";
 import { ROUTES } from "@/constants/routes";
+import { cn } from "@/lib/cn";
 
 /*
  * ProfilePage
@@ -60,6 +74,26 @@ const eur = (n) =>
     Number(n) || 0
   );
 
+// A booking can only be cancelled by the customer while it's still upcoming.
+// Completed/cancelled bookings are terminal (matches the server-side guard).
+const isCancellable = (status) => status === "pending" || status === "confirmed";
+
+// Read-only five-star score (filled up to `value`).
+const Stars = ({ value, className }) => (
+  <span className={cn("inline-flex items-center gap-0.5", className)}>
+    {[1, 2, 3, 4, 5].map((n) => (
+      <Star
+        key={n}
+        aria-hidden="true"
+        className={cn(
+          "size-4",
+          n <= value ? "fill-amber-400 text-amber-400" : "fill-none text-ink-300"
+        )}
+      />
+    ))}
+  </span>
+);
+
 const ProfilePage = () => {
   const { t, locale } = useTranslation();
   const { user, isAdmin, updateUser, logout } = useAuth();
@@ -71,13 +105,88 @@ const ProfilePage = () => {
   const [status, setStatus] = useState("idle"); // idle | saving | saved | error
   const [errorMsg, setErrorMsg] = useState("");
 
-  // Booking history for the signed-in user. Degrades to demo data when the
-  // list endpoint isn't reachable, so the section is always demonstrable.
+  // Booking history for the signed-in user — straight from the database.
   const { data: bookings = [], isLoading: bookingsLoading } = useQuery({
     queryKey: ["my-bookings", user?.email],
     queryFn: getMyBookings,
     enabled: Boolean(user),
   });
+
+  // Self-cancel flow: confirm in a modal, then PATCH /booking/:id/cancel and
+  // refresh the history so the status flips to "cancelled" in place.
+  const queryClient = useQueryClient();
+  const [cancelTarget, setCancelTarget] = useState(null);
+  const cancelMutation = useMutation({
+    mutationFn: (id) => cancelMyBooking(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-bookings"] });
+      setCancelTarget(null);
+    },
+  });
+
+  // The user's own reviews → a bookingId → review map, so each completed
+  // booking shows either its rating or a "Rate" action (one review per booking).
+  const { data: myReviews = [] } = useQuery({
+    queryKey: ["my-reviews", user?.email],
+    queryFn: getMyReviews,
+    enabled: Boolean(user),
+  });
+  const reviewByBooking = useMemo(
+    () => Object.fromEntries(myReviews.map((r) => [String(r.booking_id), r])),
+    [myReviews]
+  );
+
+  // Rate flow: open a modal for a completed booking, pick stars + comment, then
+  // POST /review/booking/:id and refresh so the row shows the new rating.
+  const [rateTarget, setRateTarget] = useState(null);
+  const [rateValue, setRateValue] = useState(0);
+  const [rateHover, setRateHover] = useState(0);
+  const [rateComment, setRateComment] = useState("");
+
+  const resetRate = () => {
+    setRateTarget(null);
+    setRateValue(0);
+    setRateHover(0);
+    setRateComment("");
+  };
+
+  const reviewMutation = useMutation({
+    mutationFn: ({ id, rating, comment }) =>
+      createBookingReview(id, { rating, comment }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-reviews"] });
+      resetRate();
+    },
+  });
+
+  const openRate = (booking) => {
+    setRateTarget(booking);
+    setRateValue(0);
+    setRateHover(0);
+    setRateComment("");
+  };
+
+  // Bookings store the service/city id only, so resolve display names from the
+  // live catalogues (same source the booking wizard offers).
+  const { services } = useServices();
+  const { data: cities = [] } = useCities();
+  const serviceNameById = useMemo(
+    () => Object.fromEntries(services.map((s) => [String(s.id), s.name])),
+    [services]
+  );
+  const cityNameById = useMemo(
+    () => Object.fromEntries(cities.map((c) => [String(c.id), c.name])),
+    [cities]
+  );
+  const history = useMemo(
+    () =>
+      bookings.map((b) => ({
+        ...b,
+        service_name: serviceNameById[String(b.service_id)] || "Service",
+        city_name: cityNameById[String(b.city_id)] || "",
+      })),
+    [bookings, serviceNameById, cityNameById]
+  );
 
   if (!user) return null;
 
@@ -247,6 +356,12 @@ const ProfilePage = () => {
                 )}
               </Card>
 
+              {/* Saved cards (hidden when Stripe isn't configured) */}
+              <SavedCards />
+
+              {/* Security: change password / delete account */}
+              <AccountSecurity />
+
               <Card className="p-6">
                 <Button
                   variant="ghost"
@@ -283,7 +398,7 @@ const ProfilePage = () => {
                 <div className="flex items-center justify-center py-10">
                   <Spinner size="lg" />
                 </div>
-              ) : bookings.length === 0 ? (
+              ) : history.length === 0 ? (
                 <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-ink-200 py-12 text-center">
                   <span className="grid size-12 place-items-center rounded-2xl bg-ink-50 text-ink-400">
                     <Sparkles className="size-6" />
@@ -302,7 +417,7 @@ const ProfilePage = () => {
                 </div>
               ) : (
                 <ul className="divide-y divide-ink-100">
-                  {bookings.map((b) => {
+                  {history.map((b) => {
                     const meta = BOOKING_STATUS_META[b.status];
                     return (
                       <li
@@ -339,9 +454,43 @@ const ProfilePage = () => {
                             )}
                           </p>
                         </div>
-                        <span className="text-body-md font-bold text-ink-900">
-                          {eur(b.total_amount)}
-                        </span>
+                        <div className="flex shrink-0 items-center gap-3">
+                          <span className="text-body-md font-bold text-ink-900">
+                            {eur(b.total_amount)}
+                          </span>
+                          {isCancellable(b.status) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              leftIcon={XCircle}
+                              onClick={() => setCancelTarget(b)}
+                              className="text-red-600 hover:bg-red-500/10 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-500/15 dark:hover:text-red-300"
+                            >
+                              {t("profile.cancelBooking")}
+                            </Button>
+                          )}
+                          {b.status === "completed" &&
+                            (reviewByBooking[b._id] ? (
+                              <span
+                                className="inline-flex items-center gap-1.5"
+                                title={reviewByBooking[b._id].comment}
+                              >
+                                <Stars value={reviewByBooking[b._id].rating} />
+                                <span className="text-caption font-medium text-ink-400">
+                                  {t("profile.yourRating")}
+                                </span>
+                              </span>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                leftIcon={Star}
+                                onClick={() => openRate(b)}
+                              >
+                                {t("profile.rate")}
+                              </Button>
+                            ))}
+                        </div>
                       </li>
                     );
                   })}
@@ -351,6 +500,134 @@ const ProfilePage = () => {
           </Card>
         </Container>
       </section>
+
+      {/* Cancel confirmation */}
+      <Modal
+        open={Boolean(cancelTarget)}
+        onClose={() => !cancelMutation.isPending && setCancelTarget(null)}
+        title={t("profile.cancelTitle")}
+        size="sm"
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              onClick={() => setCancelTarget(null)}
+              disabled={cancelMutation.isPending}
+            >
+              {t("profile.keepBooking")}
+            </Button>
+            <Button
+              onClick={() => cancelMutation.mutate(cancelTarget._id)}
+              loading={cancelMutation.isPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {t("profile.cancelConfirm")}
+            </Button>
+          </>
+        }
+      >
+        {cancelTarget && (
+          <p className="text-body-sm text-ink-600">
+            {t("profile.cancelBody", {
+              service: cancelTarget.service_name,
+              date: fmtDate(cancelTarget.booking_date, locale),
+            })}
+          </p>
+        )}
+        {cancelMutation.isError && (
+          <p className="mt-3 text-body-sm text-red-600">
+            {t("profile.cancelError")}
+          </p>
+        )}
+      </Modal>
+
+      {/* Rate a completed booking */}
+      <Modal
+        open={Boolean(rateTarget)}
+        onClose={() => !reviewMutation.isPending && resetRate()}
+        title={t("profile.rateTitle")}
+        size="md"
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              onClick={resetRate}
+              disabled={reviewMutation.isPending}
+            >
+              {t("admin.form.cancel")}
+            </Button>
+            <Button
+              onClick={() =>
+                reviewMutation.mutate({
+                  id: rateTarget._id,
+                  rating: rateValue,
+                  comment: rateComment.trim(),
+                })
+              }
+              loading={reviewMutation.isPending}
+              disabled={rateValue < 1 || !rateComment.trim()}
+            >
+              {t("profile.submitReview")}
+            </Button>
+          </>
+        }
+      >
+        {rateTarget && (
+          <div className="space-y-5">
+            <p className="text-body-sm text-ink-600">
+              {t("profile.rateSubtitle", {
+                service: rateTarget.service_name,
+                date: fmtDate(rateTarget.booking_date, locale),
+              })}
+            </p>
+
+            <div>
+              <label className="mb-1.5 block text-body-sm font-semibold text-ink-800">
+                {t("profile.ratingLabel")}
+              </label>
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button
+                    type="button"
+                    key={n}
+                    onMouseEnter={() => setRateHover(n)}
+                    onMouseLeave={() => setRateHover(0)}
+                    onClick={() => setRateValue(n)}
+                    aria-label={t("profile.rateStars", { count: n })}
+                    aria-pressed={rateValue === n}
+                    className="rounded-md p-1 transition-transform hover:scale-110"
+                  >
+                    <Star
+                      className={cn(
+                        "size-8 transition-colors",
+                        (rateHover || rateValue) >= n
+                          ? "fill-amber-400 text-amber-400"
+                          : "fill-none text-ink-300"
+                      )}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <Textarea
+              label={t("profile.commentLabel")}
+              rows={4}
+              maxLength={500}
+              value={rateComment}
+              onChange={(e) => setRateComment(e.target.value)}
+              placeholder={t("profile.commentPlaceholder")}
+              required
+            />
+
+            {reviewMutation.isError && (
+              <p className="text-body-sm text-red-600">
+                {reviewMutation.error?.message || t("profile.reviewError")}
+              </p>
+            )}
+          </div>
+        )}
+      </Modal>
     </Page>
   );
 };

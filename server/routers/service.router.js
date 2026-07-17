@@ -5,7 +5,7 @@ const express = require('express');
 const { getServices, getServiceById, createService, deleteService, editService } = require('../controllers/service.controller');
 
 // Middlewares
-const { protect, restrictTo } = require('../middlewares/protect.middleware');
+const { protect, attachUser, restrictTo } = require('../middlewares/protect.middleware');
 const validate = require('../middlewares/validate.middleware');
 
 // Validations
@@ -13,8 +13,10 @@ const { createServiceSchema, editServiceSchema } = require('../validations/servi
 
 const serviceRouter = express.Router();
 
-// Public routes (anyone can browse services)
-serviceRouter.get('/', getServices);
+// Public routes (anyone can browse services). The list only returns enabled
+// services; attachUser (optional auth, never rejects) lets a signed-in admin
+// request the full catalogue with ?includeDisabled=true.
+serviceRouter.get('/', attachUser, getServices);
 serviceRouter.get('/:id', getServiceById);
 
 // Admin routes — everything below requires a valid auth cookie AND the admin role.

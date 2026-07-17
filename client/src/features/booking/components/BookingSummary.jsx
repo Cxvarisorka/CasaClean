@@ -2,7 +2,10 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { ShieldCheck } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { useTranslation } from "@/i18n";
+import { useServices } from "@/features/services";
 import { computeQuote } from "../utils/pricing";
+import { useSpecialRequests } from "../hooks/useSpecialRequests";
+import { useCleaningTools } from "../hooks/useCleaningTools";
 
 /*
  * BookingSummary
@@ -15,7 +18,10 @@ export function BookingSummary() {
   const { t } = useTranslation();
   const { control } = useFormContext();
   const values = useWatch({ control });
-  const quote = computeQuote(values);
+  const { data: addons = [] } = useSpecialRequests();
+  const { data: tools = [] } = useCleaningTools();
+  const { services } = useServices();
+  const quote = computeQuote(values, { addons, tools, services });
 
   return (
     <aside className="rounded-2xl border border-ink-100 bg-surface p-6 shadow-soft lg:sticky lg:top-24">

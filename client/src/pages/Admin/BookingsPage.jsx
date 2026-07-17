@@ -10,6 +10,7 @@ import {
   ResourceModal,
   ConfirmDialog,
   BOOKING_STATUS_META,
+  PAYMENT_STATUS_META,
   useCollection,
 } from "@/features/admin";
 import { useTranslation } from "@/i18n";
@@ -17,8 +18,11 @@ import { useTranslation } from "@/i18n";
 /*
  * Bookings management
  * -------------------
- * Browse, filter and manage the booking pipeline. Status can be changed inline
- * or from the detail drawer; bookings can also be created, edited and deleted.
+ * Browse, filter and manage the booking pipeline (backed by the real API).
+ * Status can be changed inline or from the edit dialog; bookings can be edited
+ * and deleted. Bookings are *created* by customers through the booking wizard
+ * (the API ties each booking to the authenticated customer), so there is no
+ * admin "add" here.
  */
 
 const eur = (n) =>
@@ -37,8 +41,25 @@ function DetailRow({ label, value }) {
 
 export default function BookingsPage() {
   const { items, create, update, remove } = useCollection("bookings");
+  const { items: cities } = useCollection("cities");
+  const { items: services } = useCollection("services");
+  const { items: users } = useCollection("users");
+  const { items: workers } = useCollection("workers");
   const { t } = useTranslation();
+
+  // Bookings store service/city ids; resolve them to names from the catalogues
+  // (DB services/cities). Static (non-DB) service ids fall back to the id form.
+  const cityNameById = useMemo(
+    () => Object.fromEntries(cities.map((c) => [String(c._id), c.name])),
+    [cities]
+  );
+  const serviceNameById = useMemo(
+    () => Object.fromEntries(services.map((s) => [String(s._id), s.name])),
+    [services]
+  );
   const [statusFilter, setStatusFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [editing, setEditing] = useState(undefined);
   const [viewing, setViewing] = useState(null);
   const [deleting, setDeleting] = useState(null);
@@ -52,35 +73,114 @@ export default function BookingsPage() {
     [t]
   );
 
-  const fields = useMemo(
+  // Service/city pickers for the create form. The booking API stores real
+  // Service/City ids (the server rejects anything that isn't a valid, enabled
+  // id), so an admin must choose from the live catalogues — only enabled
+  // entries are offered.
+  const serviceOptions = useMemo(
+    () =>
+      services
+        .filter((s) => s.enabled)
+        .map((s) => ({ value: s._id, label: s.name })),
+    [services]
+  );
+  const cityOptions = useMemo(
+    () =>
+      cities.filter((c) => c.enabled).map((c) => ({ value: c._id, label: c.name })),
+    [cities]
+  );
+
+  // Optional account link for an admin-created booking. The leading blank option
+  // means "no linked account" — the booking then lives on the typed contact
+  // details alone (walk-in / phone booking).
+  const userOptions = useMemo(
     () => [
-      { name: "customer_name", label: t("admin.bookings.field.customerName"), required: true },
-      { name: "customer_email", label: t("admin.bookings.field.email"), type: "email" },
+      { value: "", label: t("admin.bookings.noAccount") },
+      ...users.map((u) => ({ value: u._id, label: `${u.fullname} (${u.email})` })),
+    ],
+    [users, t]
+  );
+
+  // Cleaning staff the admin can assign to a booking. Only enabled workers are
+  // offered; the server validates the ids fail-closed on save.
+  const workerOptions = useMemo(
+    () =>
+      workers
+        .filter((w) => w.enabled)
+        .map((w) => ({ value: w._id, label: w.fullname })),
+    [workers]
+  );
+
+  // Edit only exposes the fields the backend's editBooking endpoint accepts;
+  // service/city and the customer identity are fixed once a booking is created.
+  const editFields = useMemo(
+    () => [
+      { name: "status", label: t("admin.bookings.field.status"), type: "select", options: statusOptions, required: true },
       { name: "customer_phone", label: t("admin.bookings.field.phone") },
-      { name: "service_name", label: t("admin.bookings.field.service"), required: true },
-      { name: "city_name", label: t("admin.bookings.field.city"), required: true },
-      { name: "booking_date", label: t("admin.bookings.field.date"), placeholder: "2026-06-12" },
-      { name: "booking_time", label: t("admin.bookings.field.time"), placeholder: "14:00" },
+      { name: "booking_date", label: t("admin.bookings.field.date"), type: "date" },
+      { name: "booking_time", label: t("admin.bookings.field.time"), type: "time" },
       { name: "street_name", label: t("admin.bookings.field.street") },
       { name: "house_number", label: t("admin.bookings.field.houseNo") },
+      { name: "property_size", label: t("admin.bookings.detail.propertySize") },
       { name: "hours", label: t("admin.bookings.field.hours"), type: "number" },
       { name: "cleaners", label: t("admin.bookings.field.cleaners"), type: "number" },
-      { name: "total_amount", label: t("admin.bookings.field.total"), type: "number", required: true },
-      { name: "status", label: t("admin.bookings.field.status"), type: "select", options: statusOptions, required: true },
+      // total is server-computed (price × hours + add-ons); shown read-only in
+      // the detail view, not editable here.
+      { name: "workers", label: t("admin.bookings.field.workers"), type: "multiselect", options: workerOptions, hint: t("admin.bookings.field.workersHint") },
       { name: "notes", label: t("admin.bookings.field.notes"), type: "textarea", full: true },
     ],
-    [t, statusOptions]
+    [t, statusOptions, workerOptions]
   );
 
-  const data = useMemo(
-    () => (statusFilter ? items.filter((b) => b.status === statusFilter) : items),
-    [items, statusFilter]
+  // Create collects the full booking the model needs. service_id/city_id are
+  // real Service/City ids chosen from the catalogues (see booking.model.js); the
+  // server validates existence, enabled state and coverage.
+  const createFields = useMemo(
+    () => [
+      // Optionally link a registered account. When linked, any contact field left
+      // blank is filled from that account server-side; otherwise type them in.
+      { name: "customer_user_id", label: t("admin.bookings.field.linkAccount"), type: "select", options: userOptions },
+      { name: "customer_name", label: t("admin.bookings.field.customerName") },
+      { name: "customer_email", label: t("admin.bookings.field.email"), type: "email" },
+      { name: "customer_phone", label: t("admin.bookings.field.phone") },
+      { name: "service_id", label: t("admin.bookings.field.serviceId"), type: "select", options: serviceOptions, placeholder: t("admin.form.selectOption"), required: true },
+      { name: "city_id", label: t("admin.bookings.field.cityId"), type: "select", options: cityOptions, placeholder: t("admin.form.selectOption"), required: true },
+      { name: "booking_date", label: t("admin.bookings.field.date"), type: "date", required: true },
+      { name: "booking_time", label: t("admin.bookings.field.time"), type: "time", required: true },
+      { name: "street_name", label: t("admin.bookings.field.street"), required: true },
+      { name: "house_number", label: t("admin.bookings.field.houseNo"), required: true },
+      { name: "property_size", label: t("admin.bookings.detail.propertySize"), required: true },
+      { name: "doorbell_name", label: t("admin.bookings.field.doorbell"), required: true },
+      { name: "hours", label: t("admin.bookings.field.hours"), type: "number", required: true },
+      { name: "cleaners", label: t("admin.bookings.field.cleaners"), type: "number", required: true },
+      { name: "workers", label: t("admin.bookings.field.workers"), type: "multiselect", options: workerOptions, hint: t("admin.bookings.field.workersHint") },
+      // total is computed server-side from the service price, hours and add-ons.
+      { name: "notes", label: t("admin.bookings.field.notes"), type: "textarea", full: true },
+    ],
+    [t, serviceOptions, cityOptions, userOptions, workerOptions]
   );
 
-  const handleSubmit = (values) => {
-    if (editing) update(editing._id, values);
-    else create(values);
-    setEditing(undefined);
+  const data = useMemo(() => {
+    // booking_date is a "YYYY-MM-DD" string, so lexicographic comparison is
+    // equivalent to a date comparison (same trick the API uses server-side).
+    const base = items.filter(
+      (b) =>
+        (!statusFilter || b.status === statusFilter) &&
+        (!dateFrom || b.booking_date >= dateFrom) &&
+        (!dateTo || b.booking_date <= dateTo)
+    );
+    return base.map((b) => ({
+      ...b,
+      service_name: serviceNameById[String(b.service_id)] || b.service_name,
+      city_name: cityNameById[String(b.city_id)] || b.city_name,
+    }));
+  }, [items, statusFilter, dateFrom, dateTo, serviceNameById, cityNameById]);
+
+  const handleSubmit = async (values) => {
+    const ok = editing
+      ? await update(editing._id, values)
+      : await create(values);
+    if (ok) setEditing(undefined);
   };
 
   const columns = [
@@ -119,6 +219,18 @@ export default function BookingsPage() {
       render: (b) => <span className="font-semibold">{eur(b.total_amount)}</span>,
     },
     {
+      key: "payment_status",
+      header: t("admin.bookings.col.payment"),
+      render: (b) => {
+        const meta = PAYMENT_STATUS_META[b.payment_status] || PAYMENT_STATUS_META.unpaid;
+        return (
+          <Badge variant={meta.variant} size="sm">
+            {t(meta.labelKey)}
+          </Badge>
+        );
+      },
+    },
+    {
       key: "status",
       header: t("admin.bookings.col.status"),
       render: (b) => (
@@ -153,12 +265,32 @@ export default function BookingsPage() {
         emptyTitle={t("admin.bookings.emptyTitle")}
         emptyDescription={t("admin.bookings.emptyDescription")}
         filters={
-          <Select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            options={[{ value: "", label: t("admin.bookings.allStatuses") }, ...statusOptions]}
-            className="h-11 min-w-[10rem]"
-          />
+          <>
+            <Select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              options={[{ value: "", label: t("admin.bookings.allStatuses") }, ...statusOptions]}
+              className="h-11 min-w-[10rem]"
+            />
+            <input
+              type="date"
+              value={dateFrom}
+              max={dateTo || undefined}
+              onChange={(e) => setDateFrom(e.target.value)}
+              aria-label={t("admin.bookings.dateFrom")}
+              title={t("admin.bookings.dateFrom")}
+              className="h-11 rounded-xl border border-ink-200 bg-surface px-3 text-body-sm text-ink-800 focus:border-brand-500 focus:outline-none"
+            />
+            <input
+              type="date"
+              value={dateTo}
+              min={dateFrom || undefined}
+              onChange={(e) => setDateTo(e.target.value)}
+              aria-label={t("admin.bookings.dateTo")}
+              title={t("admin.bookings.dateTo")}
+              className="h-11 rounded-xl border border-ink-200 bg-surface px-3 text-body-sm text-ink-800 focus:border-brand-500 focus:outline-none"
+            />
+          </>
         }
         actions={(b) => (
           <>
@@ -192,10 +324,20 @@ export default function BookingsPage() {
         {viewing && (
           <div className="space-y-1">
             <div className="mb-4 flex items-center justify-between">
-              <Badge variant={BOOKING_STATUS_META[viewing.status]?.variant}>
-                {BOOKING_STATUS_META[viewing.status] &&
-                  t(BOOKING_STATUS_META[viewing.status].labelKey)}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant={BOOKING_STATUS_META[viewing.status]?.variant}>
+                  {BOOKING_STATUS_META[viewing.status] &&
+                    t(BOOKING_STATUS_META[viewing.status].labelKey)}
+                </Badge>
+                {(() => {
+                  const pm = PAYMENT_STATUS_META[viewing.payment_status] || PAYMENT_STATUS_META.unpaid;
+                  return (
+                    <Badge variant={pm.variant} size="sm">
+                      {t(pm.labelKey)}
+                    </Badge>
+                  );
+                })()}
+              </div>
               <span className="text-heading-sm font-bold text-ink-900">
                 {eur(viewing.total_amount)}
               </span>
@@ -212,6 +354,10 @@ export default function BookingsPage() {
             <DetailRow label={t("admin.bookings.detail.dateTime")} value={`${viewing.booking_date} · ${viewing.booking_time}`} />
             <DetailRow label={t("admin.bookings.detail.hoursCleaners")} value={`${viewing.hours || "—"} h · ${viewing.cleaners || "—"}`} />
             <DetailRow label={t("admin.bookings.detail.propertySize")} value={viewing.property_size ? `${viewing.property_size} m²` : "—"} />
+            <DetailRow
+              label={t("admin.bookings.detail.workers")}
+              value={viewing.worker_names?.length ? viewing.worker_names.join(", ") : "—"}
+            />
             <DetailRow label={t("admin.bookings.detail.notes")} value={viewing.notes} />
           </div>
         )}
@@ -222,8 +368,8 @@ export default function BookingsPage() {
         onClose={() => setEditing(undefined)}
         onSubmit={handleSubmit}
         title={editing ? t("admin.bookings.editTitle") : t("admin.bookings.addTitle")}
-        fields={fields}
-        initialValues={editing || { status: "pending" }}
+        fields={editing ? editFields : createFields}
+        initialValues={editing || { hours: 2, cleaners: 1, customer_user_id: "" }}
         submitLabel={editing ? t("admin.form.saveChanges") : t("admin.form.create")}
       />
 

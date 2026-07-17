@@ -18,9 +18,28 @@ const serviceSchema = new mongoose.Schema({
         unique: true, // DB-level guard; the 11000 handler turns this into a 409
         trim: true
     },
+    // Short marketing sub-title shown under the name on the service card.
+    subtitle: {
+        type: String,
+        trim: true,
+        default: ""
+    },
     description: {
         type: String,
         required: [true, "Service description is required!"]
+    },
+    // Presentation image for the service card. Stored as a string the frontend
+    // can render directly — either a hosted URL or an inline data URL (the admin
+    // upload is visual-only for now, so no external file store is involved).
+    image: {
+        type: String,
+        default: ""
+    },
+    // Bullet list of what the service includes, rendered as ticked features on
+    // the marketing card.
+    includes: {
+        type: [String],
+        default: []
     },
     pricePerHour: {
         type: Number,
@@ -46,14 +65,29 @@ const serviceSchema = new mongoose.Schema({
     enabled: {
         type: Boolean,
         default: true // soft on/off switch so a service can be hidden without deleting it
-    }
+    },
+
+    allSpecialRequests: {
+        type: Boolean,
+        default: false // if true, all special requests are available for this service; otherwise only those listed in `specialRequests`
+    },
+
+    specialRequests: [
+        {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "SpecialRequest"
+        }
+    ]
+    
 }, { timestamps: true });
 
 // Guarantee a consistent coverage state: when allCities is true we never keep a
 // stale city list around, so consumers can rely on the flag alone.
-serviceSchema.pre("save", function (next) {
+// NOTE: Mongoose 9 dropped the callback-style `next` for document middleware
+// (see user.model.js, which already uses the no-arg form). A synchronous hook
+// just returns — keeping the `next` parameter throws "next is not a function".
+serviceSchema.pre("save", function () {
     if (this.allCities) this.cities = [];
-    next();
 });
 
 serviceSchema.index({ allCities: 1, enabled: 1 });

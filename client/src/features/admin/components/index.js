@@ -7,3 +7,4 @@ export { PageHeader } from "./PageHeader";
 export { StatCard } from "./StatCard";
 export { ConfirmDialog } from "./ConfirmDialog";
 export { ResourceModal } from "./ResourceModal";
+export { BookingsMap } from "./BookingsMap";

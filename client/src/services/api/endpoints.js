@@ -1,8 +1,15 @@
 /*
  * API endpoints
  * -------------
- * Centralized, typo-proof map of every backend path. Functions are used for
- * parameterized routes so call sites never hand-build URL strings.
+ * Centralized, typo-proof map of backend paths that are consumed through this
+ * module. Only the sections below are actually used — the booking, payment and
+ * admin features keep their paths in their own api/ files
+ * (features/<domain>/api/*Api.js). The old services/cities/bookings/leads/blog
+ * sections pointed at routes that never existed on the API and were removed.
+ *
+ * NOTE: contact/newsletter have no server implementation yet; contactApi.js
+ * calls them with a graceful fallback that simulates success while the API
+ * returns 404 (see postWithGracefulFallback).
  */
 
 export const ENDPOINTS = {
@@ -11,31 +18,15 @@ export const ENDPOINTS = {
     signin: "/auth/signin",
     logout: "/auth/logout",
     me: "/auth/me",
-  },
-  services: {
-    list: "/services",
-    detail: (slug) => `/services/${slug}`,
-  },
-  cities: {
-    list: "/cities",
-  },
-  bookings: {
-    create: "/bookings",
-    mine: "/bookings/me",
-    detail: (id) => `/bookings/${id}`,
-    availability: "/bookings/availability",
-  },
-  leads: {
-    create: "/leads",
+    forgotPassword: "/auth/forgot-password",
+    resetPassword: (token) => `/auth/reset-password/${token}`,
+    changePassword: "/auth/me/password",
+    deleteMe: "/auth/me",
   },
   contact: {
     create: "/contact",
   },
   newsletter: {
     subscribe: "/newsletter/subscribe",
-  },
-  blog: {
-    list: "/blog",
-    detail: (slug) => `/blog/${slug}`,
   },
 };

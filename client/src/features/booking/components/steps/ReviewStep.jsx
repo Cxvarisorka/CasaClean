@@ -2,10 +2,13 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { AlertCircle } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { formatDate } from "@/utils/formatDate";
-import { CITIES } from "@/data/cities";
+import { useServices } from "@/features/services";
 import { useBookingNav } from "../../store/BookingContext";
+import { useCities } from "../../hooks/useCities";
+import { useSpecialRequests } from "../../hooks/useSpecialRequests";
+import { useCleaningTools } from "../../hooks/useCleaningTools";
 import { computeQuote } from "../../utils/pricing";
-import { ADDITIONAL_SERVICES, SUPPLY_OPTIONS } from "../../constants";
+import { SUPPLY_OPTIONS } from "../../constants";
 
 /*
  * ReviewStep
@@ -47,11 +50,19 @@ function Group({ title, stepIndex, children }) {
 export function ReviewStep({ submitError }) {
   const { control } = useFormContext();
   const v = useWatch({ control });
-  const quote = computeQuote(v);
+  const { data: cities = [] } = useCities();
+  const { data: addons = [] } = useSpecialRequests();
+  const { data: tools = [] } = useCleaningTools();
+  const { services } = useServices();
+  const quote = computeQuote(v, { addons, tools, services });
 
-  const city = CITIES.find((c) => String(c.id) === String(v.cityId))?.name;
+  const city = cities.find((c) => String(c.id) === String(v.cityId))?.name;
   const addonLabels = (v.additionalServices || [])
-    .map((id) => ADDITIONAL_SERVICES.find((a) => a.value === id)?.label)
+    .map((id) => addons.find((a) => a.value === id)?.label)
+    .filter(Boolean)
+    .join(", ");
+  const toolLabels = (v.cleaningTools || [])
+    .map((id) => tools.find((t) => t.value === id)?.label)
     .filter(Boolean)
     .join(", ");
   const supplyLabels = (v.supplies || [])
@@ -71,6 +82,7 @@ export function ReviewStep({ submitError }) {
         <Row label="Service" value={quote.service?.name} />
         <Row label="Duration" value={`${v.hours}h × ${v.cleaners} cleaner${v.cleaners > 1 ? "s" : ""}`} />
         <Row label="Add-ons" value={addonLabels || "None"} />
+        <Row label="Cleaning tools" value={toolLabels || "None"} />
         <Row label="Supplies" value={supplyLabels || "Host provides"} />
       </Group>
 

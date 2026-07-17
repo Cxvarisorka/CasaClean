@@ -97,6 +97,16 @@ const button = (url, label) => `
         </tr>
     </table>`;
 
+// Escape user-provided values before interpolating them into the HTML body so
+// a crafted fullname can never inject markup into the email.
+const escapeHtml = (value) =>
+    String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+
 /**
  * Email-verification template.
  *
@@ -111,7 +121,7 @@ const verificationEmail = ({ fullname, url, expiresInHours }) => {
 
     const bodyContent = `
         <h1 style="margin:0 0 12px; font-size:22px; color:${COLORS.ink};">
-            Welcome, ${fullname}! 👋
+            Welcome, ${escapeHtml(fullname)}! 👋
         </h1>
         <p style="margin:0 0 20px; font-size:15px; line-height:1.6; color:${COLORS.muted};">
             Thanks for signing up with <strong style="color:${COLORS.ink};">CasaClean</strong>.
@@ -146,4 +156,53 @@ const verificationEmail = ({ fullname, url, expiresInHours }) => {
     return { subject, html: baseLayout({ title: subject, bodyContent }), text };
 };
 
-module.exports = { verificationEmail };
+/**
+ * Password-reset template.
+ *
+ * @param {Object} opts
+ * @param {string} opts.fullname  - recipient's name (personalisation)
+ * @param {string} opts.url       - one-time reset link (client reset page)
+ * @param {number} opts.expiresInMinutes - link validity window, shown to the user
+ * @returns {{ subject: string, html: string, text: string }}
+ */
+const passwordResetEmail = ({ fullname, url, expiresInMinutes }) => {
+    const subject = "Reset your CasaClean password";
+
+    const bodyContent = `
+        <h1 style="margin:0 0 12px; font-size:22px; color:${COLORS.ink};">
+            Hello, ${escapeHtml(fullname)}
+        </h1>
+        <p style="margin:0 0 20px; font-size:15px; line-height:1.6; color:${COLORS.muted};">
+            We received a request to reset the password for your
+            <strong style="color:${COLORS.ink};">CasaClean</strong> account.
+            Click the button below to choose a new password.
+        </p>
+
+        ${button(url, "Reset Password")}
+
+        <p style="margin:24px 0 8px; font-size:13px; color:${COLORS.muted};">
+            This link is valid for <strong>${expiresInMinutes} minutes</strong>. If the button
+            above doesn't work, copy and paste this URL into your browser:
+        </p>
+        <p style="margin:0 0 20px; font-size:13px; word-break:break-all;">
+            <a href="${url}" style="color:${COLORS.brand};">${url}</a>
+        </p>
+
+        <hr style="border:none; border-top:1px solid ${COLORS.border}; margin:24px 0;" />
+
+        <p style="margin:0; font-size:13px; line-height:1.6; color:${COLORS.muted};">
+            If you didn't request a password reset, you can safely ignore this email —
+            your password will stay unchanged.
+        </p>`;
+
+    const text =
+        `Hello ${fullname},\n\n` +
+        `We received a request to reset your CasaClean password.\n` +
+        `Open the link below to choose a new one:\n${url}\n\n` +
+        `This link is valid for ${expiresInMinutes} minutes.\n\n` +
+        `If you didn't request a reset, you can ignore this email.`;
+
+    return { subject, html: baseLayout({ title: subject, bodyContent }), text };
+};
+
+module.exports = { verificationEmail, passwordResetEmail };

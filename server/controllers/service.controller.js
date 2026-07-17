@@ -5,10 +5,8 @@ const City = require("../models/city.model");
 // Utils
 const AppError = require("../utils/appError.util");
 const catchAsync = require("../utils/catchAsync.util");
-
-// "rEGULAR cleaning" -> "Regular cleaning". Capitalise the first letter and
-// lowercase the rest so the same service can't be stored under different casings.
-const formatName = (name) => name[0].toUpperCase() + name.slice(1).toLowerCase();
+const SpecialRequest = require("../models/specialRequest.model");
+const formatName = require("../utils/formatName.util");
 
 /**
  * Resolve and validate the coverage a service should have ("all cities",
@@ -50,6 +48,46 @@ const resolveCoverage = async (allCities, cities) => {
     return { allCities: false, cities: uniqueCityIds };
 };
 
+/**
+ * Resolve and validate which special-request add-ons a service enables.
+ *
+ * Accepts:
+ *   - allSpecialRequests: true            -> every add-on is offered; list cleared
+ *   - specialRequests: "<id>" | ["<id>"]  -> only the listed add-ons
+ *   - empty / nothing                     -> the service offers no add-ons
+ *
+ * Returns { allSpecialRequests, specialRequests } ready to store, or throws an
+ * AppError (caught by catchAsync) when an id doesn't reference a real add-on.
+ * Mirrors resolveCoverage; an empty selection is valid (unlike cities, a service
+ * is allowed to have no special requests).
+ */
+const resolveSpecialRequest = async (allSpecialRequests, specialRequests) => {
+    if (allSpecialRequests === true) {
+        return { allSpecialRequests: true, specialRequests: [] };
+    }
+
+    const ids = Array.isArray(specialRequests)
+        ? specialRequests
+        : specialRequests ? [specialRequests] : [];
+
+    if (ids.length === 0) {
+        return { allSpecialRequests: false, specialRequests: [] };
+    }
+
+    // Drop duplicate ids (e.g. the same add-on sent twice from the UI).
+    const uniqueIds = [...new Set(ids.map(String))];
+
+    // Every id must point to a special request that actually exists, otherwise
+    // we'd store dangling references that break population later on.
+    const foundCount = await SpecialRequest.countDocuments({ _id: { $in: uniqueIds } });
+
+    if (foundCount !== uniqueIds.length) {
+        throw new AppError("One or more selected special requests do not exist!", 400);
+    }
+
+    return { allSpecialRequests: false, specialRequests: uniqueIds };
+};
+
 // GET /api/v1/service -> paginated list of services
 const getServices = catchAsync(async (req, res, next) => {
     // Query params arrive as strings; sanitise them into safe, bounded numbers
@@ -57,14 +95,26 @@ const getServices = catchAsync(async (req, res, next) => {
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 10));
 
-    const services = await Service.find()
-        .populate("cities")
-        .sort({ createdAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .lean();
+    // Soft-disabled services are an admin concern: the public list (homepage,
+    // booking wizard) only ever sees enabled records. An admin opts into the
+    // full catalogue with ?includeDisabled=true — honoured only when the live
+    // DB role is admin (req.user comes from the attachUser middleware).
+    const includeDisabled = req.query.includeDisabled === "true" && req.user?.role === "admin";
+    const filter = includeDisabled ? {} : { enabled: true };
 
-    const serviceCount = await Service.countDocuments();
+    // Run the page query and the total count in parallel (independent reads).
+    // For the unfiltered admin view, estimatedDocumentCount reads collection
+    // metadata (O(1)) instead of scanning every document.
+    const [services, serviceCount] = await Promise.all([
+        Service.find(filter)
+            .populate("cities")
+            .populate("specialRequests")
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit)
+            .lean(),
+        includeDisabled ? Service.estimatedDocumentCount() : Service.countDocuments(filter)
+    ]);
 
     res.status(200).json({
         status: "success",
@@ -80,7 +130,7 @@ const getServices = catchAsync(async (req, res, next) => {
 const getServiceById = catchAsync(async (req, res, next) => {
     const { id } = req.params;
 
-    const service = await Service.findById(id).populate("cities");
+    const service = await Service.findById(id).populate("cities").populate("specialRequests");
 
     if (!service) {
         return next(new AppError("Service not found!", 404));
@@ -97,7 +147,7 @@ const getServiceById = catchAsync(async (req, res, next) => {
 
 // POST /api/v1/service -> create a service (admin only)
 const createService = catchAsync(async (req, res, next) => {
-    const { name, description, pricePerHour, allCities, cities } = req.body;
+    const { name, subtitle, description, image, includes, pricePerHour, allCities, cities, allSpecialRequests, specialRequests } = req.body;
 
     // Guard required fields up-front so we never hit `name[0]` on undefined and
     // the client gets a clear 400 instead of a generic schema error.
@@ -117,12 +167,18 @@ const createService = catchAsync(async (req, res, next) => {
 
     // Validate the chosen coverage (all / one / multiple cities).
     const coverage = await resolveCoverage(allCities, cities);
+    const specialRequest = await resolveSpecialRequest(allSpecialRequests, specialRequests);
 
     const service = await Service.create({
         name: formattedName,
+        subtitle,
         description,
+        image,
+        // Drop empty/blank entries so the card never renders an empty bullet.
+        includes: Array.isArray(includes) ? includes.map((i) => i.trim()).filter(Boolean) : undefined,
         pricePerHour,
-        ...coverage
+        ...coverage,
+        ...specialRequest
     });
 
     res.status(201).json({
@@ -137,7 +193,7 @@ const createService = catchAsync(async (req, res, next) => {
 // PATCH /api/v1/service/:id -> partial update (admin only)
 const editService = catchAsync(async (req, res, next) => {
     const { id } = req.params;
-    const { name, description, pricePerHour, enabled, allCities, cities } = req.body;
+    const { name, subtitle, description, image, includes, pricePerHour, enabled, allCities, cities, allSpecialRequests, specialRequests } = req.body;
 
     const service = await Service.findById(id);
 
@@ -159,7 +215,15 @@ const editService = catchAsync(async (req, res, next) => {
         service.name = formattedName;
     }
 
+    // Compared against undefined so an explicit "" clears the subtitle/image.
+    if (subtitle !== undefined) service.subtitle = subtitle;
     if (description) service.description = description;
+    if (image !== undefined) service.image = image;
+    if (includes !== undefined) {
+        service.includes = Array.isArray(includes)
+            ? includes.map((i) => i.trim()).filter(Boolean)
+            : [];
+    }
     if (pricePerHour !== undefined) service.pricePerHour = pricePerHour;
     // Compared against undefined (not truthiness) so `enabled: false` is honoured.
     if (enabled === false || enabled === true) service.enabled = enabled;
@@ -174,6 +238,17 @@ const editService = catchAsync(async (req, res, next) => {
 
         service.allCities = coverage.allCities;
         service.cities = coverage.cities;
+    }
+
+    // Likewise, only touch the special-request selection when the client sent one.
+    if (allSpecialRequests !== undefined || specialRequests !== undefined) {
+        const resolved = await resolveSpecialRequest(
+            allSpecialRequests !== undefined ? allSpecialRequests : service.allSpecialRequests,
+            specialRequests !== undefined ? specialRequests : service.specialRequests
+        );
+
+        service.allSpecialRequests = resolved.allSpecialRequests;
+        service.specialRequests = resolved.specialRequests;
     }
 
     await service.save();

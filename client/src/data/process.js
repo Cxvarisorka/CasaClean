@@ -1,7 +1,7 @@
 /*
  * Process content
  * ---------------
- * Two related narratives: the high-level turnover workflow (how working with
+ * Two related narratives: the high-level booking workflow (how working with
  * CasaClean feels) and the detailed cleaning timeline (what happens on site).
  */
 
@@ -9,30 +9,30 @@ export const WORKFLOW_STEPS = [
   {
     id: "book",
     icon: "CalendarCheck",
-    title: "Book in minutes",
+    title: "Book online in 60 seconds",
     description:
-      "Tell us about your property and pick a time. Sync your calendar so turnovers auto-schedule after each checkout.",
+      "Choose your service, tell us about your place and pick a time. You see the exact price before you confirm.",
   },
   {
     id: "clean",
     icon: "Sparkles",
-    title: "We turn it over",
+    title: "Get matched with a pro",
     description:
-      "A vetted crew arrives on time and resets your space to our 50-point, five-star hospitality standard.",
+      "We assign a vetted, background-checked cleaner who fits your schedule — with your language and preferences in mind.",
   },
   {
     id: "inspect",
     icon: "ClipboardCheck",
-    title: "Inspect & document",
+    title: "We make it shine",
     description:
-      "Every visit ends with a timestamped photo report — damage flagged, supplies logged, lost items recorded.",
+      "Your cleaner works through our 50-point checklist, starting with the priorities you flagged in your booking.",
   },
   {
     id: "relax",
     icon: "BadgeCheck",
-    title: "Guest-ready, guaranteed",
+    title: "Rate it — it's guaranteed",
     description:
-      "Your listing is staged, stocked and spotless. If anything's off, we re-clean within 24 hours — no charge.",
+      "Review your clean afterwards. If anything's not right, we'll re-clean within 48 hours at no charge.",
   },
 ];
 
@@ -42,41 +42,41 @@ export const CLEANING_TIMELINE = [
     time: "00:00",
     title: "Arrival & walkthrough",
     description:
-      "Crew checks in, documents the property's condition on entry, and reviews any host notes from the last guest.",
+      "Your cleaner arrives on time, reviews your booking notes, and confirms priorities and any no-go areas.",
   },
   {
     id: "strip",
     time: "00:15",
-    title: "Strip & laundry",
+    title: "Tidy & dust",
     description:
-      "Used linens and towels are removed, fresh hotel-grade sets are staged, and laundry is started or swapped.",
+      "Surfaces are decluttered and dusted top to bottom — shelves, frames, skirting boards and the forgotten corners.",
   },
   {
     id: "kitchen-bath",
     time: "00:45",
     title: "Kitchen & bathrooms",
     description:
-      "Deep sanitation of the highest-impact rooms: appliances, fixtures, surfaces and high-touch points.",
+      "The rooms that matter most: degreasing, descaling and sanitizing appliances, fixtures and high-touch surfaces.",
   },
   {
     id: "living",
     time: "01:30",
-    title: "Living spaces & beds",
+    title: "Bedrooms & living areas",
     description:
-      "Floors, dusting, bed making with a hotel fold, and a careful reset of every shared space.",
+      "Beds made, mirrors polished, furniture wiped and every room reset to calm.",
   },
   {
     id: "restock",
     time: "02:15",
-    title: "Restock & stage",
+    title: "Floors & finishing touches",
     description:
-      "Consumables replenished, welcome amenities staged, lighting and ambiance set for arrival.",
+      "Vacuuming and mopping throughout, bins emptied and everything returned to its place.",
   },
   {
     id: "inspect",
     time: "02:45",
-    title: "Inspection & report",
+    title: "Final check & feedback",
     description:
-      "Final 50-point check, timestamped photos captured, and your guest-ready confirmation sent.",
+      "A last pass against the checklist, then you rate the visit — your feedback shapes every clean that follows.",
   },
 ];

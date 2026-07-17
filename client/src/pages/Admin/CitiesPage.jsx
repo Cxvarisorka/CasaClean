@@ -24,56 +24,28 @@ export default function CitiesPage() {
   const [editing, setEditing] = useState(undefined);
   const [deleting, setDeleting] = useState(null);
 
-  const formatDays = (csv = "") =>
-    csv
-      .split(",")
-      .map((d) => {
-        const n = Number(d.trim());
-        return n >= 1 && n <= 7 ? t(`admin.cities.days.${n}`) : "";
-      })
-      .filter(Boolean)
-      .join(", ");
-
   const fields = useMemo(
     () => [
       { name: "name", label: t("admin.cities.field.name"), required: true },
-      { name: "name_it", label: t("admin.cities.field.nameIt") },
-      { name: "name_ka", label: t("admin.cities.field.nameKa") },
-      {
-        name: "working_days",
-        label: t("admin.cities.field.workingDays"),
-        placeholder: "1,2,3,4,5,6",
-        hint: t("admin.cities.field.workingDaysHint"),
-        full: true,
-      },
-      { name: "working_hours_start", label: t("admin.cities.field.opensAt"), placeholder: "09:00" },
-      { name: "working_hours_end", label: t("admin.cities.field.closesAt"), placeholder: "18:00" },
+      { name: "working_hours_start", label: t("admin.cities.field.opensAt"), placeholder: "09:00", required: true },
+      { name: "working_hours_end", label: t("admin.cities.field.closesAt"), placeholder: "18:00", required: true },
       { name: "enabled", label: t("admin.cities.field.enabled"), type: "switch" },
     ],
     [t]
   );
 
-  const handleSubmit = (values) => {
-    if (editing) update(editing._id, values);
-    else create(values);
-    setEditing(undefined);
+  const handleSubmit = async (values) => {
+    const ok = editing
+      ? await update(editing._id, values)
+      : await create(values);
+    if (ok) setEditing(undefined);
   };
 
   const columns = [
     {
       key: "name",
       header: t("admin.cities.col.city"),
-      render: (c) => (
-        <div>
-          <p className="font-semibold text-ink-900">{c.name}</p>
-          {c.name_it && <p className="text-caption text-ink-400">{c.name_it}</p>}
-        </div>
-      ),
-    },
-    {
-      key: "working_days",
-      header: t("admin.cities.col.workingDays"),
-      render: (c) => <span className="text-ink-600">{formatDays(c.working_days) || "—"}</span>,
+      render: (c) => <p className="font-semibold text-ink-900">{c.name}</p>,
     },
     {
       key: "working_hours_start",
@@ -114,7 +86,7 @@ export default function CitiesPage() {
       <DataTable
         columns={columns}
         data={items}
-        searchKeys={["name", "name_it", "name_ka"]}
+        searchKeys={["name"]}
         searchPlaceholder={t("admin.cities.search")}
         emptyTitle={t("admin.cities.emptyTitle")}
         emptyDescription={t("admin.cities.emptyDescription")}
@@ -145,7 +117,6 @@ export default function CitiesPage() {
         initialValues={
           editing || {
             enabled: true,
-            working_days: "1,2,3,4,5,6",
             working_hours_start: "09:00",
             working_hours_end: "18:00",
           }

@@ -34,3 +34,40 @@ export const makeSignUpSchema = (t) =>
       path: ["confirmPassword"],
       message: t("auth.errors.passwordMatch"),
     });
+
+export const makeForgotPasswordSchema = (t) =>
+  z.object({
+    email: z.string().trim().email(t("auth.errors.emailInvalid")),
+  });
+
+// New password rules mirror sign-up so a reset can't set a weaker password.
+export const makeResetPasswordSchema = (t) =>
+  z
+    .object({
+      password: z
+        .string()
+        .min(8, t("auth.errors.passwordMin"))
+        .regex(/[A-Z]/, t("auth.errors.passwordUpper"))
+        .regex(/[0-9]/, t("auth.errors.passwordNumber")),
+      confirmPassword: z.string(),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+      path: ["confirmPassword"],
+      message: t("auth.errors.passwordMatch"),
+    });
+
+export const makeChangePasswordSchema = (t) =>
+  z
+    .object({
+      currentPassword: z.string().min(1, t("auth.errors.passwordMin")),
+      newPassword: z
+        .string()
+        .min(8, t("auth.errors.passwordMin"))
+        .regex(/[A-Z]/, t("auth.errors.passwordUpper"))
+        .regex(/[0-9]/, t("auth.errors.passwordNumber")),
+      confirmPassword: z.string(),
+    })
+    .refine((data) => data.newPassword === data.confirmPassword, {
+      path: ["confirmPassword"],
+      message: t("auth.errors.passwordMatch"),
+    });

@@ -25,8 +25,12 @@ const SignInPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { refresh } = useAuth();
-  // Return the user to the page they were gated from (e.g. /booking), else home.
-  const from = location.state?.from?.pathname || ROUTES.home;
+  // Return the user to the page they were gated from (e.g. /booking), keeping
+  // any query string (e.g. ?service=<id> for a pre-selected service), else home.
+  const gatedFrom = location.state?.from;
+  const from = gatedFrom
+    ? `${gatedFrom.pathname}${gatedFrom.search || ""}`
+    : ROUTES.home;
   const schema = useMemo(() => makeSignInSchema(t), [t]);
 
   const {
@@ -88,7 +92,7 @@ const SignInPage = () => {
           <div className="flex items-center justify-between">
             <Checkbox label={t("auth.fields.rememberMe")} {...register("remember")} />
             <Link
-              to={ROUTES.contact}
+              to={ROUTES.forgotPassword}
               className="text-body-sm font-semibold text-brand-600 hover:text-brand-700"
             >
               {t("auth.signin.forgot")}

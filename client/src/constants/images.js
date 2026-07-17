@@ -47,12 +47,12 @@ export const IMAGES = {
 
   // Blog covers
   blog: {
-    "back-to-back-turnovers": img("photo-1581578731548-c64695cc6952", { w: 1200, h: 750 }),
-    "linen-par-levels": img("photo-1522771739844-6a9f6d5f14af", { w: 1200, h: 750 }),
-    "guest-ready-checklist": img("photo-1600566753086-00f18fb6b3ea", { w: 1200, h: 750 }),
-    "scaling-to-ten-listings": img("photo-1560448204-e02f11c3d0e2", { w: 1200, h: 750 }),
-    "automated-restocking": img("photo-1584813470613-5b1c1cad3d69", { w: 1200, h: 750 }),
-    "damage-disputes": img("photo-1554995207-c18c203602cb", { w: 1200, h: 750 }),
+    "deep-clean-checklist": img("photo-1581578731548-c64695cc6952", { w: 1200, h: 750 }),
+    "how-often-clean-home": img("photo-1522771739844-6a9f6d5f14af", { w: 1200, h: 750 }),
+    "move-out-deposit-clean": img("photo-1600566753086-00f18fb6b3ea", { w: 1200, h: 750 }),
+    "clean-office-productivity": img("photo-1554995207-c18c203602cb", { w: 1200, h: 750 }),
+    "supplies-pros-use": img("photo-1584813470613-5b1c1cad3d69", { w: 1200, h: 750 }),
+    "same-cleaner-every-time": img("photo-1560448204-e02f11c3d0e2", { w: 1200, h: 750 }),
   },
 };
 

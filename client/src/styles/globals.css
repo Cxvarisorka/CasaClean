@@ -101,6 +101,37 @@
 }
 
 /*
+ * Georgian typography
+ * -------------------
+ * The Georgian locale (`ka`) uses BPG Nino Mtavruli Bold. The single TTF covers
+ * the whole weight range (100–900) so every requested weight maps to it without
+ * faux-bolding — we change the family, never the weight the components declare.
+ */
+@font-face {
+  font-family: "BPG Nino Mtavruli";
+  src: url("../assets/fonts/bpg_nino_mtavruli_bold.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/*
+ * Every font in the design system resolves through the --font-sans /
+ * --font-display tokens (body, headings, the typography utilities, the
+ * `font-*` Tailwind utilities, and — via preflight `font-family: inherit` —
+ * buttons, inputs and placeholders). So scoping just these two tokens to
+ * <html lang="ka"> (set by I18nProvider) cascades the Georgian font to every
+ * text element — headings, paragraphs, links, nav, cards, forms, modals,
+ * footer — with no per-component overrides and no change to size, weight or
+ * spacing. Other locales keep their existing fonts untouched.
+ */
+html[lang="ka"] {
+  --font-sans: "BPG Nino Mtavruli", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "BPG Nino Mtavruli", "Plus Jakarta Sans", "Inter",
+    ui-sans-serif, sans-serif;
+}
+
+/*
  * Dark theme
  * ----------
  * Activated by a `.dark` class on <html> (set by ThemeProvider). Because every

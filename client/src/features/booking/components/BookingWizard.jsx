@@ -1,15 +1,13 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { FormProvider, useForm, useFormContext } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Check } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useTranslation } from "@/i18n";
 import { bookingSchema, bookingDefaults } from "../validation/bookingSchema";
 import { BookingProvider, useBookingNav } from "../store/BookingContext";
-import { useCreateBooking } from "../hooks/useCreateBooking";
-import { toBookingPayload } from "../api/bookingApi";
-import { computeQuote } from "../utils/pricing";
 import { BookingProgress } from "./BookingProgress";
 import { BookingSummary } from "./BookingSummary";
 import { PropertyStep } from "./steps/PropertyStep";
@@ -17,6 +15,7 @@ import { PreferencesStep } from "./steps/PreferencesStep";
 import { ScheduleStep } from "./steps/ScheduleStep";
 import { ContactStep } from "./steps/ContactStep";
 import { ReviewStep } from "./steps/ReviewStep";
+import { PaymentStep } from "./steps/PaymentStep";
 import { ConfirmationStep } from "./steps/ConfirmationStep";
 import { EASE_PREMIUM } from "@/animations/tokens";
 
@@ -32,6 +31,8 @@ import { EASE_PREMIUM } from "@/animations/tokens";
  * This separation keeps each concern small and the wizard composable.
  */
 
+// Indexed by step. The final "payment" step is handled separately (it needs the
+// onConfirmed callback and owns its own CTA), so it isn't listed here.
 const STEP_COMPONENTS = [
   PropertyStep,
   PreferencesStep,
@@ -48,24 +49,19 @@ const stepVariants = {
 
 function WizardBody({ onConfirmed }) {
   const { t } = useTranslation();
-  const { step, direction, isFirst, isLast, next, prev, steps } = useBookingNav();
-  const { trigger, handleSubmit } = useFormContext();
-  const { mutateAsync, isPending, error } = useCreateBooking();
+  const { step, direction, isFirst, next, prev, steps } = useBookingNav();
+  const { trigger } = useFormContext();
 
-  const StepComponent = STEP_COMPONENTS[step];
   const activeStep = steps[step];
+  const isPaymentStep = activeStep.id === "payment";
+  const StepComponent = STEP_COMPONENTS[step];
 
+  // Before leaving a step, validate only that step's fields (the payment/review
+  // steps declare none, so they advance freely once earlier steps have passed).
   const handleNext = async () => {
     const valid = await trigger(activeStep.fields, { shouldFocus: true });
     if (valid) next();
   };
-
-  const handleFinalSubmit = handleSubmit(async (values) => {
-    const quote = computeQuote(values);
-    const payload = toBookingPayload(values, quote);
-    const booking = await mutateAsync(payload);
-    onConfirmed(booking);
-  });
 
   return (
     <div className="grid gap-10 lg:grid-cols-[1.6fr_1fr]">
@@ -93,8 +89,8 @@ function WizardBody({ onConfirmed }) {
                 animate="center"
                 exit="exit"
               >
-                {isLast ? (
-                  <ReviewStep submitError={error} />
+                {isPaymentStep ? (
+                  <PaymentStep onConfirmed={onConfirmed} />
                 ) : (
                   <StepComponent />
                 )}
@@ -102,7 +98,8 @@ function WizardBody({ onConfirmed }) {
             </AnimatePresence>
           </div>
 
-          {/* Footer nav */}
+          {/* Footer nav. The payment step owns its own pay CTA (it lives inside
+              Stripe's Elements context), so only the Back button shows there. */}
           <div className="mt-8 flex items-center justify-between gap-4">
             <Button
               type="button"
@@ -115,17 +112,7 @@ function WizardBody({ onConfirmed }) {
               {t("booking.back")}
             </Button>
 
-            {isLast ? (
-              <Button
-                type="button"
-                size="lg"
-                onClick={handleFinalSubmit}
-                loading={isPending}
-                rightIcon={Check}
-              >
-                {t("booking.confirm")}
-              </Button>
-            ) : (
+            {!isPaymentStep && (
               <Button type="button" size="lg" onClick={handleNext} rightIcon={ArrowRight}>
                 {t("booking.continue")}
               </Button>
@@ -141,9 +128,17 @@ function WizardBody({ onConfirmed }) {
 }
 
 export function BookingWizard() {
+  // A service can be pre-selected from a service card (`/booking?service=<id>`),
+  // so the wizard opens with that service already chosen.
+  const [searchParams] = useSearchParams();
+  const preselectedService = searchParams.get("service");
+
   const methods = useForm({
     resolver: zodResolver(bookingSchema),
-    defaultValues: bookingDefaults,
+    defaultValues: {
+      ...bookingDefaults,
+      ...(preselectedService ? { serviceId: preselectedService } : {}),
+    },
     mode: "onTouched",
   });
   const [confirmation, setConfirmation] = useState(null);

@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Menu, LogOut, ChevronDown } from "lucide-react";
+import { Menu, LogOut, ChevronDown, ExternalLink } from "lucide-react";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
+import { ROUTES } from "@/constants/routes";
 import { useTranslation } from "@/i18n";
 import { cn } from "@/lib/cn";
 import { useAuth } from "../context";
@@ -60,6 +61,19 @@ export function AdminTopbar({ onOpenSidebar }) {
       </div>
 
       <div className="ml-auto flex items-center gap-1.5">
+        {/* Opens the full live website in a new tab so the admin can review
+            changes (services, cities, prices, …) on the real site without
+            leaving the panel. */}
+        <a
+          href={ROUTES.home}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mr-1 inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-3 py-2 text-body-sm font-semibold text-brand-700 transition-colors hover:bg-brand-100 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300 dark:hover:bg-brand-500/20"
+        >
+          <ExternalLink className="size-4.5 shrink-0" aria-hidden="true" />
+          <span className="hidden sm:inline">{t("admin.topbar.viewLive")}</span>
+        </a>
+
         <LanguageSwitcher />
         <ThemeToggle />
 

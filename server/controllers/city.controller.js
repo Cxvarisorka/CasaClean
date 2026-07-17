@@ -1,10 +1,7 @@
 const City = require("../models/city.model");
 const AppError = require("../utils/appError.util");
 const catchAsync = require("../utils/catchAsync.util");
-
-// "rOme" / "ROME" -> "Rome". Capitalise first letter, lowercase the rest,
-// so the same city can't be stored under different casings.
-const formatName = (name) => name[0].toUpperCase() + name.slice(1).toLowerCase();
+const formatName = require("../utils/formatName.util");
 
 // GET /api/v1/city -> paginated list of cities
 const getCities = catchAsync(async (req, res) => {
@@ -13,13 +10,24 @@ const getCities = catchAsync(async (req, res) => {
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 10));
 
-    const cities = await City.find()
-        .sort({ createdAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .lean();
+    // Soft-disabled cities are an admin concern: the public list (booking
+    // wizard) only ever sees enabled records. An admin opts into the full
+    // catalogue with ?includeDisabled=true — honoured only when the live DB
+    // role is admin (req.user comes from the attachUser middleware).
+    const includeDisabled = req.query.includeDisabled === "true" && req.user?.role === "admin";
+    const filter = includeDisabled ? {} : { enabled: true };
 
-    const cityCount = await City.countDocuments();
+    // Run the page query and the total count in parallel (independent reads).
+    // For the unfiltered admin view, estimatedDocumentCount reads collection
+    // metadata (O(1)) instead of scanning every document.
+    const [cities, cityCount] = await Promise.all([
+        City.find(filter)
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit)
+            .lean(),
+        includeDisabled ? City.estimatedDocumentCount() : City.countDocuments(filter)
+    ]);
 
     res.status(200).json({
         status: "success",

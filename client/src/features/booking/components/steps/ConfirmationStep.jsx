@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { CalendarCheck, CheckCircle2, Home } from "lucide-react";
+import { CalendarCheck, CheckCircle2, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { formatDate } from "@/utils/formatDate";
 import { formatCurrency } from "@/utils/formatCurrency";
@@ -72,8 +72,8 @@ export function ConfirmationStep({ booking }) {
       </div>
 
       <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-        <Button to={ROUTES.home} leftIcon={Home} size="lg">
-          {t("booking.confirmation.home")}
+        <Button to={ROUTES.profile} leftIcon={UserRound} size="lg">
+          {t("booking.confirmation.profile")}
         </Button>
         <Button to={ROUTES.services} variant="outline" size="lg">
           {t("booking.confirmation.more")}

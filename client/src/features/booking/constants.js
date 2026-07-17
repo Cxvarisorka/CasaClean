@@ -37,6 +37,12 @@ export const BOOKING_STEPS = [
     subtitle: "Confirm everything looks right",
     fields: [],
   },
+  {
+    id: "payment",
+    title: "Payment",
+    subtitle: "Secure checkout to confirm your booking",
+    fields: [],
+  },
 ];
 
 export const ADDITIONAL_SERVICES = [

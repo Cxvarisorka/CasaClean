@@ -1,7 +1,7 @@
 // Modules
 const { z } = require("zod");
 
-// Schema for valdiate add city request body
+// Schema for validate add city request body
 const addCitySchema = z.object({
     name: z
         .string()
