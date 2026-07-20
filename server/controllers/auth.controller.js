@@ -11,6 +11,7 @@ const {
 } = require("../models/user.model");
 const Booking = require("../models/booking.model");
 const Review = require("../models/review.model");
+const Subscription = require("../models/subscription.model");
 const { isProduction } = require("../utils/env.util");
 const AppError = require("../utils/appError.util");
 const catchAsync = require("../utils/catchAsync.util");
@@ -392,11 +393,20 @@ const deleteUser = catchAsync(async (req, res, next) => {
         return next(new AppError("You can't delete your own account!", 400));
     }
 
-    const user = await User.findByIdAndDelete(id);
+    const user = await User.findById(id);
 
     if (!user) {
         return next(new AppError("User not found to delete!", 404));
     }
+
+    // A deleted account must never remain eligible for an unattended charge.
+    // Do this before removing the User so an update failure leaves the account
+    // intact rather than orphaning an active subscription.
+    await Subscription.updateMany(
+        { user: user._id, status: "active" },
+        { $set: { status: "cancelled", cancelledAt: new Date(), processingAt: null } }
+    );
+    await User.deleteOne({ _id: user._id });
 
     res.status(200).json({
         status: "success",
@@ -640,6 +650,13 @@ const deleteMe = catchAsync(async (req, res, next) => {
     // Reviews are the user's own content — remove them. Past bookings are kept
     // as business/financial records (they already carry the customer details
     // they need) but are detached from the deleted account.
+    // Stop every still-active recurring plan before detaching/deleting the
+    // account. Paused plans cannot charge and remain historical state.
+    await Subscription.updateMany(
+        { user: user._id, status: "active" },
+        { $set: { status: "cancelled", cancelledAt: new Date(), processingAt: null } }
+    );
+
     await Review.deleteMany({ user: user._id });
     await Booking.updateMany({ user: user._id }, { $unset: { user: "" } });
     await User.deleteOne({ _id: user._id });

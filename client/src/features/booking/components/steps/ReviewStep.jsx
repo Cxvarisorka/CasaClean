@@ -1,14 +1,14 @@
 import { useFormContext, useWatch } from "react-hook-form";
 import { AlertCircle } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
-import { formatDate } from "@/utils/formatDate";
+import { useTranslation } from "@/i18n";
 import { useServices } from "@/features/services";
 import { useBookingNav } from "../../store/BookingContext";
 import { useCities } from "../../hooks/useCities";
 import { useSpecialRequests } from "../../hooks/useSpecialRequests";
 import { useCleaningTools } from "../../hooks/useCleaningTools";
 import { computeQuote } from "../../utils/pricing";
-import { SUPPLY_OPTIONS } from "../../constants";
+import { formatLocalDateString } from "../../utils/recurrence";
 
 /*
  * ReviewStep
@@ -48,6 +48,7 @@ function Group({ title, stepIndex, children }) {
 }
 
 export function ReviewStep({ submitError }) {
+  const { t, locale } = useTranslation();
   const { control } = useFormContext();
   const v = useWatch({ control });
   const { data: cities = [] } = useCities();
@@ -65,10 +66,8 @@ export function ReviewStep({ submitError }) {
     .map((id) => tools.find((t) => t.value === id)?.label)
     .filter(Boolean)
     .join(", ");
-  const supplyLabels = (v.supplies || [])
-    .map((id) => SUPPLY_OPTIONS.find((s) => s.value === id)?.label)
-    .filter(Boolean)
-    .join(", ");
+  const intervalDays = Number(v.intervalDays) || 0;
+  const dateLocale = locale === "ka" ? "ka-GE" : locale;
 
   return (
     <div className="space-y-4">
@@ -83,12 +82,29 @@ export function ReviewStep({ submitError }) {
         <Row label="Duration" value={`${v.hours}h × ${v.cleaners} cleaner${v.cleaners > 1 ? "s" : ""}`} />
         <Row label="Add-ons" value={addonLabels || "None"} />
         <Row label="Cleaning tools" value={toolLabels || "None"} />
-        <Row label="Supplies" value={supplyLabels || "Host provides"} />
       </Group>
 
       <Group title="Schedule" stepIndex={2}>
-        <Row label="Date" value={v.date ? formatDate(v.date, { style: "long" }) : null} />
+        <Row
+          label="Date"
+          value={
+            v.date
+              ? formatLocalDateString(v.date, dateLocale, {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })
+              : null
+          }
+        />
         <Row label="Time" value={v.time} />
+        {intervalDays > 0 && (
+          <Row
+            label={t("booking.schedule.repeat.label")}
+            value={t("booking.schedule.repeat.everyDays", { days: intervalDays })}
+          />
+        )}
       </Group>
 
       <Group title="Contact" stepIndex={3}>

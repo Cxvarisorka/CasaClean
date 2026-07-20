@@ -11,6 +11,7 @@ import { useServices } from "@/features/services";
 import { useSpecialRequests } from "../../hooks/useSpecialRequests";
 import { useCleaningTools } from "../../hooks/useCleaningTools";
 import { computeQuote } from "../../utils/pricing";
+import { addDaysToDateString, formatLocalDateString } from "../../utils/recurrence";
 import { toBookingPayload } from "../../api/bookingApi";
 import { createBookingIntent, finalizeBooking, listSavedCards } from "../../api/paymentApi";
 
@@ -93,10 +94,13 @@ function CardCheckoutForm({ amount, onFinalize }) {
 }
 
 export function PaymentStep({ onConfirmed }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const queryClient = useQueryClient();
   const { control } = useFormContext();
   const values = useWatch({ control });
+  const intervalDays = Number(values.intervalDays) || 0;
+  const isRecurring = intervalDays > 0;
+  const dateLocale = locale === "ka" ? "ka-GE" : locale;
 
   const { data: addons = [] } = useSpecialRequests();
   const { data: tools = [] } = useCleaningTools();
@@ -115,12 +119,34 @@ export function PaymentStep({ onConfirmed }) {
   const [intent, setIntent] = useState(null); // { clientSecret, paymentIntentId, amount }
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  // A recurring booking must establish an off-session mandate. Derive this
+  // from the chosen frequency rather than synchronising a second state value.
+  const shouldSaveCard = isRecurring || saveCard;
+
+  const nextChargeDate = isRecurring
+    ? addDaysToDateString(values.date, intervalDays - 1)
+    : null;
+  const nextChargeLabel = nextChargeDate
+    ? formatLocalDateString(nextChargeDate, dateLocale, {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    : "—";
 
   // Promote a paid intent into a real booking and advance to the success screen.
   const finalizeAndConfirm = async (paymentIntentId) => {
     const booking = await finalizeBooking(paymentIntentId);
     queryClient.invalidateQueries({ queryKey: ["my-bookings"] });
-    onConfirmed(booking);
+    onConfirmed(
+      isRecurring
+        ? {
+            ...booking,
+            intervalDays,
+            nextChargeDate,
+          }
+        : booking
+    );
   };
 
   const handleContinue = async () => {
@@ -155,7 +181,10 @@ export function PaymentStep({ onConfirmed }) {
       }
 
       // New card: create the intent, then reveal the PaymentElement.
-      const res = await createBookingIntent({ payload, savePaymentMethod: saveCard });
+      const res = await createBookingIntent({
+        payload,
+        savePaymentMethod: shouldSaveCard,
+      });
       setIntent({
         clientSecret: res.clientSecret,
         paymentIntentId: res.paymentIntentId,
@@ -195,6 +224,21 @@ export function PaymentStep({ onConfirmed }) {
       <h3 className="text-body-md font-semibold text-ink-900">
         {t("booking.payment.heading")}
       </h3>
+
+      {isRecurring && (
+        <div className="rounded-2xl border border-brand-100 bg-brand-50 p-4 text-body-sm text-brand-900">
+          <p className="font-semibold">
+            {t("booking.payment.recurring.summary", {
+              amount: formatCurrency(quote.total),
+              days: intervalDays,
+              date: nextChargeLabel,
+            })}
+          </p>
+          <p className="mt-1 text-brand-700">
+            {t("booking.payment.recurring.saveRequired")}
+          </p>
+        </div>
+      )}
 
       {savedCards.length > 0 && (
         <div className="space-y-2">
@@ -242,11 +286,14 @@ export function PaymentStep({ onConfirmed }) {
         <label className="flex cursor-pointer items-center gap-3 text-body-sm text-ink-700">
           <input
             type="checkbox"
-            checked={saveCard}
+            checked={shouldSaveCard}
             onChange={(e) => setSaveCard(e.target.checked)}
+            disabled={isRecurring}
             className="accent-brand-600"
           />
-          {t("booking.payment.saveCard")}
+          {isRecurring
+            ? t("booking.payment.recurring.saveRequired")
+            : t("booking.payment.saveCard")}
         </label>
       )}
 

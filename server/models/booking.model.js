@@ -149,6 +149,13 @@ const bookingSchema = new mongoose.Schema({
   paymentIntentId: {
     type: String
   },
+  // Present only for bookings created from a recurring subscription. Like the
+  // payment intent field, leave this absent (rather than defaulting to null)
+  // for one-off/manual bookings.
+  subscriptionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Subscription'
+  },
   // How the booking was paid for: an online card charge, or a manual/offline
   // (cash/invoice) booking entered by an admin.
   paymentMethod: {
@@ -200,6 +207,8 @@ bookingSchema.index({ status: 1, bookingDate: 1 });
 // Idempotency guard: a given payment can back at most one booking. `sparse` so
 // the many bookings without a payment id (current state) don't collide on null.
 bookingSchema.index({ paymentIntentId: 1 }, { unique: true, sparse: true });
+// Subscription detail/history queries fetch each cycle newest first.
+bookingSchema.index({ subscriptionId: 1, createdAt: -1 });
 
 const Booking = mongoose.model('Booking', bookingSchema);
 module.exports = Booking;

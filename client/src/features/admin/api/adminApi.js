@@ -532,6 +532,66 @@ export const reviewApi = {
   remove: (id) => request({ method: "DELETE", url: `/review/${id}` }),
 };
 
+/* ---------------------------------------------------------- Subscriptions */
+
+// Subscription endpoints are already camelCase on the wire, but admin pages
+// use the same snake_case display shape as the rest of this module. Keep the
+// boundary here so the UI never mixes API field conventions.
+export const subscriptionFromApi = (s) => ({
+  _id: s._id,
+  customer_name: s.customerName || s.user?.fullname || "—",
+  customer_email: s.customerEmail || s.user?.email || "",
+  customer_phone: s.customerPhone || "",
+  user_id: refId(s.user),
+  service_id: refId(s.serviceId),
+  service_name: refName(s.serviceId) || "—",
+  city_id: refId(s.cityId),
+  city_name: refName(s.cityId) || "—",
+  interval_days: Number(s.intervalDays) || 0,
+  status: s.status,
+  paused_reason: s.pausedReason ?? null,
+  next_service_date: s.nextServiceDate,
+  next_charge_at: s.nextChargeAt ?? null,
+  failed_attempts: Number(s.failedAttempts) || 0,
+  last_charge_status: s.lastChargeStatus ?? null,
+  last_charge_at: s.lastChargeAt ?? null,
+  last_error: s.lastError ?? null,
+  last_cycle_amount: s.lastCycleAmount ?? null,
+  charge_attempts: s.chargeAttempts ?? [],
+  createdAt: s.createdAt,
+  pausedAt: s.pausedAt ?? null,
+  cancelledAt: s.cancelledAt ?? null,
+});
+
+const subscriptionAction = async (id, action) => {
+  const data = await request({
+    method: "PATCH",
+    url: `/subscription/${id}/${action}`,
+  });
+  return subscriptionFromApi(data.subscription ?? data);
+};
+
+export const subscriptionApi = {
+  async list({ status } = {}) {
+    const statusQuery = status ? `&status=${encodeURIComponent(status)}` : "";
+    const data = await request({
+      method: "GET",
+      url: `/subscription?limit=100${statusQuery}`,
+    });
+    return (data.subscriptions ?? []).map(subscriptionFromApi);
+  },
+  async get(id) {
+    const data = await request({ method: "GET", url: `/subscription/${id}` });
+    return {
+      subscription: subscriptionFromApi(data.subscription),
+      bookings: (data.bookings ?? []).map(bookingFromApi),
+    };
+  },
+  pause: (id) => subscriptionAction(id, "admin-pause"),
+  resume: (id) => subscriptionAction(id, "admin-resume"),
+  cancel: (id) => subscriptionAction(id, "admin-cancel"),
+};
+
 /* ----------------------------------------------------------------- Registry */
 
 // Collection name (as used by the admin pages) → its API module. The data

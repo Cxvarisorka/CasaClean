@@ -17,13 +17,13 @@ export const BOOKING_STEPS = [
     id: "preferences",
     title: "Cleaning preferences",
     subtitle: "Tailor the turnover",
-    fields: ["serviceId", "hours", "cleaners", "additionalServices", "supplies"],
+    fields: ["serviceId", "hours", "cleaners", "additionalServices", "cleaningTools"],
   },
   {
     id: "schedule",
     title: "Schedule",
     subtitle: "Pick a date and time",
-    fields: ["date", "time"],
+    fields: ["date", "time", "intervalDays"],
   },
   {
     id: "contact",
@@ -52,13 +52,6 @@ export const ADDITIONAL_SERVICES = [
   { value: "staging", label: "Guest-ready staging", price: 35 },
 ];
 
-export const SUPPLY_OPTIONS = [
-  { value: "provide-solvents", label: "Cleaning solvents" },
-  { value: "provide-mop", label: "Mop & bucket" },
-  { value: "provide-vacuum", label: "Vacuum cleaner" },
-  { value: "provide-cloths", label: "Microfiber cloths" },
-];
-
 export const TIME_SLOTS = [
   "09:00",
   "10:00",
@@ -72,5 +65,10 @@ export const TIME_SLOTS = [
 
 export const HOURS_RANGE = [1, 2, 3, 4, 5, 6];
 export const CLEANERS_RANGE = [1, 2, 3];
+
+// The public recurring-booking choices. The API also accepts two-day intervals
+// for compatibility, but that cadence is intentionally not offered in the UI.
+// Labels live in i18n because the value is used by OptionGroup as the form value.
+export const RECURRENCE_OPTIONS = [0, 3, 5, 7, 14, 30];
 
 export const BOOKING_STORAGE_KEY = "casaclean:booking-draft";

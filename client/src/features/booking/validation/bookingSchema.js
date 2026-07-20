@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { todayDateString } from "../utils/recurrence";
 
 /*
  * Booking validation
@@ -8,7 +9,7 @@ import { z } from "zod";
  * rules in one place and gives us a fully-typed payload at submission.
  */
 
-const todayISO = () => new Date().toISOString().split("T")[0];
+const todayISO = () => todayDateString();
 
 export const bookingSchema = z.object({
   // Step 1 — property
@@ -27,7 +28,6 @@ export const bookingSchema = z.object({
   cleaners: z.coerce.number().min(1, "Select cleaners").max(3),
   additionalServices: z.array(z.string()).default([]),
   cleaningTools: z.array(z.string()).default([]),
-  supplies: z.array(z.string()).default([]),
 
   // Step 3 — schedule
   date: z
@@ -35,6 +35,7 @@ export const bookingSchema = z.object({
     .min(1, "Pick a date")
     .refine((v) => v >= todayISO(), "Choose a future date"),
   time: z.string().min(1, "Pick a time slot"),
+  intervalDays: z.coerce.number().int().default(0),
 
   // Step 4 — contact
   name: z.string().trim().min(2, "Enter your full name"),
@@ -57,9 +58,9 @@ export const bookingDefaults = {
   cleaners: 1,
   additionalServices: [],
   cleaningTools: [],
-  supplies: [],
   date: "",
   time: "",
+  intervalDays: 0,
   name: "",
   email: "",
   phone: "",

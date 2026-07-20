@@ -29,6 +29,7 @@ export const ROUTES = {
     login: "/admin/login",
     dashboard: "/admin",
     bookings: "/admin/bookings",
+    subscriptions: "/admin/subscriptions",
     calendar: "/admin/calendar",
     services: "/admin/services",
     specialRequests: "/admin/special-requests",

@@ -1,6 +1,7 @@
 import {
   LayoutDashboard,
   CalendarCheck,
+  CalendarClock,
   CalendarDays,
   Sparkles,
   ListPlus,
@@ -25,6 +26,7 @@ import { ROUTES } from "@/constants/routes";
 export const ADMIN_NAV = [
   { to: ROUTES.admin.dashboard, label: "Dashboard", labelKey: "admin.nav.dashboard", icon: LayoutDashboard, end: true },
   { to: ROUTES.admin.bookings, label: "Bookings", labelKey: "admin.nav.bookings", icon: CalendarCheck },
+  { to: ROUTES.admin.subscriptions, label: "Subscriptions", labelKey: "admin.nav.subscriptions", icon: CalendarClock },
   { to: ROUTES.admin.calendar, label: "Calendar", labelKey: "admin.nav.calendar", icon: CalendarDays },
   { to: ROUTES.admin.services, label: "Services", labelKey: "admin.nav.services", icon: Sparkles },
   { to: ROUTES.admin.specialRequests, label: "Special requests", labelKey: "admin.nav.specialRequests", icon: ListPlus },
@@ -45,6 +47,14 @@ export const BOOKING_STATUS_META = {
   confirmed: { label: "Confirmed", labelKey: "admin.status.confirmed", variant: "brand" },
   completed: { label: "Completed", labelKey: "admin.status.completed", variant: "success" },
   cancelled: { label: "Cancelled", labelKey: "admin.status.cancelled", variant: "outline" },
+};
+
+// Recurring subscription lifecycle badges. These names match the server enum
+// exactly; pause reasons remain supplemental flags, not another status.
+export const SUBSCRIPTION_STATUS_META = {
+  active: { label: "Active", labelKey: "admin.subscriptions.status.active", variant: "brand" },
+  paused: { label: "Paused", labelKey: "admin.subscriptions.status.paused", variant: "accent" },
+  cancelled: { label: "Cancelled", labelKey: "admin.subscriptions.status.cancelled", variant: "outline" },
 };
 
 // Read-only payment posture badge (mirrors booking.model.js paymentStatus enum).

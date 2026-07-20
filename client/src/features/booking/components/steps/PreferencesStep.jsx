@@ -9,13 +9,13 @@ import { OptionGroup } from "../fields/OptionGroup";
 import { ToggleCard } from "../fields/ToggleCard";
 import { useSpecialRequests } from "../../hooks/useSpecialRequests";
 import { useCleaningTools } from "../../hooks/useCleaningTools";
-import { SUPPLY_OPTIONS, HOURS_RANGE } from "../../constants";
+import { HOURS_RANGE } from "../../constants";
 
 /*
  * PreferencesStep
  * ---------------
  * Step 2 — the heart of the configurator: choose a service, sizing (hours ×
- * cleaners) and optional add-ons/supplies. Single-selects use a Controller with
+ * cleaners) and optional add-ons/cleaning tools. Single-selects use a Controller with
  * OptionGroup; multi-selects manage arrays via Controller + ToggleCard.
  */
 
@@ -260,30 +260,6 @@ export function PreferencesStep() {
           )}
         />
       )}
-
-      {/* Supplies */}
-      <Controller
-        control={control}
-        name="supplies"
-        render={({ field }) => (
-          <div>
-            <p className="mb-3 text-body-sm font-semibold text-ink-800">
-              We should bring{" "}
-              <span className="font-normal text-ink-400">(optional)</span>
-            </p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {SUPPLY_OPTIONS.map((supply) => (
-                <ToggleCard
-                  key={supply.value}
-                  title={supply.label}
-                  selected={(field.value || []).includes(supply.value)}
-                  onToggle={() => field.onChange(toggleInArray(field.value, supply.value))}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-      />
     </div>
   );
 }

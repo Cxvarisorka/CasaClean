@@ -26,6 +26,7 @@ require("./config/sentry.config");
 // Models (referenced directly for one-off startup tasks like index sync)
 const Review = require('./models/review.model');
 const Booking = require('./models/booking.model');
+const Subscription = require('./models/subscription.model');
 const User = require('./models/user.model');
 
 // Custom middlewares
@@ -45,6 +46,11 @@ const cleaningToolRouter = require('./routers/cleaningTool.router');
 const reviewRouter = require('./routers/review.router');
 const workerRouter = require('./routers/worker.router');
 const paymentRouter = require('./routers/payment.router');
+const subscriptionRouter = require('./routers/subscription.router');
+
+// Imported without side effects. startJobs is invoked only after app.listen so
+// server/tests can safely require this app object without starting cron.
+const { startJobs, stopJobs } = require('./jobs');
 
 // Stripe webhook (raw-body handler; mounted before the JSON parser & CSRF guard)
 const { handleStripeWebhook } = require('./controllers/webhook.controller');
@@ -150,6 +156,7 @@ app.use('/api/v1/cleaning-tool', cleaningToolRouter);
 app.use('/api/v1/review', reviewRouter);
 app.use('/api/v1/worker', workerRouter);
 app.use('/api/v1/payment', paymentRouter);
+app.use('/api/v1/subscription', subscriptionRouter);
 
 // 404 — any unmatched route falls through to here.
 // Express 5 changed the wildcard syntax; use a named splat ("/*splat").
@@ -182,6 +189,7 @@ const start = async () => {
             await Promise.all([
                 Review.syncIndexes(),
                 Booking.syncIndexes(),
+                Subscription.syncIndexes(),
                 User.syncIndexes()
             ]);
         } catch (indexErr) {
@@ -191,6 +199,7 @@ const start = async () => {
         const server = app.listen(process.env.PORT, () => {
             console.log(`Server is running on port ${process.env.PORT}`);
         });
+        startJobs();
 
         // Graceful shutdown: on SIGTERM/SIGINT (deploys, Ctrl-C, platform
         // restarts) stop accepting new connections, let in-flight requests —
@@ -198,6 +207,7 @@ const start = async () => {
         // The 10s timer is a hard backstop so a stuck connection can't block
         // the deploy forever.
         const shutdown = (signal) => {
+            stopJobs();
             console.log(`${signal} received — shutting down gracefully...`);
             server.close(async () => {
                 try {
@@ -219,16 +229,24 @@ const start = async () => {
     }
 };
 
-start();
+// Only boot (connect + listen + process-level safety nets) when this file is
+// run directly (`node app.js`). The test suites require the app object and
+// manage their own database connection, so requiring this module must stay
+// side-effect free.
+if (require.main === module) {
+    start();
 
-// Last-resort safety nets: never leave the process running in a corrupted state
-// after an unhandled failure — sync (uncaughtException) or async (rejection).
-process.on("uncaughtException", (err) => {
-    console.error("UNCAUGHT EXCEPTION 💥 Shutting down...", err);
-    process.exit(1);
-});
+    // Last-resort safety nets: never leave the process running in a corrupted state
+    // after an unhandled failure — sync (uncaughtException) or async (rejection).
+    process.on("uncaughtException", (err) => {
+        console.error("UNCAUGHT EXCEPTION 💥 Shutting down...", err);
+        process.exit(1);
+    });
 
-process.on("unhandledRejection", (err) => {
-    console.error("UNHANDLED REJECTION 💥 Shutting down...", err);
-    process.exit(1);
-});
+    process.on("unhandledRejection", (err) => {
+        console.error("UNHANDLED REJECTION 💥 Shutting down...", err);
+        process.exit(1);
+    });
+}
+
+module.exports = app;

@@ -1,5 +1,6 @@
 const { z } = require("zod");
 const { createBookingSchema } = require("./booking.validation");
+const { ALLOWED_INTERVAL_DAYS } = require('../utils/date.util');
 
 // Booking payment-intent body = the full booking payload (re-validated by the
 // same rules as the create endpoint) PLUS two optional payment options:
@@ -15,6 +16,15 @@ const bookingIntentSchema = createBookingSchema
             .string()
             .trim()
             .min(1, { message: "savedPaymentMethodId can't be empty!" })
+            .optional(),
+        // Omitted for a one-off booking. A recurring first cycle is still an
+        // on-session payment, but must establish an off-session card mandate.
+        intervalDays: z
+            .number()
+            .int()
+            .refine((value) => ALLOWED_INTERVAL_DAYS.includes(value), {
+                message: `intervalDays must be one of: ${ALLOWED_INTERVAL_DAYS.join(', ')}`
+            })
             .optional()
     })
     .strict({ message: "Unknown fields are not allowed!" });

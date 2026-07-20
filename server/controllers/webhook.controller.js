@@ -15,6 +15,7 @@ const Booking = require('../models/booking.model');
 const PendingBooking = require('../models/pendingBooking.model');
 const sendEmail = require('../utils/email.util');
 const { promotePendingBooking } = require('./payment.controller');
+const { ensureSubscriptionCycleBooking } = require('../services/subscription.service');
 
 const handleStripeWebhook = async (req, res) => {
   const signature = req.headers['stripe-signature'];
@@ -45,6 +46,12 @@ const handleStripeWebhook = async (req, res) => {
         const pi = event.data.object;
         // Backstop for the client finalize call — create the booking if it
         // hasn't been already.
+        if (pi.metadata?.type === 'subscription-cycle') {
+          // Job-side creation is the normal path; this repairs a crash after
+          // Stripe captured a cycle PaymentIntent.
+          await ensureSubscriptionCycleBooking(pi);
+          break;
+        }
         await promotePendingBooking(pi.id, pi);
         break;
       }
@@ -55,6 +62,9 @@ const handleStripeWebhook = async (req, res) => {
         // decline doesn't just go silent — never awaited past the response and
         // never allowed to fail the webhook.
         const pi = event.data.object;
+        // Cycle declines are handled synchronously by the subscription worker.
+        // Never send the one-off "book again" email for an automatic retry.
+        if (pi.metadata?.type === 'subscription-cycle') break;
         const pending = await PendingBooking.findOne({ paymentIntentId: pi.id })
           .select('draft.customerEmail draft.customerName')
           .lean()

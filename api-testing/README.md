@@ -107,3 +107,4 @@ Good to know:
 4. Then [service/service-tests.md](service/service-tests.md).
 5. Then [special-request/special-request-tests.md](special-request/special-request-tests.md).
 6. Then [booking/booking-tests.md](booking/booking-tests.md).
+7. Then [subscription/subscription-tests.md](subscription/subscription-tests.md).

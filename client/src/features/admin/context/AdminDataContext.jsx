@@ -67,7 +67,12 @@ export function AdminDataProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    refresh();
+    // Defer the initial async load one task so React does not receive a
+    // synchronous state update while this effect is being committed.
+    const initialLoad = setTimeout(() => {
+      void refresh();
+    }, 0);
+    return () => clearTimeout(initialLoad);
   }, [refresh]);
 
   // Run a mutation against the backend. On failure we surface the server's

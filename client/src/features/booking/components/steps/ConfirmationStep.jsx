@@ -1,11 +1,11 @@
 import { motion } from "framer-motion";
 import { CalendarCheck, CheckCircle2, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { formatDate } from "@/utils/formatDate";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { ROUTES } from "@/constants/routes";
 import { useTranslation } from "@/i18n";
 import { EASE_SPRING } from "@/animations/tokens";
+import { addDaysToDateString, formatLocalDateString } from "../../utils/recurrence";
 
 /*
  * ConfirmationStep
@@ -15,8 +15,16 @@ import { EASE_SPRING } from "@/animations/tokens";
  */
 
 export function ConfirmationStep({ booking }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const firstName = booking.customer_name?.split(" ")[0] || "there";
+  const intervalDays = Number(booking.intervalDays) || 0;
+  const isRecurring = intervalDays > 0;
+  const dateLocale = locale === "ka" ? "ka-GE" : locale;
+  const nextChargeDate =
+    booking.nextChargeDate ||
+    (isRecurring
+      ? addDaysToDateString(booking.booking_date, intervalDays - 1)
+      : null);
 
   return (
     <motion.div
@@ -60,22 +68,41 @@ export function ConfirmationStep({ booking }) {
           <div>
             <p className="text-body-sm font-semibold text-ink-900">
               {booking.booking_date
-                ? formatDate(booking.booking_date, { style: "long" })
+                ? formatLocalDateString(booking.booking_date, dateLocale, {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })
                 : "Scheduled"}{" "}
               · {booking.booking_time}
             </p>
             <p className="text-caption text-ink-500">
               {formatCurrency(booking.total_amount)} {t("booking.confirmation.total")}
             </p>
+            {isRecurring && (
+              <p className="mt-1 text-caption text-brand-700">
+                {t("booking.schedule.repeat.everyDays", { days: intervalDays })}
+                {nextChargeDate
+                  ? ` · ${t("booking.payment.recurring.nextCharge", {
+                      date: formatLocalDateString(nextChargeDate, dateLocale, {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      }),
+                    })}`
+                  : ""}
+              </p>
+            )}
           </div>
         </div>
       </div>
 
       <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-        <Button to={ROUTES.profile} leftIcon={UserRound} size="lg">
+        <Button to={ROUTES.profile} leftIcon={UserRound} size="lg" className="w-full sm:w-auto">
           {t("booking.confirmation.profile")}
         </Button>
-        <Button to={ROUTES.services} variant="outline" size="lg">
+        <Button to={ROUTES.services} variant="outline" size="lg" className="w-full sm:w-auto">
           {t("booking.confirmation.more")}
         </Button>
       </div>

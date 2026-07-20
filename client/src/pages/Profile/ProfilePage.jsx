@@ -34,6 +34,7 @@ import {
   cancelMyBooking,
   getMyReviews,
   createBookingReview,
+  MySubscriptions,
 } from "@/features/booking";
 import { useCities } from "@/features/booking/hooks/useCities";
 import { SavedCards } from "@/features/booking/components/SavedCards";
@@ -42,6 +43,7 @@ import { Seo } from "@/seo";
 import { useTranslation } from "@/i18n";
 import { ROUTES } from "@/constants/routes";
 import { cn } from "@/lib/cn";
+import { localDateFromDateString } from "@/features/booking/utils/recurrence";
 
 /*
  * ProfilePage
@@ -60,14 +62,20 @@ const initials = (name = "") =>
     .join("")
     .toUpperCase() || "U";
 
-const fmtDate = (iso, locale) =>
-  iso
-    ? new Date(iso).toLocaleDateString(locale === "ka" ? "ka-GE" : locale, {
+const fmtDate = (value, locale) => {
+  const calendarDate = localDateFromDateString(value);
+  const isCalendarDate = typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+  const timestamp = !calendarDate && !isCalendarDate && value ? Date.parse(value) : Number.NaN;
+  const date = calendarDate || (!Number.isNaN(timestamp) ? new Date(timestamp) : null);
+
+  return date
+    ? date.toLocaleDateString(locale === "ka" ? "ka-GE" : locale, {
         day: "2-digit",
         month: "long",
         year: "numeric",
       })
     : "—";
+};
 
 const eur = (n) =>
   new Intl.NumberFormat("en-IE", { style: "currency", currency: "EUR" }).format(
@@ -355,6 +363,10 @@ const ProfilePage = () => {
                   </Button>
                 )}
               </Card>
+
+              {/* Recurring service controls stay immediately above saved cards so
+                  a paused customer can update a card without hunting for it. */}
+              <MySubscriptions />
 
               {/* Saved cards (hidden when Stripe isn't configured) */}
               <SavedCards />

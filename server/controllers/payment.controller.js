@@ -14,6 +14,7 @@ const stripe = require('../config/stripe.config');
 
 const Booking = require('../models/booking.model');
 const PendingBooking = require('../models/pendingBooking.model');
+const Subscription = require('../models/subscription.model');
 const User = require('../models/user.model');
 
 const catchAsync = require('../utils/catchAsync.util');
@@ -24,6 +25,7 @@ const {
   buildValidatedBookingDraft,
   renderBookingConfirmationEmail
 } = require('../services/booking.service');
+const { createSubscriptionFromFirstBooking } = require('../services/subscription.service');
 
 const CURRENCY = 'eur';
 
@@ -62,7 +64,23 @@ const ensureStripeCustomer = async (user) => {
 const promotePendingBooking = async (paymentIntentId, paymentIntent = null) => {
   // Already promoted? Return the existing booking (idempotent).
   const existing = await Booking.findOne({ paymentIntentId });
-  if (existing) return existing;
+  if (existing) {
+    // Repair the narrow crash window after Booking.create but before the
+    // recurring template was created. The first PI's unique Subscription index
+    // keeps this safe across finalize/webhook races.
+    const existingPending = await PendingBooking.findOne({ paymentIntentId });
+    if (existingPending?.recurrence?.intervalDays) {
+      await createSubscriptionFromFirstBooking({
+        pending: existingPending,
+        booking: existing,
+        paymentIntent
+      });
+    }
+    if (existingPending) {
+      await PendingBooking.deleteOne({ paymentIntentId }).catch(() => {});
+    }
+    return Booking.findById(existing._id);
+  }
 
   const pending = await PendingBooking.findOne({ paymentIntentId });
   if (!pending) return null; // expired/never existed and no booking — nothing to do
@@ -104,10 +122,30 @@ const promotePendingBooking = async (paymentIntentId, paymentIntent = null) => {
     // Concurrent promotion (finalize + webhook race): the unique index rejects
     // the duplicate. Treat as already promoted.
     if (err.code === 11000) {
+      const alreadyPromoted = await Booking.findOne({ paymentIntentId });
+      if (pending.recurrence?.intervalDays && alreadyPromoted) {
+        await createSubscriptionFromFirstBooking({
+          pending,
+          booking: alreadyPromoted,
+          paymentIntent
+        });
+      }
       await PendingBooking.deleteOne({ paymentIntentId }).catch(() => {});
       return Booking.findOne({ paymentIntentId });
     }
     throw err;
+  }
+
+  // First-cycle payment and Booking creation succeeded. Only now create the
+  // recurring template; helper-level firstPaymentIntentId idempotency handles
+  // a concurrent finalize/webhook promotion.
+  if (pending.recurrence?.intervalDays) {
+    const subscription = await createSubscriptionFromFirstBooking({
+      pending,
+      booking,
+      paymentIntent
+    });
+    if (subscription) booking.subscriptionId = subscription._id;
   }
 
   // Draft fulfilled — remove it so it isn't reaped/processed again.
@@ -173,7 +211,12 @@ const refundBookingPayment = async (booking) => {
 // Validate + price the booking server-side, store a PendingBooking draft, and
 // create a Stripe PaymentIntent. Returns the clientSecret for the SPA to confirm.
 const createBookingIntent = catchAsync(async (req, res, next) => {
-  const { savePaymentMethod, savedPaymentMethodId } = req.body;
+  const { savePaymentMethod, savedPaymentMethodId, intervalDays } = req.body;
+  const isRecurring = intervalDays !== undefined;
+
+  if (isRecurring && !savedPaymentMethodId && !savePaymentMethod) {
+    return next(new AppError("A recurring booking requires a saved card.", 400));
+  }
 
   // Fail-closed validation + server-side pricing (never trusts client totals).
   const draft = await buildValidatedBookingDraft(req.body, req.user);
@@ -191,11 +234,17 @@ const createBookingIntent = catchAsync(async (req, res, next) => {
     // Stripe sends its own payment receipt on success (on top of our branded
     // confirmation email) — an independent paper trail for the customer.
     receipt_email: draft.customerEmail,
-    metadata: { type: 'booking', userId: String(req.user._id) }
+    metadata: {
+      type: 'booking',
+      userId: String(req.user._id),
+      ...(isRecurring
+        ? { recurring: 'true', intervalDays: String(intervalDays) }
+        : {})
+    }
   };
 
   // Save the card on the customer for future bookings if requested.
-  if (savePaymentMethod || savedPaymentMethodId) {
+  if (isRecurring || savePaymentMethod || savedPaymentMethodId) {
     params.setup_future_usage = 'off_session';
   }
 
@@ -227,8 +276,17 @@ const createBookingIntent = catchAsync(async (req, res, next) => {
     user: req.user._id,
     paymentIntentId: paymentIntent.id,
     savePaymentMethod: Boolean(savePaymentMethod || savedPaymentMethodId),
+    recurrence: isRecurring ? { intervalDays } : null,
     draft: draftFields
   });
+
+  // A saved card is confirmed server-side and can succeed immediately. Stripe
+  // may deliver its webhook before the draft above exists; promote it here once
+  // persistence is complete so an ACKed early webhook can never strand a paid
+  // first booking (or its recurring Subscription) waiting on client finalize.
+  if (paymentIntent.status === 'succeeded') {
+    await promotePendingBooking(paymentIntent.id, paymentIntent);
+  }
 
   res.status(201).json({
     status: "success",
@@ -413,6 +471,20 @@ const deletePaymentMethod = catchAsync(async (req, res, next) => {
   // Never detach a card that isn't this user's.
   if (pm.customer !== fresh.stripeCustomerId) {
     return next(new AppError("Card not found.", 404));
+  }
+
+  // Do not detach a card that an active or paused recurring plan still needs.
+  // A customer must update that subscription's card (or cancel it) first.
+  const usedBySubscription = await Subscription.exists({
+    user: req.user._id,
+    paymentMethodId: id,
+    status: { $in: ['active', 'paused'] }
+  });
+  if (usedBySubscription) {
+    return next(new AppError(
+      "This card is used by a recurring subscription. Switch that subscription's card first.",
+      400
+    ));
   }
 
   await stripe.paymentMethods.detach(id);

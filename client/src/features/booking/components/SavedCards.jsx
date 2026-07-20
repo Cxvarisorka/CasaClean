@@ -117,7 +117,7 @@ export function SavedCards() {
   if (!isStripeConfigured) return null;
 
   return (
-    <Card className="p-6">
+    <Card id="saved-cards" className="p-6">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-heading-sm text-ink-900">{t("profile.payments.title")}</h2>
         <Button

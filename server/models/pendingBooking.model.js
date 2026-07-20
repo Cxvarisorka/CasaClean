@@ -34,6 +34,16 @@ const pendingBookingSchema = new mongoose.Schema({
     default: false
   },
 
+  // Present only when this first paid booking starts a recurring subscription.
+  // It sits outside the draft because recurrence is payment/schedule state, not
+  // a field copied into an individual Booking.
+  recurrence: {
+    type: new mongoose.Schema({
+      intervalDays: { type: Number }
+    }, { _id: false }),
+    default: null
+  },
+
   // The fully validated & priced booking payload, ready to hand to
   // Booking.create() on promotion. An explicit sub-schema (rather than a free
   // Mixed blob) keeps the shape honest.

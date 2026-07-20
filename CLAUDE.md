@@ -33,7 +33,16 @@ Both sides need a `.env` (copy from each `.env.example`). The server **refuses t
 ## Backend architecture
 
 ### Request pipeline (order is load-bearing — see `server/app.js`)
-`assertEnv()` (fail-fast on bad config) → `helmet` → CORS allow-list (`CLIENT_URL` only, `credentials:true`) → `globalLimiter` → `passport.initialize()` → `express.json({limit:'4mb'})` + `cookieParser` → `csrfGuard` → `sanitizeMongo` → routers (`/api/v1/{auth,city,service,booking,special-request,review}`) → `/*splat` 404 → Sentry error handler → `globalErrorHandler` (must be last).
+`assertEnv()` (fail-fast on bad config) → `helmet` → CORS allow-list (`CLIENT_URL` only, `credentials:true`) → `globalLimiter` → `passport.initialize()` → `express.json({limit:'4mb'})` + `cookieParser` → `csrfGuard` → `sanitizeMongo` → routers (`/api/v1/{auth,city,service,booking,special-request,review,subscription}`) → `/*splat` 404 → Sentry error handler → `globalErrorHandler` (must be last).
+
+### Routes and background jobs
+
+- The application mounts recurring-subscription routes at `/api/v1/subscription`.
+- Recurring subscription charges run through `node-cron`. Jobs start only inside
+  `start()` after `app.listen` when `server/app.js` is run directly, so requiring
+  the app (including from tests) has no cron side effects. Shutdown calls
+  `stopJobs()` before closing the listener and database; the charge sweep remains
+  exported for controlled verification.
 
 ### Per-resource MVC layering
 Each resource follows the same vertical slice, named by suffix: `routers/x.router.js` → `validations/x.validation.js` (Zod) → `controllers/x.controller.js` → `models/x.model.js`.

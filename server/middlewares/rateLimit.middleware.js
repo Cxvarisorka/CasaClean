@@ -1,11 +1,15 @@
 const rateLimit = require("express-rate-limit");
 
 // Shared JSON shape so limiter responses look like every other API error.
+// Limits are skipped under NODE_ENV=test: the automated suites fire many
+// requests from a single IP (supertest), which would trip every limiter and
+// fail unrelated tests. Checked per-request so nothing else changes.
 const limiterOptions = (max, windowMs, message) => ({
     windowMs,
     max,
     standardHeaders: true,   // RateLimit-* headers so clients can back off
     legacyHeaders: false,
+    skip: () => process.env.NODE_ENV === "test",
     message: { success: false, status: "fail", message }
 });
 

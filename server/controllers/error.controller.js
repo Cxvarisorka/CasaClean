@@ -87,14 +87,9 @@ const globalErrorHandler = (err, req, res, next) => {
     err.statusCode = err.statusCode || 500;
     err.status = err.status || "error";
 
-    // Fail-secure: stacks/error internals are only sent when the environment
-    // is EXPLICITLY a development one (see utils/env.util.js). Any unknown
-    // NODE_ENV value gets the safe production behaviour.
-    if (!isProduction) {
-        return sendErrorDev(err, res);
-    }
-
-    // Normalise known DB/JWT errors into operational AppErrors before sending.
+    // Normalise known DB/JWT/Stripe errors into operational AppErrors BEFORE the
+    // dev/prod split, so both environments return the same status codes (an
+    // invalid JWT is a 401 everywhere — not a 500 in dev and a 401 in prod).
     // Copy first so we don't mutate the original error object.
     let error = Object.assign(Object.create(Object.getPrototypeOf(err)), err);
     error.message = err.message;
@@ -105,6 +100,17 @@ const globalErrorHandler = (err, req, res, next) => {
     if (err.name === "JsonWebTokenError") error = handleJWTError();
     if (err.name === "TokenExpiredError") error = handleJWTExpired();
     if (isStripeError(err) && STRIPE_ERROR_TYPES.has(err.type)) error = handleStripeError(err);
+
+    // Fail-secure: stacks/error internals are only sent when the environment
+    // is EXPLICITLY a development one (see utils/env.util.js). Any unknown
+    // NODE_ENV value gets the safe production behaviour.
+    if (!isProduction) {
+        // Keep the ORIGINAL stack/details — the normalised copy points at the
+        // handler, which is useless for debugging.
+        error.stack = err.stack;
+        if (error.details == null) error.details = err.details;
+        return sendErrorDev(error, res);
+    }
 
     sendErrorProd(error, res);
 };

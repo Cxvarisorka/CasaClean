@@ -13,7 +13,7 @@ import { request } from "@/services/api";
 const ref = (id) => `CC-${String(id).slice(-6).toUpperCase()}`;
 
 export function toBookingPayload(values) {
-  return {
+  const payload = {
     serviceId: values.serviceId,
     cityId: values.cityId,
     // Name and email are NOT sent: the server derives them from the signed-in
@@ -36,8 +36,16 @@ export function toBookingPayload(values) {
     // Requested tools are CleaningTool ids (validated server-side against
     // enabled tools usable on the chosen service).
     cleaningTools: values.cleaningTools || [],
-    supplies: values.supplies || [],
   };
+
+  // `intervalDays: 0` is a UI-only one-time sentinel. The payment schema is
+  // strict, so omit it completely unless this is actually a recurring booking.
+  const intervalDays = Number(values.intervalDays);
+  if (Number.isInteger(intervalDays) && intervalDays > 0) {
+    payload.intervalDays = intervalDays;
+  }
+
+  return payload;
 }
 
 /**

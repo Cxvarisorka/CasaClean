@@ -313,7 +313,7 @@ const formatEuro = (n) =>
  */
 const renderBookingConfirmationEmail = ({
   customerName, serviceName, bookingDate, bookingTime,
-  hours, cleaners, streetName, houseNumber, totalAmount
+  hours, cleaners, streetName, houseNumber, totalAmount, recurring = false
 }) => {
   const subject = "CasaClean — Your booking is confirmed 🎉";
   const name = escapeHtml(customerName);
@@ -327,6 +327,7 @@ const renderBookingConfirmationEmail = ({
     ["Time", bookingTime],
     ["Duration", `${hours} h · ${cleaners} cleaner(s)`],
     ["Address", address || "—"],
+    ...(recurring ? [["Plan", "Recurring service"]] : []),
     ["Payment", `${total} — paid`],
   ];
 
@@ -404,6 +405,7 @@ const renderBookingConfirmationEmail = ({
     `Time:     ${bookingTime}\n` +
     `Duration: ${hours} h (${cleaners} cleaner(s))\n` +
     `Address:  ${address || "—"}\n` +
+    `${recurring ? "Plan:     Recurring service\n" : ""}` +
     `Paid:     ${total}\n\n` +
     `Thank you for choosing CasaClean!`;
 
