@@ -318,13 +318,13 @@ const finalizeBooking = catchAsync(async (req, res, next) => {
     return next(new AppError("Payment has not been completed yet.", 400));
   }
 
-  // Ownership: the intent must belong to this user's Stripe customer.
+  // Ownership: the intent must belong to this user's Stripe customer. A caller
+  // with no stripeCustomerId can't own ANY customer-attached intent (intent
+  // creation always ensures a customer first), so a missing id is a mismatch —
+  // not a pass — otherwise a fresh account could drive the refund path below
+  // against another user's orphaned payment.
   const fresh = await User.findById(req.user._id).select('stripeCustomerId');
-  if (
-    paymentIntent.customer &&
-    fresh?.stripeCustomerId &&
-    paymentIntent.customer !== fresh.stripeCustomerId
-  ) {
+  if (paymentIntent.customer && paymentIntent.customer !== fresh?.stripeCustomerId) {
     return next(new AppError("This payment does not belong to your account.", 403));
   }
 

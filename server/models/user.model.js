@@ -31,7 +31,12 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: [function () { return this.provider === "local" }, "Phone number is required!"],
         trim: true,
-        unique: true
+        // sparse: Google users are created without a phone. A non-sparse unique
+        // index puts every phone-less document into the index as null, so the
+        // SECOND Google user ever would collide (E11000) and be unable to sign
+        // up. Local users always have a phone, so their uniqueness is unchanged.
+        unique: true,
+        sparse: true
     },
     password: {
         type: String,
