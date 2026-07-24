@@ -45,7 +45,7 @@ function ComparisonSlider() {
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       role="slider"
-      aria-label="Before and after comparison"
+      aria-label={t("beforeAfter.sliderLabel")}
       aria-valuenow={Math.round(position)}
       aria-valuemin={0}
       aria-valuemax={100}
@@ -58,7 +58,7 @@ function ComparisonSlider() {
       {/* After (base layer) */}
       <Image
         src={IMAGES.afterRoom}
-        alt="The space after a CasaClean turnover — bright and guest-ready"
+        alt={t("beforeAfter.afterAlt")}
         rounded="rounded-none"
         className="absolute inset-0 size-full"
         gradient="from-brand-400 to-brand-600"
@@ -77,7 +77,7 @@ function ComparisonSlider() {
       >
         <Image
           src={IMAGES.beforeRoom}
-          alt="The space before cleaning, just after guest checkout"
+          alt={t("beforeAfter.beforeAlt")}
           rounded="rounded-none"
           className="absolute inset-0 size-full"
           imgClassName="grayscale-[35%] brightness-90 contrast-95"

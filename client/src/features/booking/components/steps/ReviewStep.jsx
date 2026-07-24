@@ -29,6 +29,7 @@ function Row({ label, value }) {
 }
 
 function Group({ title, stepIndex, children }) {
+  const { t } = useTranslation();
   const { goTo } = useBookingNav();
   return (
     <div className="rounded-2xl border border-ink-100 bg-surface p-5">
@@ -39,7 +40,7 @@ function Group({ title, stepIndex, children }) {
           onClick={() => goTo(stepIndex)}
           className="text-body-sm font-semibold text-brand-600 hover:text-brand-700"
         >
-          Edit
+          {t("booking.edit")}
         </button>
       </div>
       <div className="mt-2 divide-y divide-ink-50">{children}</div>
@@ -55,7 +56,14 @@ export function ReviewStep({ submitError }) {
   const { data: addons = [] } = useSpecialRequests();
   const { data: tools = [] } = useCleaningTools();
   const { services } = useServices();
-  const quote = computeQuote(v, { addons, tools, services });
+  const formatServiceLabel = ({ name, hours, cleaners }) =>
+    t("booking.units.serviceLine", {
+      name,
+      hours,
+      cleaners,
+      unit: t(cleaners > 1 ? "booking.units.cleaners" : "booking.units.cleaner"),
+    });
+  const quote = computeQuote(v, { addons, tools, services, formatServiceLabel });
 
   const city = cities.find((c) => String(c.id) === String(v.cityId))?.name;
   const addonLabels = (v.additionalServices || [])
@@ -68,25 +76,51 @@ export function ReviewStep({ submitError }) {
     .join(", ");
   const intervalDays = Number(v.intervalDays) || 0;
   const dateLocale = locale === "ka" ? "ka-GE" : locale;
+  const cleanersUnit = t(
+    v.cleaners > 1 ? "booking.units.cleaners" : "booking.units.cleaner"
+  );
 
   return (
     <div className="space-y-4">
-      <Group title="Property" stepIndex={0}>
-        <Row label="Address" value={`${v.street} ${v.houseNumber}, ${city || ""}`} />
-        <Row label="Size" value={v.propertySize ? `${v.propertySize} m²` : null} />
-        <Row label="Doorbell" value={v.doorbellName} />
-      </Group>
-
-      <Group title="Cleaning" stepIndex={1}>
-        <Row label="Service" value={quote.service?.name} />
-        <Row label="Duration" value={`${v.hours}h × ${v.cleaners} cleaner${v.cleaners > 1 ? "s" : ""}`} />
-        <Row label="Add-ons" value={addonLabels || "None"} />
-        <Row label="Cleaning tools" value={toolLabels || "None"} />
-      </Group>
-
-      <Group title="Schedule" stepIndex={2}>
+      <Group title={t("booking.review.property")} stepIndex={0}>
         <Row
-          label="Date"
+          label={t("booking.review.address")}
+          value={`${v.street} ${v.houseNumber}, ${city || ""}`}
+        />
+        <Row
+          label={t("booking.review.size")}
+          value={
+            v.propertySize
+              ? t("booking.units.squareMeters", { size: v.propertySize })
+              : null
+          }
+        />
+        <Row label={t("booking.review.doorbell")} value={v.doorbellName} />
+      </Group>
+
+      <Group title={t("booking.review.cleaning")} stepIndex={1}>
+        <Row label={t("booking.review.service")} value={quote.service?.name} />
+        <Row
+          label={t("booking.review.duration")}
+          value={t("booking.units.duration", {
+            hours: v.hours,
+            cleaners: v.cleaners,
+            unit: cleanersUnit,
+          })}
+        />
+        <Row
+          label={t("booking.fields.addons")}
+          value={addonLabels || t("booking.none")}
+        />
+        <Row
+          label={t("booking.fields.tools")}
+          value={toolLabels || t("booking.none")}
+        />
+      </Group>
+
+      <Group title={t("booking.review.schedule")} stepIndex={2}>
+        <Row
+          label={t("booking.review.date")}
           value={
             v.date
               ? formatLocalDateString(v.date, dateLocale, {
@@ -98,7 +132,7 @@ export function ReviewStep({ submitError }) {
               : null
           }
         />
-        <Row label="Time" value={v.time} />
+        <Row label={t("booking.review.time")} value={v.time} />
         {intervalDays > 0 && (
           <Row
             label={t("booking.schedule.repeat.label")}
@@ -107,11 +141,11 @@ export function ReviewStep({ submitError }) {
         )}
       </Group>
 
-      <Group title="Contact" stepIndex={3}>
-        <Row label="Name" value={v.name} />
-        <Row label="Email" value={v.email} />
-        <Row label="Phone" value={v.phone} />
-        <Row label="Notes" value={v.notes} />
+      <Group title={t("booking.review.contact")} stepIndex={3}>
+        <Row label={t("booking.review.name")} value={v.name} />
+        <Row label={t("booking.fields.email")} value={v.email} />
+        <Row label={t("booking.fields.phone")} value={v.phone} />
+        <Row label={t("booking.review.notes")} value={v.notes} />
       </Group>
 
       {/* Total */}
@@ -125,7 +159,9 @@ export function ReviewStep({ submitError }) {
           ))}
         </div>
         <div className="mt-3 flex items-center justify-between border-t border-ink-200 pt-3">
-          <span className="text-body-md font-semibold text-black">Total due</span>
+          <span className="text-body-md font-semibold text-black">
+            {t("booking.review.totalDue")}
+          </span>
           <span className="text-heading-sm font-bold text-black">
             {formatCurrency(quote.total)}
           </span>
@@ -135,7 +171,7 @@ export function ReviewStep({ submitError }) {
       {submitError && (
         <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-4 text-body-sm text-red-700">
           <AlertCircle className="mt-0.5 size-4.5 shrink-0" />
-          {submitError.message || "We couldn't submit your booking. Please try again."}
+          {submitError.message || t("booking.review.submitError")}
         </div>
       )}
     </div>

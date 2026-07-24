@@ -1,4 +1,5 @@
 import { Spinner } from "@/components/ui/Spinner";
+import { useTranslation } from "@/i18n";
 
 /*
  * PageLoader
@@ -8,9 +9,10 @@ import { Spinner } from "@/components/ui/Spinner";
  */
 
 export function PageLoader() {
+  const { t } = useTranslation();
   return (
     <div className="flex min-h-[70vh] items-center justify-center">
-      <Spinner size="lg" label="Loading page" />
+      <Spinner size="lg" label={t("common.loadingPage")} />
     </div>
   );
 }

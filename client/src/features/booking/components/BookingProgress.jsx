@@ -18,7 +18,7 @@ export function BookingProgress() {
   const progress = (step / (steps.length - 1)) * 100;
 
   return (
-    <nav aria-label="Booking progress" className="w-full">
+    <nav aria-label={t("booking.progressLabel")} className="w-full">
       {/* Labels are absolutely positioned below the circles (see the reserved
           sm:pb-12), so long translations (e.g. Georgian) wrap in place instead
           of stretching the flex row wider than the wizard column. */}

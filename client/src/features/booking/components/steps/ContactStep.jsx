@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useFormContext } from "react-hook-form";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
+import { useTranslation } from "@/i18n";
 import { useAuth } from "@/features/admin/context";
 
 /*
@@ -14,6 +15,7 @@ import { useAuth } from "@/features/admin/context";
  */
 
 export function ContactStep() {
+  const { t } = useTranslation();
   const {
     register,
     setValue,
@@ -33,8 +35,8 @@ export function ContactStep() {
   return (
     <div className="space-y-5">
       <Input
-        label="Full name"
-        placeholder="Lela Gorelishvili"
+        label={t("booking.contact.name")}
+        placeholder={t("booking.contact.namePlaceholder")}
         required
         error={errors.name?.message}
         {...register("name")}
@@ -42,17 +44,17 @@ export function ContactStep() {
 
       <div className="grid gap-5 sm:grid-cols-2">
         <Input
-          label="Email"
+          label={t("booking.fields.email")}
           type="email"
-          placeholder="you@email.com"
+          placeholder={t("booking.contact.emailPlaceholder")}
           required
           error={errors.email?.message}
           {...register("email")}
         />
         <Input
-          label="Phone"
+          label={t("booking.fields.phone")}
           type="tel"
-          placeholder="+39 ..."
+          placeholder={t("booking.contact.phonePlaceholder")}
           required
           error={errors.phone?.message}
           {...register("phone")}
@@ -60,10 +62,10 @@ export function ContactStep() {
       </div>
 
       <Textarea
-        label="Access notes"
-        hint="Optional — gate codes, parking, pets, where to find keys, etc."
+        label={t("booking.contact.notes")}
+        hint={t("booking.contact.notesHint")}
         rows={4}
-        placeholder="Anything the crew should know before arriving…"
+        placeholder={t("booking.contact.notesPlaceholder")}
         error={errors.notes?.message}
         {...register("notes")}
       />

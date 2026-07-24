@@ -32,7 +32,7 @@ export function ScheduleStep() {
   return (
     <div className="space-y-7">
       <Input
-        label="Preferred date"
+        label={t("booking.schedule.date")}
         type="date"
         min={today}
         required
@@ -45,7 +45,7 @@ export function ScheduleStep() {
         name="time"
         render={({ field }) => (
           <OptionGroup
-            label="Preferred time slot"
+            label={t("booking.schedule.time")}
             options={TIME_SLOTS}
             value={field.value}
             onChange={field.onChange}
@@ -75,8 +75,7 @@ export function ScheduleStep() {
       </p>
 
       <p className="rounded-xl bg-ink-50 px-4 py-3 text-body-sm text-ink-500">
-        We'll confirm the exact crew arrival window by message once your booking
-        is received. Same-day turnovers are subject to availability.
+        {t("booking.schedule.note")}
       </p>
     </div>
   );

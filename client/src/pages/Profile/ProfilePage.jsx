@@ -285,14 +285,14 @@ const ProfilePage = () => {
                   leftIcon={Mail}
                   value={user.email}
                   disabled
-                  hint="Email can't be changed here."
+                  hint={t("profile.emailHint")}
                 />
                 <Input
                   label={t("common.phone")}
                   leftIcon={Phone}
                   value={form.phone}
                   onChange={onChange("phone")}
-                  placeholder="+39 ..."
+                  placeholder={t("profile.phonePlaceholder")}
                 />
 
                 {status === "saved" && (

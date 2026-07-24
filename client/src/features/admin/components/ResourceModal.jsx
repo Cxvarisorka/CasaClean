@@ -303,7 +303,9 @@ function ImageField({ field, value, error, onChange }) {
     try {
       onChange(await downscaleImage(file));
     } catch (err) {
-      setLocalError(err.message || "Could not process that image.");
+      setLocalError(
+        t(err.code ? `admin.imageError.${err.code}` : "admin.imageError.processFailed")
+      );
     } finally {
       setBusy(false);
     }

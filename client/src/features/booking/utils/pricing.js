@@ -10,9 +10,16 @@ import { SERVICES } from "@/data/services";
  * The service, add-on and tool catalogues are passed in (they come from the
  * database now); `services` defaults to the static list so existing callers
  * and tests keep working, and `addons`/`tools` default to empty.
+ *
+ * `formatServiceLabel` is an optional hook the UI passes to localize the labor
+ * line item (`{ name, hours, cleaners } → string`). When omitted the original
+ * English label is produced, so pure callers and unit tests are unaffected.
  */
 
-export function computeQuote(values, { addons = [], tools = [], services = SERVICES } = {}) {
+export function computeQuote(
+  values,
+  { addons = [], tools = [], services = SERVICES, formatServiceLabel } = {}
+) {
   const service = services.find(
     (s) => String(s.id) === String(values.serviceId)
   );
@@ -58,7 +65,9 @@ export function computeQuote(values, { addons = [], tools = [], services = SERVI
     total: subtotal,
     lineItems: [
       service && {
-        label: `${service.name} · ${hours}h × ${cleaners} ${cleaners > 1 ? "cleaners" : "cleaner"}`,
+        label: formatServiceLabel
+          ? formatServiceLabel({ name: service.name, hours, cleaners })
+          : `${service.name} · ${hours}h × ${cleaners} ${cleaners > 1 ? "cleaners" : "cleaner"}`,
         amount: labor,
       },
       ...selectedAddons.map((a) => ({

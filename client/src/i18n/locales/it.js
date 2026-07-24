@@ -13,6 +13,7 @@ export default {
     readMore: "Leggi di più",
     viewAll: "Vedi tutto",
     loading: "Caricamento",
+    loadingPage: "Caricamento pagina",
     submit: "Invia",
     send: "Invia messaggio",
     continue: "Continua",
@@ -28,6 +29,10 @@ export default {
     optional: "Facoltativo",
     search: "Cerca",
     close: "Chiudi",
+    panel: "Pannello",
+    pagination: "Impaginazione",
+    previousPage: "Pagina precedente",
+    nextPage: "Pagina successiva",
     talkToTeam: "Parla con il nostro team",
     talkToSales: "Contatta le vendite",
     from: "Da",
@@ -38,12 +43,20 @@ export default {
 
   theme: { label: "Tema", light: "Chiaro", dark: "Scuro" },
 
+  errorBoundary: {
+    title: "Qualcosa è andato storto",
+    description: "Si è verificato un errore imprevisto. Di solito basta aggiornare la pagina.",
+    reload: "Ricarica la pagina",
+  },
+
   profile: {
     title: "Il mio profilo",
     subtitle: "Gestisci i dati e le preferenze del tuo account.",
     menu: "Profilo",
     account: "Account",
     personalInfo: "Informazioni personali",
+    emailHint: "L'email non può essere modificata qui.",
+    phonePlaceholder: "+39 ...",
     memberSince: "Membro dal",
     role: "Ruolo",
     verified: "Verificato",
@@ -146,6 +159,7 @@ export default {
     subscribe: "Iscriviti",
     subscribed: "Iscrizione completata — controlla la tua casella.",
     emailPlaceholder: "tu@email.com",
+    emailLabel: "Indirizzo email",
     rights: "Tutti i diritti riservati.",
     columns: {
       Company: "Azienda",
@@ -257,6 +271,7 @@ export default {
     cardStatus: "Impeccabile ✓",
     cardStatusLabel: "Stato",
     cardRatingLabel: "Valutazione media clienti",
+    imageAlt: "Un luminoso spazio abitativo appena pulito",
   },
 
   trustedBy: {
@@ -377,6 +392,9 @@ export default {
       "Trascina per confrontare una stanza vissuta di tutti i giorni con lo stesso spazio dopo una visita CasaClean.",
     before: "Prima",
     after: "Dopo",
+    sliderLabel: "Confronto prima e dopo",
+    beforeAlt: "La stanza prima della pulizia",
+    afterAlt: "La stessa stanza dopo una visita CasaClean — luminosa e fresca",
   },
 
   stats: {
@@ -391,6 +409,9 @@ export default {
     title: "I clienti non si limitano ad apprezzarci — riprenotano",
     subtitle:
       "Parole reali dalle case e dagli uffici che si affidano a CasaClean.",
+    prevAria: "Testimonianza precedente",
+    nextAria: "Testimonianza successiva",
+    goToAria: "Vai alla testimonianza {index}",
   },
 
   testimonials: {
@@ -618,6 +639,9 @@ export default {
       heroSubtitle:
         "Ciò che è iniziato con tre addetti e un furgone in prestito è oggi un team selezionato che mantiene impeccabili migliaia di case e luoghi di lavoro in tutta Italia.",
       missionLabel: "La nostra missione",
+      imageAlt1: "Un soggiorno curato e appena pulito",
+      imageAlt2: "Una cucina impeccabile e pronta all'uso",
+      imageAlt3: "Un bagno igienizzato, di livello alberghiero",
       mission:
         "Restituire alle persone il loro tempo — rendendo le pulizie professionali e affidabili facili da prenotare come un taxi, per ogni casa e luogo di lavoro.",
       valuesEyebrow: "I nostri valori",
@@ -656,6 +680,9 @@ export default {
         message: "Come possiamo aiutarti?",
         messagePlaceholder: "Raccontaci del tuo spazio e di ciò che ti serve…",
         topicPlaceholder: "Seleziona un argomento",
+        namePlaceholder: "Mario Rossi",
+        emailPlaceholder: "mario@email.com",
+        phonePlaceholder: "+39 ...",
       },
       topics: {
         general: "Richiesta generale",
@@ -852,6 +879,9 @@ export default {
       payment: { title: "Pagamento", subtitle: "Checkout sicuro per confermare la prenotazione" },
     },
     schedule: {
+      date: "Data preferita",
+      time: "Fascia oraria preferita",
+      note: "Confermeremo la finestra esatta di arrivo del team con un messaggio non appena riceviamo la tua prenotazione. Le pulizie in giornata sono soggette a disponibilità.",
       repeat: {
         label: "Frequenza",
         oneTime: "Una volta",
@@ -893,12 +923,87 @@ export default {
       home: "Torna alla home",
       profile: "Vai al mio profilo",
       more: "Esplora altri servizi",
+      fallbackName: "Ciao",
+      scheduled: "Programmata",
+    },
+    edit: "Modifica",
+    none: "Nessuno",
+    optional: "(facoltativo)",
+    progressLabel: "Avanzamento della prenotazione",
+    fields: {
+      email: "Email",
+      phone: "Telefono",
+      addons: "Servizi aggiuntivi",
+      tools: "Attrezzatura per la pulizia",
+    },
+    property: {
+      city: "Città",
+      cityLoading: "Caricamento città…",
+      cityPlaceholder: "Seleziona la tua città",
+      street: "Nome della via",
+      streetPlaceholder: "Via Giovanni Giorgi",
+      houseNumber: "Numero civico",
+      houseNumberPlaceholder: "5",
+      size: "Superficie (m²)",
+      sizePlaceholder: "40",
+      doorbell: "Nome sul citofono",
+      doorbellPlaceholder: "Chi deve cercare il team?",
+    },
+    preferences: {
+      service: "Scegli un servizio",
+      noServices:
+        "Non ci sono ancora servizi disponibili nella città selezionata. Prova a scegliere un'altra città.",
+      perHour: "{amount}/h",
+      hours: "Ore stimate",
+      cleaners: "Numero di addetti",
+      cleanersHint: "Da 1 a 3 addetti",
+    },
+    contact: {
+      name: "Nome completo",
+      namePlaceholder: "Lela Gorelishvili",
+      emailPlaceholder: "you@email.com",
+      phonePlaceholder: "+39 ...",
+      notes: "Note di accesso",
+      notesHint:
+        "Facoltativo — codici del cancello, parcheggio, animali, dove trovare le chiavi, ecc.",
+      notesPlaceholder: "Tutto ciò che il team dovrebbe sapere prima di arrivare…",
+    },
+    review: {
+      property: "Proprietà",
+      address: "Indirizzo",
+      size: "Superficie",
+      doorbell: "Citofono",
+      cleaning: "Pulizia",
+      service: "Servizio",
+      duration: "Durata",
+      schedule: "Calendario",
+      date: "Data",
+      time: "Ora",
+      contact: "Contatto",
+      name: "Nome",
+      notes: "Note",
+      totalDue: "Totale dovuto",
+      submitError: "Non siamo riusciti a inviare la tua prenotazione. Riprova.",
+    },
+    units: {
+      hour: "{count}h",
+      squareMeters: "{size} m²",
+      serviceLine: "{name} · {hours}h × {cleaners} {unit}",
+      duration: "{hours}h × {cleaners} {unit}",
+      cleaner: "addetto",
+      cleaners: "addetti",
     },
   },
 
   // ----- Admin panel -----
   admin: {
     manage: "Gestione",
+    imageError: {
+      notImage: "Scegli un file immagine.",
+      readFailed: "Impossibile leggere il file immagine.",
+      loadFailed: "Impossibile caricare questa immagine.",
+      processFailed: "Impossibile elaborare questa immagine.",
+    },
     backToSite: "Torna al sito",
     login: {
       badge: "Area riservata",
@@ -917,6 +1022,7 @@ export default {
       administrator: "Amministratore",
       signOut: "Esci",
       openNav: "Apri navigazione",
+      closeNav: "Chiudi navigazione",
       adminFallback: "Admin",
       viewLive: "Vedi il sito online",
     },
@@ -1190,6 +1296,8 @@ export default {
         fullname: "Nome completo",
         email: "Email",
         phone: "Telefono",
+        password: "Password",
+        passwordEditHint: "Lascia vuoto per mantenere la password attuale.",
         role: "Ruolo",
         verified: "Email verificata",
       },

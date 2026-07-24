@@ -1,6 +1,7 @@
 import { useFormContext } from "react-hook-form";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { useTranslation } from "@/i18n";
 import { useCities } from "../../hooks/useCities";
 
 /*
@@ -13,6 +14,7 @@ import { useCities } from "../../hooks/useCities";
  */
 
 export function PropertyStep() {
+  const { t } = useTranslation();
   const {
     register,
     formState: { errors },
@@ -22,8 +24,12 @@ export function PropertyStep() {
   return (
     <div className="space-y-5">
       <Select
-        label="City"
-        placeholder={isLoading ? "Loading cities…" : "Select your city"}
+        label={t("booking.property.city")}
+        placeholder={
+          isLoading
+            ? t("booking.property.cityLoading")
+            : t("booking.property.cityPlaceholder")
+        }
         required
         options={cities.map((c) => ({ value: String(c.id), label: c.name }))}
         error={errors.cityId?.message}
@@ -32,15 +38,15 @@ export function PropertyStep() {
 
       <div className="grid gap-5 sm:grid-cols-[2fr_1fr]">
         <Input
-          label="Street name"
-          placeholder="Via Giovanni Giorgi"
+          label={t("booking.property.street")}
+          placeholder={t("booking.property.streetPlaceholder")}
           required
           error={errors.street?.message}
           {...register("street")}
         />
         <Input
-          label="House number"
-          placeholder="5"
+          label={t("booking.property.houseNumber")}
+          placeholder={t("booking.property.houseNumberPlaceholder")}
           required
           error={errors.houseNumber?.message}
           {...register("houseNumber")}
@@ -49,17 +55,17 @@ export function PropertyStep() {
 
       <div className="grid gap-5 sm:grid-cols-2">
         <Input
-          label="Property size (m²)"
+          label={t("booking.property.size")}
           type="number"
           min={1}
-          placeholder="40"
+          placeholder={t("booking.property.sizePlaceholder")}
           required
           error={errors.propertySize?.message}
           {...register("propertySize")}
         />
         <Input
-          label="Name on doorbell"
-          placeholder="Who should the crew look for?"
+          label={t("booking.property.doorbell")}
+          placeholder={t("booking.property.doorbellPlaceholder")}
           required
           error={errors.doorbellName?.message}
           {...register("doorbellName")}
