@@ -16,7 +16,8 @@ import { addDaysToDateString, formatLocalDateString } from "../../utils/recurren
 
 export function ConfirmationStep({ booking }) {
   const { t, locale } = useTranslation();
-  const firstName = booking.customer_name?.split(" ")[0] || "there";
+  const firstName =
+    booking.customer_name?.split(" ")[0] || t("booking.confirmation.fallbackName");
   const intervalDays = Number(booking.intervalDays) || 0;
   const isRecurring = intervalDays > 0;
   const dateLocale = locale === "ka" ? "ka-GE" : locale;
@@ -74,7 +75,7 @@ export function ConfirmationStep({ booking }) {
                     month: "long",
                     year: "numeric",
                   })
-                : "Scheduled"}{" "}
+                : t("booking.confirmation.scheduled")}{" "}
               · {booking.booking_time}
             </p>
             <p className="text-caption text-ink-500">

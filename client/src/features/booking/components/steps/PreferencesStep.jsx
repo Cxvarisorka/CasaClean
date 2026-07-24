@@ -4,6 +4,7 @@ import { Icon } from "@/components/shared/Icon";
 import { Input } from "@/components/ui/Input";
 import { cn } from "@/lib/cn";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { useTranslation } from "@/i18n";
 import { useServices } from "@/features/services";
 import { OptionGroup } from "../fields/OptionGroup";
 import { ToggleCard } from "../fields/ToggleCard";
@@ -24,6 +25,7 @@ function toggleInArray(arr = [], value) {
 }
 
 export function PreferencesStep() {
+  const { t } = useTranslation();
   const {
     control,
     getValues,
@@ -118,12 +120,12 @@ export function PreferencesStep() {
         render={({ field }) => (
           <fieldset>
             <legend className="mb-3 text-body-sm font-semibold text-ink-800">
-              Choose a service <span className="text-brand-600">*</span>
+              {t("booking.preferences.service")}{" "}
+              <span className="text-brand-600">*</span>
             </legend>
             {availableServices.length === 0 && (
               <p className="rounded-xl border border-dashed border-ink-200 px-4 py-3 text-body-sm text-ink-500">
-                No services are available in the selected city yet. Try choosing
-                a different city.
+                {t("booking.preferences.noServices")}
               </p>
             )}
             <div className="grid gap-3 sm:grid-cols-2">
@@ -149,7 +151,9 @@ export function PreferencesStep() {
                         {service.name}
                       </span>
                       <span className="block text-caption text-ink-500">
-                        {formatCurrency(service.pricePerHour)}/hr
+                        {t("booking.preferences.perHour", {
+                          amount: formatCurrency(service.pricePerHour),
+                        })}
                         {service.tagline ? ` · ${service.tagline}` : ""}
                       </span>
                     </span>
@@ -173,8 +177,11 @@ export function PreferencesStep() {
           name="hours"
           render={({ field }) => (
             <OptionGroup
-              label="Estimated hours"
-              options={HOURS_RANGE.map((h) => ({ value: h, label: `${h}h` }))}
+              label={t("booking.preferences.hours")}
+              options={HOURS_RANGE.map((h) => ({
+                value: h,
+                label: t("booking.units.hour", { count: h }),
+              }))}
               value={field.value}
               onChange={(v) => field.onChange(Number(v))}
               columns={3}
@@ -187,13 +194,13 @@ export function PreferencesStep() {
           name="cleaners"
           render={({ field }) => (
             <Input
-              label="Number of cleaners"
+              label={t("booking.preferences.cleaners")}
               type="number"
               min={1}
               max={3}
               step={1}
               required
-              hint="Between 1 and 3 cleaners"
+              hint={t("booking.preferences.cleanersHint")}
               value={field.value ?? ""}
               onBlur={field.onBlur}
               onChange={(e) =>
@@ -215,7 +222,10 @@ export function PreferencesStep() {
           render={({ field }) => (
             <div>
               <p className="mb-3 text-body-sm font-semibold text-ink-800">
-                Add-ons <span className="font-normal text-ink-400">(optional)</span>
+                {t("booking.fields.addons")}{" "}
+                <span className="font-normal text-ink-400">
+                  {t("booking.optional")}
+                </span>
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
                 {visibleAddons.map((addon) => (
@@ -242,7 +252,10 @@ export function PreferencesStep() {
           render={({ field }) => (
             <div>
               <p className="mb-3 text-body-sm font-semibold text-ink-800">
-                Cleaning tools <span className="font-normal text-ink-400">(optional)</span>
+                {t("booking.fields.tools")}{" "}
+                <span className="font-normal text-ink-400">
+                  {t("booking.optional")}
+                </span>
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
                 {visibleTools.map((tool) => (

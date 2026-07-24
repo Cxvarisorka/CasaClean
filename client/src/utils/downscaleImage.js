@@ -15,15 +15,17 @@ export function downscaleImage(file, options = {}) {
 
   return new Promise((resolve, reject) => {
     if (!file || !file.type?.startsWith("image/")) {
-      reject(new Error("Please choose an image file."));
+      reject(Object.assign(new Error("Please choose an image file."), { code: "notImage" }));
       return;
     }
 
     const reader = new FileReader();
-    reader.onerror = () => reject(new Error("Could not read the image file."));
+    reader.onerror = () =>
+      reject(Object.assign(new Error("Could not read the image file."), { code: "readFailed" }));
     reader.onload = () => {
       const img = new Image();
-      img.onerror = () => reject(new Error("That image could not be loaded."));
+      img.onerror = () =>
+        reject(Object.assign(new Error("That image could not be loaded."), { code: "loadFailed" }));
       img.onload = () => {
         const scale = Math.min(1, maxEdge / Math.max(img.width, img.height));
         const width = Math.round(img.width * scale);

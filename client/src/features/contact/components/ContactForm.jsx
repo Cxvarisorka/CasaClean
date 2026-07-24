@@ -64,7 +64,7 @@ export function ContactForm() {
       <div className="grid gap-5 sm:grid-cols-2">
         <Input
           label={t("pages.contact.fields.name")}
-          placeholder="Jane Cooper"
+          placeholder={t("pages.contact.fields.namePlaceholder")}
           required
           error={errors.name?.message}
           {...register("name")}
@@ -72,7 +72,7 @@ export function ContactForm() {
         <Input
           label={t("pages.contact.fields.email")}
           type="email"
-          placeholder="jane@email.com"
+          placeholder={t("pages.contact.fields.emailPlaceholder")}
           required
           error={errors.email?.message}
           {...register("email")}
@@ -83,7 +83,7 @@ export function ContactForm() {
         <Input
           label={t("pages.contact.fields.phone")}
           type="tel"
-          placeholder="+39 ..."
+          placeholder={t("pages.contact.fields.phonePlaceholder")}
           hint={t("common.optional")}
           error={errors.phone?.message}
           {...register("phone")}

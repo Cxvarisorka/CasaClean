@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useScrollLock } from "@/hooks/useScrollLock";
+import { useTranslation } from "@/i18n";
 import { EASE_PREMIUM } from "@/animations/tokens";
 
 /*
@@ -21,6 +22,7 @@ const SIDE_CONFIG = {
 };
 
 export function Drawer({ open, onClose, side = "right", title, children, className }) {
+  const { t } = useTranslation();
   useScrollLock(open);
 
   useEffect(() => {
@@ -51,7 +53,7 @@ export function Drawer({ open, onClose, side = "right", title, children, classNa
           <motion.aside
             role="dialog"
             aria-modal="true"
-            aria-label={title || "Panel"}
+            aria-label={title || t("common.panel")}
             initial={initial}
             animate={{ x: 0, y: 0 }}
             exit={initial}
@@ -67,7 +69,7 @@ export function Drawer({ open, onClose, side = "right", title, children, classNa
               <button
                 type="button"
                 onClick={onClose}
-                aria-label="Close panel"
+                aria-label={t("common.close")}
                 className="grid size-9 place-items-center rounded-full text-ink-400 transition-colors hover:bg-ink-100 hover:text-ink-700"
               >
                 <X className="size-5" />

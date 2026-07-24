@@ -24,7 +24,7 @@ export function AdminSidebar({ onNavigate }) {
           <button
             type="button"
             onClick={onNavigate}
-            aria-label="Close navigation"
+            aria-label={t("admin.topbar.closeNav")}
             className="grid size-9 place-items-center rounded-full text-ink-500 hover:bg-ink-100 lg:hidden"
           >
             <X className="size-5" />

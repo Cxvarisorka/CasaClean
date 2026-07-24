@@ -15,6 +15,7 @@ export default {
     readMore: "Read more",
     viewAll: "View all",
     loading: "Loading",
+    loadingPage: "Loading page",
     submit: "Submit",
     send: "Send message",
     continue: "Continue",
@@ -30,6 +31,10 @@ export default {
     optional: "Optional",
     search: "Search",
     close: "Close",
+    panel: "Panel",
+    pagination: "Pagination",
+    previousPage: "Previous page",
+    nextPage: "Next page",
     talkToTeam: "Talk to our team",
     talkToSales: "Talk to sales",
     from: "From",
@@ -40,12 +45,20 @@ export default {
 
   theme: { label: "Theme", light: "Light", dark: "Dark" },
 
+  errorBoundary: {
+    title: "Something went wrong",
+    description: "An unexpected error occurred. Refreshing the page usually fixes it.",
+    reload: "Reload page",
+  },
+
   profile: {
     title: "My profile",
     subtitle: "Manage your account details and preferences.",
     menu: "Profile",
     account: "Account",
     personalInfo: "Personal information",
+    emailHint: "Email can't be changed here.",
+    phonePlaceholder: "+39 ...",
     memberSince: "Member since",
     role: "Role",
     verified: "Verified",
@@ -152,6 +165,7 @@ export default {
     subscribe: "Subscribe",
     subscribed: "You're subscribed — watch your inbox.",
     emailPlaceholder: "you@email.com",
+    emailLabel: "Email address",
     rights: "All rights reserved.",
     columns: {
       Company: "Company",
@@ -262,6 +276,7 @@ export default {
     cardStatus: "Spotless ✓",
     cardStatusLabel: "Status",
     cardRatingLabel: "Avg. customer rating",
+    imageAlt: "A bright, freshly cleaned living space",
   },
 
   trustedBy: {
@@ -382,6 +397,9 @@ export default {
       "Drag to compare an everyday lived-in room with the same space after a CasaClean visit.",
     before: "Before",
     after: "After",
+    sliderLabel: "Before and after comparison",
+    beforeAlt: "The room before cleaning",
+    afterAlt: "The same room after a CasaClean visit — bright and fresh",
   },
 
   stats: {
@@ -395,6 +413,9 @@ export default {
     eyebrow: "Loved by customers",
     title: "Customers don't just like us — they rebook",
     subtitle: "Real words from the homes and offices that trust CasaClean.",
+    prevAria: "Previous testimonial",
+    nextAria: "Next testimonial",
+    goToAria: "Go to testimonial {index}",
   },
 
   testimonials: {
@@ -625,6 +646,9 @@ export default {
       heroSubtitle:
         "What began with three cleaners and a borrowed van is now a vetted team keeping thousands of homes and workplaces spotless across Italy.",
       missionLabel: "Our mission",
+      imageAlt1: "A styled, freshly cleaned living room",
+      imageAlt2: "A spotless, ready-to-use kitchen",
+      imageAlt3: "A sanitized, hotel-grade bathroom",
       mission:
         "To give people their time back — by making professional, trustworthy cleaning as easy to book as a taxi, for every home and workplace.",
       valuesEyebrow: "What we value",
@@ -662,6 +686,9 @@ export default {
         message: "How can we help?",
         messagePlaceholder: "Tell us about your place and what you need…",
         topicPlaceholder: "Select a topic",
+        namePlaceholder: "Jane Cooper",
+        emailPlaceholder: "jane@email.com",
+        phonePlaceholder: "+39 ...",
       },
       topics: {
         general: "General enquiry",
@@ -865,6 +892,9 @@ export default {
       payment: { title: "Payment", subtitle: "Secure checkout to confirm your booking" },
     },
     schedule: {
+      date: "Preferred date",
+      time: "Preferred time slot",
+      note: "We'll confirm the exact crew arrival window by message once your booking is received. Same-day turnovers are subject to availability.",
       repeat: {
         label: "Frequency",
         oneTime: "One-time",
@@ -906,12 +936,86 @@ export default {
       home: "Back to home",
       profile: "Go to my profile",
       more: "Explore more services",
+      fallbackName: "there",
+      scheduled: "Scheduled",
+    },
+    edit: "Edit",
+    none: "None",
+    optional: "(optional)",
+    progressLabel: "Booking progress",
+    fields: {
+      email: "Email",
+      phone: "Phone",
+      addons: "Add-ons",
+      tools: "Cleaning tools",
+    },
+    property: {
+      city: "City",
+      cityLoading: "Loading cities…",
+      cityPlaceholder: "Select your city",
+      street: "Street name",
+      streetPlaceholder: "Via Giovanni Giorgi",
+      houseNumber: "House number",
+      houseNumberPlaceholder: "5",
+      size: "Property size (m²)",
+      sizePlaceholder: "40",
+      doorbell: "Name on doorbell",
+      doorbellPlaceholder: "Who should the crew look for?",
+    },
+    preferences: {
+      service: "Choose a service",
+      noServices:
+        "No services are available in the selected city yet. Try choosing a different city.",
+      perHour: "{amount}/hr",
+      hours: "Estimated hours",
+      cleaners: "Number of cleaners",
+      cleanersHint: "Between 1 and 3 cleaners",
+    },
+    contact: {
+      name: "Full name",
+      namePlaceholder: "Lela Gorelishvili",
+      emailPlaceholder: "you@email.com",
+      phonePlaceholder: "+39 ...",
+      notes: "Access notes",
+      notesHint: "Optional — gate codes, parking, pets, where to find keys, etc.",
+      notesPlaceholder: "Anything the crew should know before arriving…",
+    },
+    review: {
+      property: "Property",
+      address: "Address",
+      size: "Size",
+      doorbell: "Doorbell",
+      cleaning: "Cleaning",
+      service: "Service",
+      duration: "Duration",
+      schedule: "Schedule",
+      date: "Date",
+      time: "Time",
+      contact: "Contact",
+      name: "Name",
+      notes: "Notes",
+      totalDue: "Total due",
+      submitError: "We couldn't submit your booking. Please try again.",
+    },
+    units: {
+      hour: "{count}h",
+      squareMeters: "{size} m²",
+      serviceLine: "{name} · {hours}h × {cleaners} {unit}",
+      duration: "{hours}h × {cleaners} {unit}",
+      cleaner: "cleaner",
+      cleaners: "cleaners",
     },
   },
 
   // ----- Admin panel -----
   admin: {
     manage: "Manage",
+    imageError: {
+      notImage: "Please choose an image file.",
+      readFailed: "Could not read the image file.",
+      loadFailed: "That image could not be loaded.",
+      processFailed: "Could not process that image.",
+    },
     backToSite: "Back to site",
     login: {
       badge: "Restricted area",
@@ -930,6 +1034,7 @@ export default {
       administrator: "Administrator",
       signOut: "Sign out",
       openNav: "Open navigation",
+      closeNav: "Close navigation",
       adminFallback: "Admin",
       viewLive: "View live website",
     },

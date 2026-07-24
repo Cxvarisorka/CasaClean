@@ -21,7 +21,19 @@ export function BookingSummary() {
   const { data: addons = [] } = useSpecialRequests();
   const { data: tools = [] } = useCleaningTools();
   const { services } = useServices();
-  const quote = computeQuote(values, { addons, tools, services });
+  const formatServiceLabel = ({ name, hours, cleaners }) =>
+    t("booking.units.serviceLine", {
+      name,
+      hours,
+      cleaners,
+      unit: t(cleaners > 1 ? "booking.units.cleaners" : "booking.units.cleaner"),
+    });
+  const quote = computeQuote(values, {
+    addons,
+    tools,
+    services,
+    formatServiceLabel,
+  });
 
   return (
     <aside className="rounded-2xl border border-ink-100 bg-surface p-6 shadow-soft lg:sticky lg:top-24">

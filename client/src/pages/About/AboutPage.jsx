@@ -61,21 +61,21 @@ const AboutPage = () => {
           <Reveal className="grid gap-4 sm:grid-cols-3">
             <Image
               src={IMAGES.livingModern}
-              alt="A styled, freshly turned-over living room"
+              alt={t("pages.about.imageAlt1")}
               aspect="aspect-[4/5]"
               zoomOnHover
               className="sm:col-span-1"
             />
             <Image
               src={IMAGES.kitchen}
-              alt="A spotless guest-ready kitchen"
+              alt={t("pages.about.imageAlt2")}
               aspect="aspect-[4/5]"
               zoomOnHover
               className="sm:col-span-1 sm:mt-8"
             />
             <Image
               src={IMAGES.bathroom}
-              alt="A sanitized, hotel-grade bathroom"
+              alt={t("pages.about.imageAlt3")}
               aspect="aspect-[4/5]"
               zoomOnHover
               className="sm:col-span-1"
