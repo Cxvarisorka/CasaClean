@@ -2,10 +2,20 @@
 // and the email rendering (HTML escaping of customer-controlled values).
 const {
     assertBookingWindow,
+    computeBookingTotal,
     renderBookingConfirmationEmail,
     renderRefundEmail,
     formatEuro
 } = require("../../services/booking.service");
+
+describe("computeBookingTotal", () => {
+    test("multiplies labour by cleaners and adds fixed catalogue fees", () => {
+        expect(computeBookingTotal({
+            service: { pricePerHour: 20 }, hours: 3, cleaners: 2,
+            specialRequests: [{ price: 15 }], cleaningTools: [{ price: 5 }]
+        })).toBe(140);
+    });
+});
 
 const city = { workingHourStarts: "09:00", workingHourEnds: "17:30" };
 

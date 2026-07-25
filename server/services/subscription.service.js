@@ -22,6 +22,7 @@ const {
   resolveServiceAndCity,
   resolveSpecialRequests,
   resolveCleaningTools,
+  computeBookingTotal,
   renderBookingConfirmationEmail,
   formatEuro
 } = require('./booking.service');
@@ -255,11 +256,13 @@ const priceSubscriptionCycle = async (subscription) => {
   const specialRequests = await resolveSpecialRequests(subscription.specialRequests, service);
   const cleaningTools = await resolveCleaningTools(subscription.cleaningTools, service);
 
-  // Keep this aligned with existing booking pricing. The known cleaners-
-  // multiplier discrepancy is intentionally out of scope for this feature.
-  const totalAmount = service.pricePerHour * subscription.hours +
-    specialRequests.reduce((sum, item) => sum + item.price, 0) +
-    cleaningTools.reduce((sum, item) => sum + item.price, 0);
+  const totalAmount = computeBookingTotal({
+    service,
+    hours: subscription.hours,
+    cleaners: subscription.cleaners,
+    specialRequests,
+    cleaningTools
+  });
 
   return { service, city, specialRequests, cleaningTools, totalAmount };
 };

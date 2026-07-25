@@ -42,6 +42,7 @@ describe("POST /api/v1/booking (admin manual bookings)", () => {
             .set("Cookie", cookieFor(admin))
             .send(validBookingBody(service, city, {
                 hours: 3,
+                cleaners: 2,
                 specialRequests: [String(addon._id)],
                 cleaningTools: [String(tool._id)]
             }));
@@ -49,7 +50,7 @@ describe("POST /api/v1/booking (admin manual bookings)", () => {
         expect(res.status).toBe(201);
         const booking = res.body.data.booking;
         // 20 €/h * 3h + 15 + 5 — computed by the server, never from the client.
-        expect(booking.totalAmount).toBe(80);
+        expect(booking.totalAmount).toBe(140);
         expect(booking.status).toBe("confirmed");
         expect(booking.paymentMethod).toBe("manual");
         expect(booking.paymentStatus).toBe("manual");
@@ -81,6 +82,17 @@ describe("POST /api/v1/booking (admin manual bookings)", () => {
         const res = await api.post("/api/v1/booking")
             .set("Cookie", cookieFor(admin))
             .send(validBookingBody(service, city, { totalAmount: 0.01 }));
+        expect(res.status).toBe(400);
+        expect(res.body.message).toMatch(/Validation failed/);
+    });
+
+    test("rejects more than 10 cleaners", async () => {
+        const admin = await createAdmin();
+        const service = await createService();
+        const city = await createCity();
+        const res = await api.post("/api/v1/booking")
+            .set("Cookie", cookieFor(admin))
+            .send(validBookingBody(service, city, { cleaners: 11 }));
         expect(res.status).toBe(400);
         expect(res.body.message).toMatch(/Validation failed/);
     });
@@ -290,6 +302,19 @@ describe("PATCH /api/v1/booking/:id (admin edit)", () => {
 
         expect(res.status).toBe(200);
         expect(res.body.data.booking.totalAmount).toBe(100);
+    });
+
+    test("recomputes the total when cleaners change", async () => {
+        const admin = await createAdmin();
+        const user = await createUser();
+        const service = await createService({ pricePerHour: 20 });
+        const city = await createCity();
+        const booking = await createPaidBooking(user, service, city, { totalAmount: 40 });
+        const res = await api.patch(`/api/v1/booking/${booking._id}`)
+            .set("Cookie", cookieFor(admin))
+            .send({ cleaners: 3 });
+        expect(res.status).toBe(200);
+        expect(res.body.data.booking.totalAmount).toBe(120);
     });
 
     test("cannot overwrite server-managed payment fields (strict schema)", async () => {

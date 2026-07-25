@@ -20,6 +20,7 @@ const {
   resolveSpecialRequests,
   resolveCleaningTools,
   assertBookingWindow,
+  computeBookingTotal,
   renderBookingConfirmationEmail,
   renderRefundEmail
 } = require('../services/booking.service');
@@ -261,9 +262,13 @@ const createBooking = catchAsync(async (req, res, next) => {
 
   // Fix 1: compute the booking total on the server — never trust the client.
   // specialRequests/cleaningTools now contain full documents with a `price` field.
-  const computedTotal = service.pricePerHour * hours +
-    resolvedSpecialRequests.reduce((sum, sr) => sum + sr.price, 0) +
-    resolvedCleaningTools.reduce((sum, ct) => sum + ct.price, 0);
+  const computedTotal = computeBookingTotal({
+    service,
+    hours,
+    cleaners,
+    specialRequests: resolvedSpecialRequests,
+    cleaningTools: resolvedCleaningTools
+  });
 
   // Extract just the ids for storage (the Booking model stores ObjectId refs).
   const requestIds = resolvedSpecialRequests.map((sr) => sr._id);
@@ -358,6 +363,7 @@ const editBooking = catchAsync(async (req, res, next) => {
   const srChanged = req.body.specialRequests !== undefined;
   const ctChanged = req.body.cleaningTools !== undefined;
   const hoursChanged = updates.hours !== undefined;
+  const cleanersChanged = updates.cleaners !== undefined;
   const timeChanged = updates.bookingTime !== undefined;
   const dateChanged = updates.bookingDate !== undefined;
 
@@ -367,9 +373,9 @@ const editBooking = catchAsync(async (req, res, next) => {
   let existing = null;
   let service = null;
   let city = null;
-  if (srChanged || ctChanged || hoursChanged || timeChanged || dateChanged) {
+  if (srChanged || ctChanged || hoursChanged || cleanersChanged || timeChanged || dateChanged) {
     existing = await Booking.findById(id)
-      .select('serviceId cityId hours bookingDate bookingTime specialRequests cleaningTools')
+      .select('serviceId cityId hours cleaners bookingDate bookingTime specialRequests cleaningTools')
       .lean();
     if (!existing) {
       return next(new AppError("Booking not found!", 404));
@@ -419,12 +425,13 @@ const editBooking = catchAsync(async (req, res, next) => {
   // or tools) changes — otherwise the stored amount would drift out of sync
   // with the booking. Price = pricePerHour * hours + sum(add-on prices) +
   // sum(tool surcharges).
-  if ((hoursChanged || srChanged || ctChanged) && service) {
+  if ((hoursChanged || cleanersChanged || srChanged || ctChanged) && service) {
     const finalHours = hoursChanged ? updates.hours : existing.hours;
+    const finalCleaners = cleanersChanged ? updates.cleaners : existing.cleaners;
 
-    let addOnTotal;
+    let finalSpecialRequests;
     if (srChanged) {
-      addOnTotal = resolvedSpecialRequests.reduce((sum, sr) => sum + sr.price, 0);
+      finalSpecialRequests = resolvedSpecialRequests;
     } else {
       // Something else changed but the add-ons didn't — price the existing ones.
       // Look up by id only (no `enabled` filter) so a since-disabled add-on
@@ -433,23 +440,29 @@ const editBooking = catchAsync(async (req, res, next) => {
         .find({ _id: { $in: existing.specialRequests || [] } })
         .select('price')
         .lean();
-      addOnTotal = existingDocs.reduce((sum, sr) => sum + sr.price, 0);
+      finalSpecialRequests = existingDocs;
     }
 
     // Same pattern for the tools: price the incoming selection when it changed,
     // otherwise the booking's existing ones (again without an `enabled` filter).
-    let toolTotal;
+    let finalCleaningTools;
     if (ctChanged) {
-      toolTotal = resolvedCleaningTools.reduce((sum, ct) => sum + ct.price, 0);
+      finalCleaningTools = resolvedCleaningTools;
     } else {
       const existingTools = await CleaningTool
         .find({ _id: { $in: existing.cleaningTools || [] } })
         .select('price')
         .lean();
-      toolTotal = existingTools.reduce((sum, ct) => sum + ct.price, 0);
+      finalCleaningTools = existingTools;
     }
 
-    updates.totalAmount = service.pricePerHour * finalHours + addOnTotal + toolTotal;
+    updates.totalAmount = computeBookingTotal({
+      service,
+      hours: finalHours,
+      cleaners: finalCleaners,
+      specialRequests: finalSpecialRequests,
+      cleaningTools: finalCleaningTools
+    });
   }
 
   // An admin cancelling a booking must release the money too — a status flip to
