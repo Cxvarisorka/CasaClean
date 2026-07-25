@@ -180,9 +180,9 @@ const signin = catchAsync(async (req, res, next) => {
     // Per-ACCOUNT lockout (complements the per-IP signinLimiter, which a
     // distributed credential-stuffing run can sidestep). Still burn one bcrypt
     // compare so a locked account isn't distinguishable by response timing.
-    if (user?.lockUntil && user.lockUntil > Date.now()) {
+    const isLocked = user?.lockUntil && user.lockUntil > Date.now();
+    if (isLocked) {
         await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
-        return next(new AppError("Too many failed sign-in attempts. Please try again later.", 429));
     }
 
     // Constant-work comparison: ALWAYS run one bcrypt compare, even when the
@@ -191,10 +191,10 @@ const signin = catchAsync(async (req, res, next) => {
     // attacker enumerate registered emails via response timing. (Google
     // accounts have no local password and take the dummy branch too.)
     let passwordMatches = false;
-    if (user && user.password) {
-        passwordMatches = await user.comparePassword(password);
-    } else {
-        await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
+    if (!isLocked && user && user.password) {
+      passwordMatches = await user.comparePassword(password);
+    } else if (!isLocked) {
+      await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
     }
 
     // Use one generic message for both branches so we don't reveal whether
@@ -203,7 +203,7 @@ const signin = catchAsync(async (req, res, next) => {
         // Count the failure against the account and lock it after too many.
         // Atomic $inc (no read-modify-write race between parallel attempts);
         // fire-and-forget correctness isn't enough here, so we await it.
-        if (user) {
+        if (user && !isLocked) {
             const attempts = (user.failedLoginAttempts || 0) + 1;
             await User.updateOne(
                 { _id: user._id },
