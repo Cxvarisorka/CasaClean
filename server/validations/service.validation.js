@@ -1,6 +1,14 @@
 // Modules
 const { z } = require("zod");
 
+const SERVICE_IMAGE_REGEX = /^(https:\/\/[^\s]+|data:image\/(?:png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+/]+={0,2})$/i;
+const serviceImage = z
+    .string()
+    .max(3_000_000, "Image is too large!")
+    .refine((value) => SERVICE_IMAGE_REGEX.test(value), {
+        message: "Image must be an HTTPS URL or a supported base64 image data URL!"
+    });
+
 // Schema for validate create service request body
 const createServiceSchema = z.object({
     name: z
@@ -23,10 +31,7 @@ const createServiceSchema = z.object({
 
     // A hosted URL or an inline data URL — keep it permissive but bounded so a
     // runaway upload can't bloat a document.
-    image: z
-        .string()
-        .max(3_000_000, "Image is too large!")
-        .optional(),
+    image: serviceImage.optional(),
 
     includes: z
         .array(z.string().trim().min(1).max(200))
@@ -75,10 +80,7 @@ const editServiceSchema = z.object({
         .max(700, "Description is too long!")
         .optional(),
 
-    image: z
-        .string()
-        .max(3_000_000, "Image is too large!")
-        .optional(),
+    image: serviceImage.optional(),
 
     includes: z
         .array(z.string().trim().min(1).max(200))
