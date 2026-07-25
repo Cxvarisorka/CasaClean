@@ -16,7 +16,10 @@ const signupSchema = z.object({
 
     phone: z
         .string()
-        .trim(),
+        .trim()
+        .min(7, { message: "Phone number must contain at least 7 characters!" })
+        .max(20, { message: "Phone number is too long!" })
+        .regex(/^[0-9+\s-]+$/, { message: "Phone number may only contain digits, spaces, plus signs and dashes!" }),
 
     password: z
         .string()

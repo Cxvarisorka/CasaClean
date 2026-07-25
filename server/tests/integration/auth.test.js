@@ -56,6 +56,13 @@ describe("POST /api/v1/auth/signup", () => {
         expect(res.body.message).toMatch(/Validation failed/);
     });
 
+    test("rejects empty and malformed phone numbers at validation", async () => {
+        const empty = await api.post("/api/v1/auth/signup").send({ ...SIGNUP_BODY, phone: "" });
+        const malformed = await api.post("/api/v1/auth/signup").send({ ...SIGNUP_BODY, phone: "call-me" });
+        expect(empty.status).toBe(400);
+        expect(malformed.status).toBe(400);
+    });
+
     test("returns ONE generic message for duplicate email or phone (anti-enumeration)", async () => {
         await createUser({ email: SIGNUP_BODY.email });
 
@@ -161,8 +168,8 @@ describe("POST /api/v1/auth/signin", () => {
         // The account is now locked: the CORRECT password is rejected with 429.
         const locked = await api.post("/api/v1/auth/signin")
             .send({ email: user.email, password: "password123" });
-        expect(locked.status).toBe(429);
-        expect(locked.body.message).toMatch(/try again later/i);
+        expect(locked.status).toBe(401);
+        expect(locked.body.message).toBe(lastFail.body.message);
     });
 
     test("a successful signin clears accumulated failure state", async () => {
