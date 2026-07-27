@@ -33,6 +33,29 @@ const CATALOGUE_QS = `${LIST_QS}&includeDisabled=true`;
 const definedOnly = (obj) =>
   Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined));
 
+/*
+ * Multipart encoding for endpoints that accept a file upload.
+ *
+ * multipart/form-data carries strings only, so the server re-types the
+ * non-string fields (see middlewares/multipart.middleware.js). Arrays are
+ * JSON-encoded rather than sent as repeated keys — that's the only encoding in
+ * which an *empty* array survives the round trip, and "no cities selected" has
+ * to reach the strict schema as `[]`, not as a missing field.
+ *
+ * axios drops the instance's default JSON Content-Type when the payload is a
+ * FormData, so the browser sets the multipart boundary itself.
+ */
+const toFormData = (fields) => {
+  const form = new FormData();
+  for (const [key, value] of Object.entries(fields)) {
+    if (value === undefined) continue;
+    if (value instanceof File || value instanceof Blob) form.append(key, value);
+    else if (Array.isArray(value)) form.append(key, JSON.stringify(value));
+    else form.append(key, String(value));
+  }
+  return form;
+};
+
 /* ------------------------------------------------------------------ Cities */
 
 const cityFromApi = (c) => ({
@@ -102,6 +125,12 @@ const serviceFromApi = (s) => ({
   createdAt: s.createdAt,
 });
 
+// The cover image is either a freshly picked File (upload it as multipart) or a
+// plain string: the path already stored on the record, a hosted URL, or "" to
+// clear it. Only the File case needs multipart, so ordinary edits keep sending
+// the same compact JSON body they always did.
+const isUpload = (image) => image instanceof File;
+
 export const serviceApi = {
   async list() {
     const data = await request({ method: "GET", url: `/service${CATALOGUE_QS}` });
@@ -112,27 +141,29 @@ export const serviceApi = {
     const allSpecialRequests = Boolean(v.all_special_requests);
     // createServiceSchema is strict. `enabled` is NOT accepted here (defaults to
     // true server-side); the special-request keys are optional.
+    const body = {
+      name: v.name,
+      subtitle: v.subtitle || "",
+      description: v.description,
+      image: v.image || "",
+      includes: Array.isArray(v.includes) ? v.includes.filter(Boolean) : [],
+      pricePerHour: Number(v.price_per_hour),
+      allCities,
+      cities: allCities ? [] : (v.cities ?? []),
+      allSpecialRequests,
+      specialRequests: allSpecialRequests ? [] : (v.special_requests ?? []),
+    };
     const data = await request({
       method: "POST",
       url: "/service",
-      data: {
-        name: v.name,
-        subtitle: v.subtitle || "",
-        description: v.description,
-        image: v.image || "",
-        includes: Array.isArray(v.includes) ? v.includes.filter(Boolean) : [],
-        pricePerHour: Number(v.price_per_hour),
-        allCities,
-        cities: allCities ? [] : (v.cities ?? []),
-        allSpecialRequests,
-        specialRequests: allSpecialRequests ? [] : (v.special_requests ?? []),
-      },
+      data: isUpload(v.image) ? toFormData(body) : body,
     });
     return serviceFromApi(data.service);
   },
   async update(id, patch) {
-    // editServiceSchema is strict: name / description / pricePerHour /
-    // allCities / cities / allSpecialRequests / specialRequests / enabled.
+    // editServiceSchema is strict: name / subtitle / description / image /
+    // includes / pricePerHour / allCities / cities / allSpecialRequests /
+    // specialRequests / enabled.
     const body = definedOnly({
       name: patch.name,
       subtitle: patch.subtitle,
@@ -155,7 +186,7 @@ export const serviceApi = {
     const data = await request({
       method: "PATCH",
       url: `/service/${id}`,
-      data: body,
+      data: isUpload(patch.image) ? toFormData(body) : body,
     });
     return serviceFromApi(data.service);
   },

@@ -53,19 +53,20 @@ describe("POST /api/v1/payment/booking/intent", () => {
             .set("Cookie", cookieFor(user))
             .send(validBookingBody(service, city, {
                 hours: 2,
+                cleaners: 2,
                 specialRequests: [String(addon._id)],
                 cleaningTools: [String(tool._id)]
             }));
 
         expect(res.status).toBe(201);
         // 20 €/h * 2h + 15 + 5 = 60 — computed from DB prices, never the client.
-        expect(res.body.data.amount).toBe(60);
+        expect(res.body.data.amount).toBe(100);
         expect(res.body.data.clientSecret).toBe("pi_test_1_secret");
 
         // Stripe was asked to charge exactly the server-computed total in cents.
         expect(stripeMock.paymentIntents.create).toHaveBeenCalledWith(
             expect.objectContaining({
-                amount: toMinorUnits(60),
+                amount: toMinorUnits(100),
                 currency: "eur",
                 customer: "cus_test_1",
                 receipt_email: user.email
@@ -75,7 +76,7 @@ describe("POST /api/v1/payment/booking/intent", () => {
         // The draft is persisted, keyed to the intent, with the same total.
         const pending = await PendingBooking.findOne({ paymentIntentId: "pi_test_1" });
         expect(pending).not.toBeNull();
-        expect(pending.draft.totalAmount).toBe(60);
+        expect(pending.draft.totalAmount).toBe(100);
         expect(String(pending.user)).toBe(String(user._id));
 
         // No booking exists yet — pay-first means no charge, no booking.

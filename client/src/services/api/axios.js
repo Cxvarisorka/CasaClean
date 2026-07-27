@@ -9,8 +9,12 @@
 import axios from "axios";
 import { attachInterceptors } from "./interceptors";
 
-const baseURL =
+// Exported so assets.js can derive the API origin from the same single source
+// (uploaded files are served from /uploads, outside the /api/v1 prefix).
+export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
+
+const baseURL = API_BASE_URL;
 
 export const apiClient = attachInterceptors(
   axios.create({

@@ -7,6 +7,18 @@ const AppError = require("../utils/appError.util");
 const catchAsync = require("../utils/catchAsync.util");
 const SpecialRequest = require("../models/specialRequest.model");
 const formatName = require("../utils/formatName.util");
+const { serviceImageUrl, removeServiceImage } = require("../utils/upload.util");
+
+/**
+ * The image value to store for a write request.
+ *
+ * A multipart upload (req.file, put there by multer) always wins — the file is
+ * already on disk, so the document must point at it. Otherwise the body's
+ * `image` field is used, which lets an admin keep supplying a hosted URL (or
+ * send "" to clear the image) without uploading anything.
+ */
+const resolveImage = (req) =>
+    req.file ? serviceImageUrl(req.file.filename) : req.body.image;
 
 /**
  * Resolve and validate the coverage a service should have ("all cities",
@@ -147,7 +159,12 @@ const getServiceById = catchAsync(async (req, res, next) => {
 
 // POST /api/v1/service -> create a service (admin only)
 const createService = catchAsync(async (req, res, next) => {
-    const { name, subtitle, description, image, includes, pricePerHour, allCities, cities, allSpecialRequests, specialRequests } = req.body;
+    const { name, subtitle, description, includes, pricePerHour, allCities, cities, allSpecialRequests, specialRequests } = req.body;
+
+    // An uploaded file (multipart) takes precedence over an `image` URL in the
+    // body. Any failure below leaves the file orphaned on disk — the service
+    // router's cleanup handler unlinks it.
+    const image = resolveImage(req);
 
     // Guard required fields up-front so we never hit `name[0]` on undefined and
     // the client gets a clear 400 instead of a generic schema error.
@@ -193,13 +210,19 @@ const createService = catchAsync(async (req, res, next) => {
 // PATCH /api/v1/service/:id -> partial update (admin only)
 const editService = catchAsync(async (req, res, next) => {
     const { id } = req.params;
-    const { name, subtitle, description, image, includes, pricePerHour, enabled, allCities, cities, allSpecialRequests, specialRequests } = req.body;
+    const { name, subtitle, description, includes, pricePerHour, enabled, allCities, cities, allSpecialRequests, specialRequests } = req.body;
+
+    const image = resolveImage(req);
 
     const service = await Service.findById(id);
 
     if (!service) {
         return next(new AppError("Service not found to edit!", 404));
     }
+
+    // Remembered so a replaced/cleared upload can be unlinked after the save
+    // succeeds (never before — a failed save must leave the old file in place).
+    const previousImage = service.image;
 
     if (name) {
         const formattedName = formatName(name);
@@ -253,6 +276,12 @@ const editService = catchAsync(async (req, res, next) => {
 
     await service.save();
 
+    // The old file is only garbage once the new value is durably stored.
+    // Best-effort and non-blocking: a stale file must never fail the request.
+    if (previousImage && previousImage !== service.image) {
+        removeServiceImage(previousImage);
+    }
+
     res.status(200).json({
         status: "success",
         message: "Service edited successfully!",
@@ -271,6 +300,9 @@ const deleteService = catchAsync(async (req, res, next) => {
     if (!service) {
         return next(new AppError("Service not found to delete!", 404));
     }
+
+    // Nothing references the cover image any more — drop it from disk too.
+    removeServiceImage(service.image);
 
     res.status(200).json({
         status: "success",

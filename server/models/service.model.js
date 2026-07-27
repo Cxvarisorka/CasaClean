@@ -29,8 +29,9 @@ const serviceSchema = new mongoose.Schema({
         required: [true, "Service description is required!"]
     },
     // Presentation image for the service card. Stored as a string the frontend
-    // can render directly — either a hosted URL or an inline data URL (the admin
-    // upload is visual-only for now, so no external file store is involved).
+    // resolves against the API origin — normally a relative path to a file this
+    // server holds (`/uploads/services/…`, written by the multer upload), but a
+    // hosted HTTPS URL or a legacy inline data URL is equally valid.
     image: {
         type: String,
         default: ""

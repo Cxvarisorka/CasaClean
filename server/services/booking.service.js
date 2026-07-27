@@ -14,6 +14,12 @@ const Service = require('../models/service.model');
 
 const AppError = require('../utils/appError.util');
 
+// Single source of truth for booking price. Cleaners multiply labour only.
+const computeBookingTotal = ({ service, hours, cleaners, specialRequests = [], cleaningTools = [] }) =>
+  service.pricePerHour * hours * cleaners +
+  specialRequests.reduce((sum, specialRequest) => sum + specialRequest.price, 0) +
+  cleaningTools.reduce((sum, cleaningTool) => sum + cleaningTool.price, 0);
+
 /**
  * Validate the service/city pair selected for a booking.
  *
@@ -261,9 +267,13 @@ const buildValidatedBookingDraft = async (payload, user) => {
 
   // Server-side price: pricePerHour * hours + sum(add-on prices) + sum(tool
   // surcharges). Never trusted from the client.
-  const totalAmount = service.pricePerHour * hours +
-    resolvedSpecialRequests.reduce((sum, sr) => sum + sr.price, 0) +
-    resolvedCleaningTools.reduce((sum, ct) => sum + ct.price, 0);
+  const totalAmount = computeBookingTotal({
+    service,
+    hours,
+    cleaners,
+    specialRequests: resolvedSpecialRequests,
+    cleaningTools: resolvedCleaningTools
+  });
 
   return {
     user: user._id,
@@ -473,6 +483,7 @@ const renderRefundEmail = ({ customerName, serviceName, bookingDate, amount }) =
 };
 
 module.exports = {
+  computeBookingTotal,
   resolveServiceAndCity,
   resolveSpecialRequests,
   resolveCleaningTools,

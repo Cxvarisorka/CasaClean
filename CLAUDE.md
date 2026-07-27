@@ -19,7 +19,7 @@ Deep references already exist — read them before large changes instead of re-d
 **Server** (`cd server`):
 - `npm install`
 - `node app.js` — start the API. There is **no `start`/`dev` script** despite what `api-testing/00-setup.md` says (`npm start` will fail with "Missing script: start"). Use `node app.js`, or run nodemon yourself for reload.
-- No test runner is configured (`npm test` only prints an error). Verify changes against `api-testing/` manually or via the Postman collection.
+- `npm test` — Jest (`--runInBand`) over `server/tests/{unit,integration}`; integration suites boot an in-memory MongoDB and mock Stripe + email (`tests/setup/testEnv.js`). Also `npm run test:watch` / `test:coverage`. For anything not covered there, verify against `api-testing/` manually or via the Postman collection.
 
 **Client** (`cd client`):
 - `npm install`
@@ -33,7 +33,14 @@ Both sides need a `.env` (copy from each `.env.example`). The server **refuses t
 ## Backend architecture
 
 ### Request pipeline (order is load-bearing — see `server/app.js`)
-`assertEnv()` (fail-fast on bad config) → `helmet` → CORS allow-list (`CLIENT_URL` only, `credentials:true`) → `globalLimiter` → `passport.initialize()` → `express.json({limit:'4mb'})` + `cookieParser` → `csrfGuard` → `sanitizeMongo` → routers (`/api/v1/{auth,city,service,booking,special-request,review,subscription}`) → `/*splat` 404 → Sentry error handler → `globalErrorHandler` (must be last).
+`assertEnv()` (fail-fast on bad config) → `helmet` → Stripe webhook (raw body) → `/healthz` → `compression` → `express.static('/uploads')` → CORS allow-list (`CLIENT_URL` only, `credentials:true`) → `globalLimiter` → `passport.initialize()` → `express.json({limit:'4mb'})` + `cookieParser` → `csrfGuard` → `sanitizeMongo` → routers (`/api/v1/{auth,city,service,booking,special-request,review,subscription}`) → `/*splat` 404 → Sentry error handler → `globalErrorHandler` (must be last).
+
+### File uploads
+A service's cover image is uploaded via **multer** (`middlewares/upload.middleware.js`) to `server/uploads/services/` (git-ignored, recreated at boot by `ensureUploadDirs()`) and served read-only from `/uploads` — mounted *before* the rate limiter so image fetches don't burn API quota, with `Cross-Origin-Resource-Policy: cross-origin` so the SPA on another origin can render them. `utils/upload.util.js` owns the paths and the traversal-safe delete.
+
+Documents store the **relative** path (`/uploads/services/<random>.png`); the client resolves it against the API origin (`services/api/assets.js` `assetUrl()`). Filenames are random + an extension derived from the MIME type — never from `originalname`.
+
+`POST /service` and `PATCH /service/:id` accept **either** JSON **or** `multipart/form-data`; multer no-ops on JSON. On multipart, `coerceMultipart` (`middlewares/multipart.middleware.js`) re-types the flattened string fields (numbers/booleans/JSON-encoded arrays) so the one strict Zod schema validates both encodings. `sanitizeMongo` is re-run inside the service router because the app-level pass happens before multer populates `req.body`. A router-level error handler unlinks `req.file` on any downstream failure so nothing is orphaned; the controller deletes the previous file after a successful replace and on service delete.
 
 ### Routes and background jobs
 

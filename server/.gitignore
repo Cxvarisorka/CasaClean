@@ -1,2 +1,7 @@
 node_modules
 .env
+
+# Admin-uploaded files (service cover images). Generated at runtime and served
+# from /uploads — never committed. The directory tree itself is recreated at
+# boot by ensureUploadDirs().
+uploads/

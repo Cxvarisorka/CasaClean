@@ -100,7 +100,8 @@ const createBookingSchema = z.object({
     cleaners: z
         .number()
         .int({ message: "Cleaners must be a whole number!" })
-        .min(1, { message: "A booking must have at least 1 cleaner!" }),
+        .min(1, { message: "A booking must have at least 1 cleaner!" })
+        .max(10, { message: "A booking cannot have more than 10 cleaners!" }),
 
     // totalAmount is now server-managed (computed from service.pricePerHour * hours
     // + sum of specialRequest prices). It is intentionally absent from this schema
@@ -204,6 +205,7 @@ const editBookingSchema = z.object({
         .number()
         .int({ message: "Cleaners must be a whole number!" })
         .min(1, { message: "A booking must have at least 1 cleaner!" })
+        .max(10, { message: "A booking cannot have more than 10 cleaners!" })
         .optional(),
 
     // totalAmount is server-managed — intentionally absent from editBookingSchema
