@@ -35,6 +35,7 @@ const csrfGuard = require('./middlewares/csrf.middleware');
 const sanitizeMongo = require('./middlewares/sanitize.middleware');
 const { globalLimiter } = require('./middlewares/rateLimit.middleware');
 const AppError = require('./utils/appError.util');
+const { UPLOADS_ROOT, ensureUploadDirs } = require('./utils/upload.util');
 
 // Routers
 const authRouter = require('./routers/auth.router');
@@ -99,6 +100,34 @@ app.get('/healthz', (req, res) => {
 // Compress JSON responses (catalogue/admin lists are chatty). Mounted after the
 // webhook (raw bytes must stay untouched for signature verification).
 app.use(compression());
+
+// --- Uploaded files (read-only) ---------------------------------------------
+// Admin-uploaded service cover images live on disk under server/uploads and are
+// served here. Created at require-time so a fresh clone (uploads/ is
+// git-ignored) can serve and write immediately.
+//
+// Mounted before the global rate limiter: a catalogue page pulls a dozen images
+// at once, and static asset fetches must not eat into a visitor's API quota.
+// It sits outside /api/v1 and before the routers, so nothing here touches auth.
+ensureUploadDirs();
+app.use('/uploads', express.static(UPLOADS_ROOT, {
+    // Never serve a directory listing or an implicit index.html, and ignore
+    // dotfiles entirely — this tree holds nothing but generated image files.
+    index: false,
+    dotfiles: 'ignore',
+    // Filenames are random and immutable (an edit writes a new file and unlinks
+    // the old one), so they can be cached hard.
+    maxAge: '30d',
+    immutable: true,
+    setHeaders: (res) => {
+        // helmet's default Cross-Origin-Resource-Policy is `same-origin`, which
+        // would make the browser refuse to render these images inside the SPA
+        // (a different origin). Relax it for this tree only — the files are
+        // public product imagery. helmet's global nosniff still applies, so the
+        // browser can't reinterpret an image as script.
+        res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    }
+}));
 
 // CORS — credentials:true is required so the browser sends/stores the auth
 // cookie. The origin is an explicit allow-list (assertEnv guarantees

@@ -1,12 +1,21 @@
 // Modules
 const { z } = require("zod");
 
-const SERVICE_IMAGE_REGEX = /^(https:\/\/[^\s]+|data:image\/(?:png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+/]+={0,2})$/i;
+// Accepted forms for the `image` field, in order:
+//   1. a hosted HTTPS URL,
+//   2. a path to a file this server stores and serves (the multer upload —
+//      the admin panel echoes it back unchanged on a partial edit),
+//   3. a legacy inline base64 data URL (pre-upload services still hold these).
+// The filename character class is deliberately narrow so a stored value can
+// never encode a traversal segment.
+const SERVICE_IMAGE_REGEX = /^(https:\/\/[^\s]+|\/uploads\/services\/[A-Za-z0-9._-]+|data:image\/(?:png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+/]+={0,2})$/i;
 const serviceImage = z
     .string()
     .max(3_000_000, "Image is too large!")
-    .refine((value) => SERVICE_IMAGE_REGEX.test(value), {
-        message: "Image must be an HTTPS URL or a supported base64 image data URL!"
+    // "" is the explicit "no image" / "clear the image" value the admin form
+    // sends; everything else must match one of the accepted forms above.
+    .refine((value) => value === "" || SERVICE_IMAGE_REGEX.test(value), {
+        message: "Image must be an HTTPS URL, an uploaded image path or a supported base64 image data URL!"
     });
 
 // Schema for validate create service request body

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ImagePlus, Loader2, Plus, Trash2, X } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
@@ -8,6 +8,7 @@ import { Select } from "@/components/ui/Select";
 import { Switch } from "@/components/ui/Switch";
 import { useTranslation } from "@/i18n";
 import { downscaleImage } from "@/utils/downscaleImage";
+import { assetUrl } from "@/services/api";
 import { cn } from "@/lib/cn";
 
 /*
@@ -286,15 +287,34 @@ function ResourceForm({ fields, initialValues, onSubmit }) {
 /*
  * ImageField
  * ----------
- * A file picker that downscales the chosen image client-side and stores it as a
- * compact data URL (visual-only — there's no file store yet). Shows a live
- * preview with a remove control.
+ * A file picker that downscales the chosen image client-side, then holds it as
+ * a File until the form is submitted — the API stores it in its uploads folder
+ * and the record keeps a path.
+ *
+ * So the value is one of three things:
+ *   - a File   — freshly picked, not uploaded yet (preview via an object URL),
+ *   - a string — the path/URL already stored on the record (resolved against
+ *                the API origin for display),
+ *   - ""       — no image / cleared.
  */
 function ImageField({ field, value, error, onChange }) {
   const { t } = useTranslation();
   const inputRef = useRef(null);
   const [busy, setBusy] = useState(false);
   const [localError, setLocalError] = useState("");
+
+  // A pending File isn't addressable, so give it a temporary object URL and
+  // revoke it as soon as the value changes or the modal unmounts.
+  const objectUrl = useMemo(
+    () => (value instanceof File ? URL.createObjectURL(value) : ""),
+    [value]
+  );
+  useEffect(() => {
+    if (!objectUrl) return undefined;
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [objectUrl]);
+
+  const previewSrc = objectUrl || assetUrl(value);
 
   const handleFile = async (file) => {
     if (!file) return;
@@ -331,10 +351,10 @@ function ImageField({ field, value, error, onChange }) {
         }}
       />
 
-      {value ? (
+      {previewSrc ? (
         <div className="group relative overflow-hidden rounded-xl border border-ink-200">
           <img
-            src={value}
+            src={previewSrc}
             alt={field.label}
             className="aspect-[16/10] w-full object-cover"
           />

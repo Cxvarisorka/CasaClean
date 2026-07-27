@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { request } from "@/services/api";
+import { request, assetUrl } from "@/services/api";
 import { IMAGES } from "@/constants/images";
 
 /*
@@ -35,9 +35,10 @@ function normalizeDbService(s, index) {
     tagline: s.subtitle || "",
     features: Array.isArray(s.includes) ? s.includes : [],
     icon: "Sparkles",
-    // Prefer the admin-uploaded image; otherwise rotate through the curated
+    // Prefer the admin-uploaded image (stored as a relative /uploads path, so
+    // resolve it against the API origin); otherwise rotate through the curated
     // photos so the grid stays visually consistent.
-    image: s.image || FALLBACK_IMAGES[index % FALLBACK_IMAGES.length],
+    image: assetUrl(s.image) || FALLBACK_IMAGES[index % FALLBACK_IMAGES.length],
     pricePerHour: s.pricePerHour,
     startingAt: s.pricePerHour,
     popular: false,

@@ -11,6 +11,7 @@ import {
   useCollection,
 } from "@/features/admin";
 import { useTranslation } from "@/i18n";
+import { assetUrl } from "@/services/api";
 
 /*
  * Services management
@@ -135,8 +136,10 @@ export default function ServicesPage() {
       render: (s) => (
         <div className="flex items-center gap-3">
           {s.image ? (
+            // Stored as a relative /uploads path — resolve it against the API
+            // origin (see services/api/assets.js).
             <img
-              src={s.image}
+              src={assetUrl(s.image)}
               alt=""
               className="size-11 shrink-0 rounded-lg object-cover"
             />

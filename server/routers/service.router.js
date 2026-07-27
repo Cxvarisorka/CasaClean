@@ -7,6 +7,12 @@ const { getServices, getServiceById, createService, deleteService, editService }
 // Middlewares
 const { protect, attachUser, restrictTo } = require('../middlewares/protect.middleware');
 const validate = require('../middlewares/validate.middleware');
+const sanitizeMongo = require('../middlewares/sanitize.middleware');
+const coerceMultipart = require('../middlewares/multipart.middleware');
+const { uploadServiceImage } = require('../middlewares/upload.middleware');
+
+// Utils
+const { removeServiceImage, serviceImageUrl } = require('../utils/upload.util');
 
 // Validations
 const { createServiceSchema, editServiceSchema } = require('../validations/service.validation');
@@ -22,7 +28,39 @@ serviceRouter.get('/:id', getServiceById);
 // Admin routes — everything below requires a valid auth cookie AND the admin role.
 // protect populates req.user; restrictTo("admin") then gates on the role.
 serviceRouter.use(protect, restrictTo('admin'));
-serviceRouter.post('/', validate(createServiceSchema), createService);
-serviceRouter.route('/:id').delete(deleteService).patch(validate(editServiceSchema), editService);
+
+// Write pipeline for the two routes that accept a cover image.
+//   uploadServiceImage — multer; parses `multipart/form-data` (file → req.file,
+//                        text fields → req.body) and no-ops on JSON bodies.
+//   sanitizeMongo      — re-run here because the app-level pass happens before
+//                        multer populates req.body on a multipart request.
+//   coerceMultipart    — re-types the non-string fields multipart flattened to
+//                        strings, so the strict Zod schema below is unchanged.
+const parseServiceBody = [
+    uploadServiceImage,
+    sanitizeMongo,
+    coerceMultipart({
+        numbers: ['pricePerHour'],
+        booleans: ['allCities', 'allSpecialRequests', 'enabled'],
+        arrays: ['includes', 'cities', 'specialRequests']
+    })
+];
+
+serviceRouter.post('/', parseServiceBody, validate(createServiceSchema), createService);
+serviceRouter
+    .route('/:id')
+    .delete(deleteService)
+    .patch(parseServiceBody, validate(editServiceSchema), editService);
+
+// Orphan cleanup. multer has already written the file to disk by the time
+// validation or the controller rejects the request, so any failure downstream
+// of the upload would otherwise leave a file nothing references. Runs before the
+// global error handler and always re-throws — it only tidies up.
+serviceRouter.use((err, req, res, next) => {
+    if (req.file) {
+        removeServiceImage(serviceImageUrl(req.file.filename));
+    }
+    next(err);
+});
 
 module.exports = serviceRouter;
