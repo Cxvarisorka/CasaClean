@@ -1,6 +1,8 @@
 const Worker = require("../models/worker.model");
+const Booking = require("../models/booking.model");
 const AppError = require("../utils/appError.util");
 const catchAsync = require("../utils/catchAsync.util");
+const { assertNotReferenced } = require("../utils/referentialGuard.util");
 
 // Optional contact fields arrive trimmed from the Zod layer; the admin form
 // sends "" to clear one. Normalise an empty/whitespace value to null so the
@@ -88,6 +90,13 @@ const addWorker = catchAsync(async (req, res, next) => {
 // DELETE /api/v1/worker/:id -> remove a worker (admin only)
 const deleteWorker = catchAsync(async (req, res, next) => {
     const { id } = req.params;
+
+    // Staff assignments are an audit trail of who was sent to a job. Deleting a
+    // worker would leave unresolvable ids on those bookings; disable instead
+    // (resolveWorkers deliberately allows disabled staff on existing bookings).
+    await assertNotReferenced([
+        { model: Booking, filter: { workers: id }, noun: "bookings" }
+    ], "worker");
 
     const deletedWorker = await Worker.findByIdAndDelete(id);
 

@@ -470,28 +470,47 @@ const editBooking = catchAsync(async (req, res, next) => {
   // payment fields, refund a paid card booking, and merge the resulting payment
   // fields into the update so they persist atomically with the status change.
   if (updates.status === 'cancelled') {
-    const current = await Booking.findById(id)
-      .select('paymentMethod paymentStatus paymentIntentId status customerName customerEmail bookingDate totalAmount')
-      .populate('serviceId', 'name')
-      .lean();
-    if (!current) {
-      return next(new AppError("Booking not found!", 404));
-    }
-    // Idempotent: don't refund again if it's already cancelled.
-    if (current.status !== 'cancelled') {
-      const refundUpdate = await refundBookingPayment(current);
+    // Same atomic claim as the customer cancel path: exactly one caller may
+    // transition a booking into 'cancelled', and only that caller performs the
+    // refund. Without this, two concurrent admin cancels both see paymentStatus
+    // 'paid' and both call Stripe. `new: false` returns the pre-update document.
+    const claimed = await Booking.findOneAndUpdate(
+      { _id: id, status: { $ne: 'cancelled' } },
+      { $set: { status: 'cancelled' } },
+      { new: false }
+    )
+      .select('paymentMethod paymentStatus paymentIntentId status customerName customerEmail bookingDate totalAmount serviceId')
+      .populate('serviceId', 'name');
+
+    if (!claimed) {
+      // Either the booking is gone, or it was already cancelled (in which case
+      // there is nothing left to refund and the remaining edits still apply).
+      const exists = await Booking.exists({ _id: id });
+      if (!exists) {
+        return next(new AppError("Booking not found!", 404));
+      }
+    } else {
+      let refundUpdate = null;
+      try {
+        refundUpdate = await refundBookingPayment(claimed);
+      } catch (refundError) {
+        // Never leave a booking cancelled while the customer is still charged.
+        await Booking.updateOne({ _id: id }, { $set: { status: claimed.status } });
+        return next(refundError);
+      }
+
       if (refundUpdate) {
         Object.assign(updates, refundUpdate);
 
         // Best-effort refund email.
         try {
           const { subject, html, text } = renderRefundEmail({
-            customerName: current.customerName,
-            serviceName: current.serviceId?.name,
-            bookingDate: current.bookingDate,
-            amount: current.totalAmount
+            customerName: claimed.customerName,
+            serviceName: claimed.serviceId?.name,
+            bookingDate: claimed.bookingDate,
+            amount: claimed.totalAmount
           });
-          await sendEmail({ email: current.customerEmail, subject, html, text });
+          await sendEmail({ email: claimed.customerEmail, subject, html, text });
         } catch (emailError) {
           console.error('Refund email send error:', emailError.message);
         }
@@ -531,19 +550,35 @@ const cancelMyBooking = catchAsync(async (req, res, next) => {
     return next(new AppError("Invalid booking id!", 400));
   }
 
+  // Claim the cancellation ATOMICALLY before touching Stripe. Two concurrent
+  // cancels (a double-clicked button is enough) would otherwise both read
+  // paymentStatus 'paid' and both issue a refund. `new: false` returns the
+  // PRE-update document, which carries the payment fields we need plus the
+  // status to restore if the refund fails.
   // Ownership is enforced in the query itself: a booking that isn't the user's
   // simply isn't found (no information leak about other users' bookings).
-  const booking = await Booking.findOne({ _id: id, user: req.user._id });
-  if (!booking) {
-    return next(new AppError("Booking not found!", 404));
-  }
+  const booking = await Booking.findOneAndUpdate(
+    { _id: id, user: req.user._id, status: { $in: ['pending', 'confirmed'] } },
+    { $set: { status: 'cancelled' } },
+    { new: false }
+  );
 
-  if (booking.status === 'cancelled') {
-    return next(new AppError("This booking is already cancelled.", 400));
-  }
-  if (booking.status === 'completed') {
+  if (!booking) {
+    // Losing the claim is not automatically a 404 — distinguish "not yours /
+    // doesn't exist" from a booking that simply isn't in a cancellable state.
+    const current = await Booking.findOne({ _id: id, user: req.user._id })
+      .select('status')
+      .lean();
+    if (!current) {
+      return next(new AppError("Booking not found!", 404));
+    }
+    if (current.status === 'cancelled') {
+      return next(new AppError("This booking is already cancelled.", 400));
+    }
     return next(new AppError("A completed booking can't be cancelled.", 400));
   }
+
+  const previousStatus = booking.status;
 
   // Refund policy: an automatic full refund only applies when the cancellation
   // happens at least CANCELLATION_WINDOW_HOURS before the appointment starts.
@@ -557,20 +592,24 @@ const cancelMyBooking = catchAsync(async (req, res, next) => {
   const withinWindow =
     startsAt.getTime() - Date.now() < CANCELLATION_WINDOW_HOURS * 60 * 60 * 1000;
 
-  // Release the money before marking the booking cancelled. refundBookingPayment
-  // throws on a Stripe failure, which (via catchAsync) aborts the cancellation —
-  // we never want a booking marked cancelled while the customer is still charged.
-  // It's a no-op for manual/offline or unpaid bookings.
+  // Release the money. On a Stripe failure we roll the status back to what it
+  // was and abort — a booking must never be left cancelled while the customer
+  // is still charged. It's a no-op for manual/offline or unpaid bookings.
   let refundUpdate = null;
   if (!withinWindow) {
-    refundUpdate = await refundBookingPayment(booking);
-    if (refundUpdate) {
-      Object.assign(booking, refundUpdate);
+    try {
+      refundUpdate = await refundBookingPayment(booking);
+    } catch (refundError) {
+      await Booking.updateOne({ _id: id }, { $set: { status: previousStatus } });
+      return next(refundError);
     }
   }
 
+  if (refundUpdate) {
+    Object.assign(booking, refundUpdate);
+    await Booking.updateOne({ _id: id }, { $set: refundUpdate });
+  }
   booking.status = 'cancelled';
-  await booking.save();
 
   // Best-effort refund email (only when an actual refund was issued).
   if (refundUpdate) {

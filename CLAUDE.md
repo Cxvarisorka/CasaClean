@@ -75,6 +75,8 @@ Each resource follows the same vertical slice, named by suffix: `routers/x.route
 ### Domain model & fail-closed reference resolution
 Mongoose fields are **camelCase**. Core relationships: `Booking` references `User`, `Service`, `City`, and `SpecialRequest[]`. A `Service` is offered in `allCities` or an explicit `cities[]` subset, and accepts `allSpecialRequests` or an explicit `specialRequests[]` subset.
 
+Recurrence is opt-in per service, in the same shape: `recurringEnabled` gates it, and `recurringIntervalDays` optionally pins the exact cadences (empty = the customer picks any whole number of days between `MIN_INTERVAL_DAYS` and `MAX_INTERVAL_DAYS` in `utils/date.util.js` — currently 1–14). `assertRecurrenceAllowed` (booking.service.js) enforces it on **both** paths that can start or continue a plan: the first on-session payment (via `buildValidatedBookingDraft`) and every unattended cycle (via `priceSubscriptionCycle`), so revoking recurrence on a service pauses live subscriptions with `pausedReason: "service-unavailable"` instead of charging on.
+
 Before creating a booking, `booking.controller.js` calls `resolveServiceAndCity` and `resolveSpecialRequests` — these **fail closed**: ids must be valid ObjectIds pointing to existing, `enabled` documents, the city must be within a city-restricted service's coverage, and add-ons must be offered by that service. Controllers never trust raw ids from the request.
 
 Mongoose 9 note: document `pre('save')` hooks use the **no-arg form** (no `next` callback) — keeping `next` throws "next is not a function".

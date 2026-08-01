@@ -13,9 +13,14 @@ const stripe = require('../config/stripe.config');
 const StripeEvent = require('../models/stripeEvent.model');
 const Booking = require('../models/booking.model');
 const PendingBooking = require('../models/pendingBooking.model');
+const Subscription = require('../models/subscription.model');
 const sendEmail = require('../utils/email.util');
 const { promotePendingBooking } = require('./payment.controller');
-const { ensureSubscriptionCycleBooking } = require('../services/subscription.service');
+const {
+  ensureSubscriptionCycleBooking,
+  renderSubscriptionPausedEmail,
+  sendBestEffortEmail
+} = require('../services/subscription.service');
 
 const handleStripeWebhook = async (req, res) => {
   const signature = req.headers['stripe-signature'];
@@ -96,10 +101,44 @@ const handleStripeWebhook = async (req, res) => {
         if (paymentIntentId && charge.amount_refunded >= charge.amount) {
           // Idempotent: re-applying the same fields is harmless if the cancel
           // handler already set them.
-          await Booking.findOneAndUpdate(
+          const booking = await Booking.findOneAndUpdate(
             { paymentIntentId },
-            { paymentStatus: 'refunded', refundedAt: new Date(), stripeStatus: 'refunded' }
+            { paymentStatus: 'refunded', refundedAt: new Date(), stripeStatus: 'refunded' },
+            { new: true }
           );
+
+          // A refund issued straight from the Stripe dashboard is a deliberate
+          // "undo this charge". If the refunded charge paid for a recurring
+          // cycle, leaving the plan active would just charge the same card again
+          // on the next sweep — so pause it and tell the customer why. Paused
+          // (not cancelled) keeps it resumable once the card/billing issue is
+          // sorted out.
+          if (booking?.subscriptionId) {
+            const paused = await Subscription.findOneAndUpdate(
+              { _id: booking.subscriptionId, status: 'active' },
+              {
+                $set: {
+                  status: 'paused',
+                  pausedReason: 'payment-failed',
+                  pausedAt: new Date(),
+                  processingAt: null,
+                  lastError: 'A charge for this plan was refunded, so upcoming visits are on hold.'
+                }
+              },
+              { new: true }
+            );
+
+            if (paused) {
+              sendBestEffortEmail({
+                email: paused.customerEmail,
+                ...renderSubscriptionPausedEmail({
+                  subscription: paused,
+                  reason: 'payment-failed',
+                  errorMessage: paused.lastError
+                })
+              });
+            }
+          }
         }
         break;
       }

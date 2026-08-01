@@ -48,45 +48,19 @@ export function toBookingPayload(values) {
   return payload;
 }
 
-/**
- * Submit a booking. `input` is either the raw server payload, or
- * `{ payload, display }` where `display` carries name/total used ONLY to render
- * the offline-simulated confirmation (those values aren't sent — the server
- * derives the name and computes the total itself).
+/*
+ * There is deliberately no `createBooking` here.
+ *
+ * Customers book through the pay-first flow (features/booking/api/paymentApi.js:
+ * createBookingIntent -> Stripe confirm -> finalizeBooking), which is the only
+ * path that guarantees "no charge, no booking". `POST /booking` is now
+ * admin-only (server/routers/booking.router.js) for manual walk-in/phone
+ * bookings, so a customer-side helper for it could only ever return 403.
+ *
+ * The old helper also faked a `status: "confirmed"` result whenever the network
+ * was unreachable, which would have shown a customer a confirmation for a
+ * booking that was never created and never paid for.
  */
-export async function createBooking(input) {
-  const payload = input?.payload ?? input;
-  const display = input?.display ?? {};
-  try {
-    const res = await request({ method: "POST", url: "/booking", data: payload });
-    const b = res?.booking ?? res;
-    return {
-      _id: b._id,
-      id: ref(b._id),
-      customer_name: b.customerName,
-      booking_date: b.bookingDate,
-      booking_time: b.bookingTime,
-      total_amount: b.totalAmount,
-      status: b.status,
-    };
-  } catch (err) {
-    // Only simulate when the API is genuinely unreachable (preview/offline);
-    // real validation errors from a live server still surface to the user.
-    if (err?.status === 0) {
-      await new Promise((r) => setTimeout(r, 700));
-      return {
-        id: `CC-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
-        status: "confirmed",
-        simulated: true,
-        customer_name: display.customerName,
-        booking_date: payload.bookingDate,
-        booking_time: payload.bookingTime,
-        total_amount: display.totalAmount,
-      };
-    }
-    throw err;
-  }
-}
 
 /**
  * Cancel one of the signed-in user's own bookings. The server enforces ownership

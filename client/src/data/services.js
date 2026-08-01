@@ -4,6 +4,10 @@
  * The marketing-facing service offerings. Shapes mirror the backend `service`
  * model (name, description, price_per_hour) and extend it with presentation
  * metadata (icon, slug, features) the API doesn't need to own.
+ *
+ * The six services below are CasaClean's official offering — keep this list in
+ * sync with the "Our Services" block on the About page (`pages.about.services`
+ * in the locale files).
  */
 
 import { IMAGES } from "@/constants/images";
@@ -11,13 +15,13 @@ import { IMAGES } from "@/constants/images";
 export const SERVICES = [
   {
     id: 1,
-    slug: "home-cleaning",
-    name: "Home Cleaning",
+    slug: "regular-cleaning",
+    name: "Regular Cleaning",
     icon: "Sparkles",
     image: IMAGES.turnover,
-    tagline: "Your regular clean, made effortless",
+    tagline: "Your routine clean, made effortless",
     description:
-      "A thorough clean of your whole home — kitchen, bathrooms, bedrooms and living areas — as a one-off or on a schedule that suits you.",
+      "A thorough clean of your whole home — kitchen, bathrooms, bedrooms and living areas — as a one-time visit or on a schedule that suits you.",
     pricePerHour: 19.9,
     startingAt: 49,
     features: [
@@ -49,32 +53,13 @@ export const SERVICES = [
   },
   {
     id: 3,
-    slug: "office-cleaning",
-    name: "Office Cleaning",
-    icon: "Building2",
-    image: IMAGES.inspection,
-    tagline: "A workspace your team enjoys",
-    description:
-      "Reliable cleaning for offices, studios and shops — scheduled around your working hours, with one simple monthly invoice.",
-    pricePerHour: 22,
-    startingAt: 59,
-    features: [
-      "Desks, meeting rooms & kitchens",
-      "High-touch points sanitized",
-      "Evening & early-morning slots",
-      "Monthly invoicing available",
-    ],
-    popular: false,
-  },
-  {
-    id: 4,
     slug: "move-in-move-out",
     name: "Move-In / Move-Out Cleaning",
     icon: "DoorOpen",
     image: IMAGES.guestReady,
     tagline: "Leave nothing behind but shine",
     description:
-      "A rigorous end-of-lease clean that helps deposits come back in full and new chapters start fresh — landlord-checklist thorough.",
+      "A rigorous clean before or after a move that helps deposits come back in full and new chapters start fresh — landlord-checklist thorough.",
     pricePerHour: 24,
     startingAt: 99,
     features: [
@@ -86,40 +71,59 @@ export const SERVICES = [
     popular: false,
   },
   {
-    id: 5,
-    slug: "laundry-ironing",
-    name: "Laundry & Ironing",
-    icon: "Shirt",
-    image: IMAGES.linens,
-    tagline: "Fresh, folded and put away",
+    id: 4,
+    slug: "office-commercial-cleaning",
+    name: "Office & Commercial Cleaning",
+    icon: "Building2",
+    image: IMAGES.inspection,
+    tagline: "A workspace your team enjoys",
     description:
-      "Add washing, ironing and folding to any cleaning visit — or book it on its own. Your wardrobe and linen cupboard, handled.",
-    pricePerHour: 16.5,
-    startingAt: 29,
+      "Reliable cleaning for offices, studios, shops and commercial spaces — scheduled around your working hours, with one simple monthly invoice.",
+    pricePerHour: 22,
+    startingAt: 59,
     features: [
-      "Wash, dry & fold",
-      "Ironing & garment care",
-      "Bed linen & towel rotation",
-      "Add-on to any cleaning",
+      "Desks, meeting rooms & kitchens",
+      "High-touch points sanitized",
+      "Evening & early-morning slots",
+      "Monthly invoicing available",
+    ],
+    popular: false,
+  },
+  {
+    id: 5,
+    slug: "holiday-home-airbnb-hotel",
+    name: "Holiday Home, Airbnb & Hotel Cleaning",
+    icon: "BedDouble",
+    image: IMAGES.linens,
+    tagline: "Guest-ready between every stay",
+    description:
+      "Fast, reliable turnovers for holiday homes, Airbnb properties and hotels in Rome — cleaned, reset and presented to hospitality standards.",
+    pricePerHour: 22,
+    startingAt: 59,
+    features: [
+      "Checkout-to-checkin turnovers",
+      "Fresh linen & towel changes",
+      "Property reset & presentation",
+      "Flexible, short-notice scheduling",
     ],
     popular: false,
   },
   {
     id: 6,
-    slug: "sanitization-disinfection",
-    name: "Sanitization & Disinfection",
-    icon: "SprayCan",
+    slug: "emergency-cleaning",
+    name: "Emergency Cleaning",
+    icon: "Zap",
     image: IMAGES.restock,
-    tagline: "Certified clean, down to the details",
+    tagline: "When it can't wait until tomorrow",
     description:
-      "Professional-grade disinfection of high-touch surfaces for homes and workplaces — ideal after illness, tenants or renovations.",
-    pricePerHour: 26,
+      "Urgent cleaning when plans change or something goes wrong — a qualified team dispatched at short notice, with the same standards as every other visit.",
+    pricePerHour: 28,
     startingAt: 79,
     features: [
-      "Certified professional disinfectants",
-      "High-touch surface treatment",
-      "Kitchen & bathroom focus",
-      "Suitable for homes & offices",
+      "Short-notice availability",
+      "Same qualified professionals",
+      "Homes, offices & rentals",
+      "Professional products included",
     ],
     popular: false,
   },

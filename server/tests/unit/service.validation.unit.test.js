@@ -33,3 +33,29 @@ describe("service image validation", () => {
         expect(editServiceSchema.safeParse({ image: "/uploads/services/nested/file.png" }).success).toBe(false);
     });
 });
+
+describe("service recurrence validation", () => {
+    test("recurrence fields are optional on both schemas", () => {
+        expect(createServiceSchema.safeParse(service).success).toBe(true);
+        expect(editServiceSchema.safeParse({ name: "Deep Cleaning" }).success).toBe(true);
+    });
+
+    test("accepts cadences across the whole 1–14 day range, including an empty list", () => {
+        expect(createServiceSchema.safeParse({
+            ...service,
+            recurringEnabled: true,
+            recurringIntervalDays: [1, 7, 14]
+        }).success).toBe(true);
+
+        // "No restriction — the customer picks" must stay expressible.
+        expect(editServiceSchema.safeParse({ recurringIntervalDays: [] }).success).toBe(true);
+    });
+
+    test("rejects cadences outside the range and non-whole days", () => {
+        expect(editServiceSchema.safeParse({ recurringIntervalDays: [0] }).success).toBe(false);
+        expect(editServiceSchema.safeParse({ recurringIntervalDays: [15] }).success).toBe(false);
+        expect(editServiceSchema.safeParse({ recurringIntervalDays: [30] }).success).toBe(false);
+        expect(editServiceSchema.safeParse({ recurringIntervalDays: [3.5] }).success).toBe(false);
+        expect(editServiceSchema.safeParse({ recurringIntervalDays: ["7"] }).success).toBe(false);
+    });
+});

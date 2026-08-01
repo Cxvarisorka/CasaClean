@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const { ALLOWED_INTERVAL_DAYS } = require('../utils/date.util');
+const { MIN_INTERVAL_DAYS, MAX_INTERVAL_DAYS } = require('../utils/date.util');
 
 // A recurring-cleaning template. Prices intentionally do not live here: every
 // cycle is re-resolved against the current enabled catalogue before charging.
@@ -54,10 +54,18 @@ const subscriptionSchema = new mongoose.Schema({
   },
   supplies: { type: [String], default: [] },
 
+  // The cadence the customer chose, already checked against the service's own
+  // recurrence rules (Service.recurringEnabled / recurringIntervalDays). Only
+  // the platform-wide bounds are re-asserted here.
   intervalDays: {
     type: Number,
     required: true,
-    enum: ALLOWED_INTERVAL_DAYS
+    min: MIN_INTERVAL_DAYS,
+    max: MAX_INTERVAL_DAYS,
+    validate: {
+      validator: Number.isInteger,
+      message: 'intervalDays must be a whole number of days!'
+    }
   },
   status: {
     type: String,

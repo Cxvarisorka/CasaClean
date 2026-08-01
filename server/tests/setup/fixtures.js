@@ -54,6 +54,10 @@ const createService = (overrides = {}) =>
         pricePerHour: 20,
         allCities: true,
         allSpecialRequests: true,
+        // Deliberately permissive, like the coverage/add-on flags above: a suite
+        // exercising recurrence shouldn't have to opt in, and one testing the
+        // "this service can't repeat" path passes recurringEnabled: false.
+        recurringEnabled: true,
         ...overrides
     });
 

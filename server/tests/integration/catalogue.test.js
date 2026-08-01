@@ -161,6 +161,73 @@ describe("services", () => {
             });
         expect(res.status).toBe(403);
     });
+
+    test("recurrence is off by default and stores a deduplicated, sorted cadence list", async () => {
+        const admin = await createAdmin();
+
+        const oneOff = await api.post("/api/v1/service")
+            .set("Cookie", cookieFor(admin))
+            .send({
+                name: "One Off Cleaning",
+                description: "A single deep clean, never repeated.",
+                pricePerHour: 30,
+                allCities: true,
+                cities: []
+            });
+
+        expect(oneOff.status).toBe(201);
+        expect(oneOff.body.data.service.recurringEnabled).toBe(false);
+        expect(oneOff.body.data.service.recurringIntervalDays).toEqual([]);
+
+        const recurring = await api.post("/api/v1/service")
+            .set("Cookie", cookieFor(admin))
+            .send({
+                name: "Weekly Upkeep Test",
+                description: "A repeating tidy-up on a fixed cadence.",
+                pricePerHour: 20,
+                allCities: true,
+                cities: [],
+                recurringEnabled: true,
+                recurringIntervalDays: [14, 7, 7]
+            });
+
+        expect(recurring.status).toBe(201);
+        expect(recurring.body.data.service.recurringEnabled).toBe(true);
+        expect(recurring.body.data.service.recurringIntervalDays).toEqual([7, 14]);
+    });
+
+    test("turning recurrence off clears the cadence list, and out-of-range cadences are rejected", async () => {
+        const admin = await createAdmin();
+        const service = await createService({
+            recurringEnabled: true,
+            recurringIntervalDays: [7]
+        });
+
+        const tooLong = await api.patch(`/api/v1/service/${service._id}`)
+            .set("Cookie", cookieFor(admin))
+            .send({ recurringIntervalDays: [30] });
+        expect(tooLong.status).toBe(400);
+
+        const tooShort = await api.patch(`/api/v1/service/${service._id}`)
+            .set("Cookie", cookieFor(admin))
+            .send({ recurringIntervalDays: [0] });
+        expect(tooShort.status).toBe(400);
+
+        // An unrelated edit must leave the cadence list alone...
+        const renamed = await api.patch(`/api/v1/service/${service._id}`)
+            .set("Cookie", cookieFor(admin))
+            .send({ pricePerHour: 22 });
+        expect(renamed.status).toBe(200);
+        expect(renamed.body.data.service.recurringIntervalDays).toEqual([7]);
+
+        // ...while switching recurrence off drops it.
+        const disabled = await api.patch(`/api/v1/service/${service._id}`)
+            .set("Cookie", cookieFor(admin))
+            .send({ recurringEnabled: false });
+        expect(disabled.status).toBe(200);
+        expect(disabled.body.data.service.recurringEnabled).toBe(false);
+        expect(disabled.body.data.service.recurringIntervalDays).toEqual([]);
+    });
 });
 
 describe("special requests", () => {

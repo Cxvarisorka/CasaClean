@@ -5,7 +5,11 @@ import { formatCurrency } from "@/utils/formatCurrency";
 import { ROUTES } from "@/constants/routes";
 import { useTranslation } from "@/i18n";
 import { EASE_SPRING } from "@/animations/tokens";
-import { addDaysToDateString, formatLocalDateString } from "../../utils/recurrence";
+import {
+  addDaysToDateString,
+  formatLocalDateString,
+  intervalLabel,
+} from "../../utils/recurrence";
 
 /*
  * ConfirmationStep
@@ -83,7 +87,7 @@ export function ConfirmationStep({ booking }) {
             </p>
             {isRecurring && (
               <p className="mt-1 text-caption text-brand-700">
-                {t("booking.schedule.repeat.everyDays", { days: intervalDays })}
+                {intervalLabel(t, intervalDays)}
                 {nextChargeDate
                   ? ` · ${t("booking.payment.recurring.nextCharge", {
                       date: formatLocalDateString(nextChargeDate, dateLocale, {

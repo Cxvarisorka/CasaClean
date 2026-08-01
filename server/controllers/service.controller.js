@@ -6,7 +6,17 @@ const City = require("../models/city.model");
 const AppError = require("../utils/appError.util");
 const catchAsync = require("../utils/catchAsync.util");
 const SpecialRequest = require("../models/specialRequest.model");
+const CleaningTool = require("../models/cleaningTool.model");
+const Booking = require("../models/booking.model");
+const Subscription = require("../models/subscription.model");
+const Review = require("../models/review.model");
 const formatName = require("../utils/formatName.util");
+const { assertNotReferenced } = require("../utils/referentialGuard.util");
+const {
+    MIN_INTERVAL_DAYS,
+    MAX_INTERVAL_DAYS,
+    isValidIntervalDays
+} = require("../utils/date.util");
 const { serviceImageUrl, removeServiceImage } = require("../utils/upload.util");
 
 /**
@@ -100,6 +110,50 @@ const resolveSpecialRequest = async (allSpecialRequests, specialRequests) => {
     return { allSpecialRequests: false, specialRequests: uniqueIds };
 };
 
+/**
+ * Resolve and validate whether a service can be booked on a recurring schedule,
+ * and on which cadences.
+ *
+ * Accepts:
+ *   - recurringEnabled: false / absent      -> one-off only; list cleared
+ *   - recurringEnabled: true, no list       -> the customer picks any cadence
+ *                                              between MIN and MAX days
+ *   - recurringEnabled: true, [7, 14]       -> only those cadences are offered
+ *
+ * Returns { recurringEnabled, recurringIntervalDays } ready to store. Values are
+ * deduplicated and sorted so the stored list is directly renderable; anything
+ * outside the accepted range throws (Zod already bounds it — this is the same
+ * defense-in-depth the coverage resolver applies).
+ */
+const resolveRecurrence = (recurringEnabled, recurringIntervalDays) => {
+    // Not recurring wins outright — no cadence list is needed or kept.
+    if (recurringEnabled !== true) {
+        return { recurringEnabled: false, recurringIntervalDays: [] };
+    }
+
+    const raw = Array.isArray(recurringIntervalDays)
+        ? recurringIntervalDays
+        : recurringIntervalDays !== undefined && recurringIntervalDays !== null
+            ? [recurringIntervalDays]
+            : [];
+
+    // An empty list is valid and meaningful: it means "no cadence restriction".
+    if (raw.length === 0) {
+        return { recurringEnabled: true, recurringIntervalDays: [] };
+    }
+
+    const intervals = [...new Set(raw.map(Number))].sort((a, b) => a - b);
+
+    if (!intervals.every(isValidIntervalDays)) {
+        throw new AppError(
+            `Recurring intervals must be whole numbers between ${MIN_INTERVAL_DAYS} and ${MAX_INTERVAL_DAYS} days!`,
+            400
+        );
+    }
+
+    return { recurringEnabled: true, recurringIntervalDays: intervals };
+};
+
 // GET /api/v1/service -> paginated list of services
 const getServices = catchAsync(async (req, res, next) => {
     // Query params arrive as strings; sanitise them into safe, bounded numbers
@@ -159,7 +213,7 @@ const getServiceById = catchAsync(async (req, res, next) => {
 
 // POST /api/v1/service -> create a service (admin only)
 const createService = catchAsync(async (req, res, next) => {
-    const { name, subtitle, description, includes, pricePerHour, allCities, cities, allSpecialRequests, specialRequests } = req.body;
+    const { name, subtitle, description, includes, pricePerHour, allCities, cities, allSpecialRequests, specialRequests, recurringEnabled, recurringIntervalDays } = req.body;
 
     // An uploaded file (multipart) takes precedence over an `image` URL in the
     // body. Any failure below leaves the file orphaned on disk — the service
@@ -185,6 +239,7 @@ const createService = catchAsync(async (req, res, next) => {
     // Validate the chosen coverage (all / one / multiple cities).
     const coverage = await resolveCoverage(allCities, cities);
     const specialRequest = await resolveSpecialRequest(allSpecialRequests, specialRequests);
+    const recurrence = resolveRecurrence(recurringEnabled, recurringIntervalDays);
 
     const service = await Service.create({
         name: formattedName,
@@ -195,7 +250,8 @@ const createService = catchAsync(async (req, res, next) => {
         includes: Array.isArray(includes) ? includes.map((i) => i.trim()).filter(Boolean) : undefined,
         pricePerHour,
         ...coverage,
-        ...specialRequest
+        ...specialRequest,
+        ...recurrence
     });
 
     res.status(201).json({
@@ -210,7 +266,7 @@ const createService = catchAsync(async (req, res, next) => {
 // PATCH /api/v1/service/:id -> partial update (admin only)
 const editService = catchAsync(async (req, res, next) => {
     const { id } = req.params;
-    const { name, subtitle, description, includes, pricePerHour, enabled, allCities, cities, allSpecialRequests, specialRequests } = req.body;
+    const { name, subtitle, description, includes, pricePerHour, enabled, allCities, cities, allSpecialRequests, specialRequests, recurringEnabled, recurringIntervalDays } = req.body;
 
     const image = resolveImage(req);
 
@@ -274,6 +330,18 @@ const editService = catchAsync(async (req, res, next) => {
         service.specialRequests = resolved.specialRequests;
     }
 
+    // Likewise for recurrence: a plain rename must not silently turn a recurring
+    // service into a one-off one (recurringEnabled would read as undefined).
+    if (recurringEnabled !== undefined || recurringIntervalDays !== undefined) {
+        const recurrence = resolveRecurrence(
+            recurringEnabled !== undefined ? recurringEnabled : service.recurringEnabled,
+            recurringIntervalDays !== undefined ? recurringIntervalDays : service.recurringIntervalDays
+        );
+
+        service.recurringEnabled = recurrence.recurringEnabled;
+        service.recurringIntervalDays = recurrence.recurringIntervalDays;
+    }
+
     await service.save();
 
     // The old file is only garbage once the new value is durably stored.
@@ -294,6 +362,16 @@ const editService = catchAsync(async (req, res, next) => {
 // DELETE /api/v1/service/:id -> remove a service (admin only)
 const deleteService = catchAsync(async (req, res, next) => {
     const { id } = req.params;
+
+    // A deleted service breaks every record pointing at it — and an active
+    // recurring plan would only find out when its next charge fails reference
+    // resolution. Disable instead (see referentialGuard.util.js).
+    await assertNotReferenced([
+        { model: Booking, filter: { serviceId: id }, noun: "bookings" },
+        { model: Subscription, filter: { serviceId: id }, noun: "recurring subscriptions" },
+        { model: Review, filter: { service_id: id }, noun: "reviews" },
+        { model: CleaningTool, filter: { services: id }, noun: "cleaning tool restrictions" }
+    ], "service");
 
     const service = await Service.findByIdAndDelete(id);
 

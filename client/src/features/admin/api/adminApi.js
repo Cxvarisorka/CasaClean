@@ -16,16 +16,57 @@
  *   /city  /service  /special-request  /booking
  */
 
-import { request } from "@/services/api";
+import { apiClient, request } from "@/services/api";
 
-// Pull a big page so the panel shows the whole catalogue in one go (the lists
-// are small; pagination on the admin side isn't needed yet).
-const LIST_QS = "?limit=100";
+// The server clamps every list endpoint to `limit=100`. The panel used to send
+// exactly that and render whatever came back, so the 101st booking/user/
+// subscription simply vanished — with no page controls and no warning. Walk the
+// pages instead so the admin always sees the complete set.
+const PAGE_SIZE = 100;
+
+// Hard stop so a bad count or a server-side change can never spin forever.
+// 100 pages x 100 records is far beyond this product's realistic dataset.
+const MAX_PAGES = 100;
 
 // The public catalogue lists (city/service/special-request) only return
 // enabled records; the admin panel must also see soft-disabled ones to manage
 // (and re-enable) them. The server honours this flag only for admins.
-const CATALOGUE_QS = `${LIST_QS}&includeDisabled=true`;
+const CATALOGUE_QS = "?includeDisabled=true";
+
+/**
+ * Fetch every page of a list endpoint and return the concatenated records.
+ *
+ * Uses `apiClient` rather than the shared `request()` helper because the total
+ * count lives on the response envelope alongside `data` (e.g. `bookingCount`),
+ * and `request()` unwraps straight to `data` — discarding exactly the number
+ * needed to know whether more pages exist.
+ *
+ * @param {string} url       endpoint path, may already carry a query string
+ * @param {string} key       collection key inside `data` (e.g. "bookings")
+ * @param {string} countKey  total-count key on the envelope (e.g. "bookingCount")
+ */
+async function fetchAll(url, key, countKey) {
+  const separator = url.includes("?") ? "&" : "?";
+  const items = [];
+
+  for (let page = 1; page <= MAX_PAGES; page += 1) {
+    const response = await apiClient.request({
+      method: "GET",
+      url: `${url}${separator}page=${page}&limit=${PAGE_SIZE}`,
+    });
+    const body = response.data ?? {};
+    const batch = body.data?.[key] ?? [];
+    items.push(...batch);
+
+    // A short page is always the last one. The count check additionally stops us
+    // re-requesting when the total lands exactly on a page boundary.
+    if (batch.length < PAGE_SIZE) break;
+    const total = Number(body[countKey]);
+    if (Number.isFinite(total) && items.length >= total) break;
+  }
+
+  return items;
+}
 
 // Keep an object to only the keys whose value is defined — used so a partial
 // edit (e.g. just toggling `enabled`) never sends `undefined` into a strict
@@ -42,8 +83,10 @@ const definedOnly = (obj) =>
  * which an *empty* array survives the round trip, and "no cities selected" has
  * to reach the strict schema as `[]`, not as a missing field.
  *
- * axios drops the instance's default JSON Content-Type when the payload is a
- * FormData, so the browser sets the multipart boundary itself.
+ * The shared axios request interceptor strips the instance's default JSON
+ * Content-Type for FormData payloads (see services/api/interceptors.js) so the
+ * browser sets multipart/form-data with its own boundary. Without that, axios
+ * would silently re-encode this FormData as JSON.
  */
 const toFormData = (fields) => {
   const form = new FormData();
@@ -69,8 +112,8 @@ const cityFromApi = (c) => ({
 
 export const cityApi = {
   async list() {
-    const data = await request({ method: "GET", url: `/city${CATALOGUE_QS}` });
-    return (data.cities ?? []).map(cityFromApi);
+    const cities = await fetchAll(`/city${CATALOGUE_QS}`, "cities", "cityCount");
+    return cities.map(cityFromApi);
   },
   async create(v) {
     // addCitySchema is strict: ONLY these three keys are allowed on create.
@@ -121,6 +164,10 @@ const serviceFromApi = (s) => ({
   special_requests: (s.specialRequests ?? []).map((r) =>
     r && r._id ? r._id : r
   ),
+  // Recurring bookings: opt-in per service, with an optional cadence whitelist.
+  // An empty list means "the customer picks any cadence the platform allows".
+  recurring_enabled: Boolean(s.recurringEnabled),
+  recurring_interval_days: (s.recurringIntervalDays ?? []).map(Number),
   enabled: s.enabled,
   createdAt: s.createdAt,
 });
@@ -133,12 +180,13 @@ const isUpload = (image) => image instanceof File;
 
 export const serviceApi = {
   async list() {
-    const data = await request({ method: "GET", url: `/service${CATALOGUE_QS}` });
-    return (data.services ?? []).map(serviceFromApi);
+    const services = await fetchAll(`/service${CATALOGUE_QS}`, "services", "serviceCount");
+    return services.map(serviceFromApi);
   },
   async create(v) {
     const allCities = Boolean(v.all_cities);
     const allSpecialRequests = Boolean(v.all_special_requests);
+    const recurringEnabled = Boolean(v.recurring_enabled);
     // createServiceSchema is strict. `enabled` is NOT accepted here (defaults to
     // true server-side); the special-request keys are optional.
     const body = {
@@ -152,6 +200,12 @@ export const serviceApi = {
       cities: allCities ? [] : (v.cities ?? []),
       allSpecialRequests,
       specialRequests: allSpecialRequests ? [] : (v.special_requests ?? []),
+      recurringEnabled,
+      // Cadences are only meaningful for a recurring service; the server clears
+      // them anyway, but don't send a list the form left behind.
+      recurringIntervalDays: recurringEnabled
+        ? (v.recurring_interval_days ?? []).map(Number)
+        : [],
     };
     const data = await request({
       method: "POST",
@@ -163,7 +217,7 @@ export const serviceApi = {
   async update(id, patch) {
     // editServiceSchema is strict: name / subtitle / description / image /
     // includes / pricePerHour / allCities / cities / allSpecialRequests /
-    // specialRequests / enabled.
+    // specialRequests / recurringEnabled / recurringIntervalDays / enabled.
     const body = definedOnly({
       name: patch.name,
       subtitle: patch.subtitle,
@@ -180,6 +234,11 @@ export const serviceApi = {
       cities: patch.cities,
       allSpecialRequests: patch.all_special_requests,
       specialRequests: patch.special_requests,
+      recurringEnabled: patch.recurring_enabled,
+      recurringIntervalDays:
+        patch.recurring_interval_days === undefined
+          ? undefined
+          : patch.recurring_interval_days.map(Number),
       // Soft on/off switch — a disabled service is hidden from the public site.
       enabled: patch.enabled,
     });
@@ -206,11 +265,12 @@ const specialRequestFromApi = (s) => ({
 
 export const specialRequestApi = {
   async list() {
-    const data = await request({
-      method: "GET",
-      url: `/special-request${CATALOGUE_QS}`,
-    });
-    return (data.specialRequests ?? []).map(specialRequestFromApi);
+    const specialRequests = await fetchAll(
+      `/special-request${CATALOGUE_QS}`,
+      "specialRequests",
+      "specialRequestCount"
+    );
+    return specialRequests.map(specialRequestFromApi);
   },
   async create(v) {
     const data = await request({
@@ -255,11 +315,12 @@ const cleaningToolFromApi = (t) => ({
 
 export const cleaningToolApi = {
   async list() {
-    const data = await request({
-      method: "GET",
-      url: `/cleaning-tool${CATALOGUE_QS}`,
-    });
-    return (data.cleaningTools ?? []).map(cleaningToolFromApi);
+    const cleaningTools = await fetchAll(
+      `/cleaning-tool${CATALOGUE_QS}`,
+      "cleaningTools",
+      "cleaningToolCount"
+    );
+    return cleaningTools.map(cleaningToolFromApi);
   },
   async create(v) {
     const data = await request({
@@ -304,8 +365,8 @@ const workerFromApi = (w) => ({
 
 export const workerApi = {
   async list() {
-    const data = await request({ method: "GET", url: `/worker${LIST_QS}` });
-    return (data.workers ?? []).map(workerFromApi);
+    const workers = await fetchAll("/worker", "workers", "workerCount");
+    return workers.map(workerFromApi);
   },
   async create(v) {
     // addWorkerSchema is strict: fullname required, email/phone optional. Blank
@@ -395,8 +456,8 @@ const bookingFromApi = (b) => ({
 
 export const bookingApi = {
   async list() {
-    const data = await request({ method: "GET", url: `/booking${LIST_QS}` });
-    return (data.bookings ?? []).map(bookingFromApi);
+    const bookings = await fetchAll("/booking", "bookings", "bookingCount");
+    return bookings.map(bookingFromApi);
   },
   async create(v) {
     // Admin-entered booking, on a customer's behalf. The admin may either link a
@@ -476,8 +537,8 @@ const userFromApi = (u) => ({
 
 export const userApi = {
   async list() {
-    const data = await request({ method: "GET", url: `/auth/users${LIST_QS}` });
-    return (data.users ?? []).map(userFromApi);
+    const users = await fetchAll("/auth/users", "users", "userCount");
+    return users.map(userFromApi);
   },
   async create(v) {
     const data = await request({
@@ -557,8 +618,8 @@ const reviewFromApi = (r) => {
 
 export const reviewApi = {
   async list() {
-    const data = await request({ method: "GET", url: `/review${LIST_QS}` });
-    return (data.reviews ?? []).map(reviewFromApi);
+    const reviews = await fetchAll("/review", "reviews", "reviewCount");
+    return reviews.map(reviewFromApi);
   },
   remove: (id) => request({ method: "DELETE", url: `/review/${id}` }),
 };
@@ -603,13 +664,17 @@ const subscriptionAction = async (id, action) => {
 };
 
 export const subscriptionApi = {
+  // `status` is applied SERVER-side. The page used to call list() with no
+  // argument and filter the (truncated) result client-side, so filtering by
+  // "paused" only ever searched the newest 100 subscriptions.
   async list({ status } = {}) {
-    const statusQuery = status ? `&status=${encodeURIComponent(status)}` : "";
-    const data = await request({
-      method: "GET",
-      url: `/subscription?limit=100${statusQuery}`,
-    });
-    return (data.subscriptions ?? []).map(subscriptionFromApi);
+    const statusQuery = status ? `?status=${encodeURIComponent(status)}` : "";
+    const subscriptions = await fetchAll(
+      `/subscription${statusQuery}`,
+      "subscriptions",
+      "subscriptionCount"
+    );
+    return subscriptions.map(subscriptionFromApi);
   },
   async get(id) {
     const data = await request({ method: "GET", url: `/subscription/${id}` });

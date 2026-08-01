@@ -1,10 +1,14 @@
 // Models
 const SpecialRequest = require("../models/specialRequest.model");
+const Service = require("../models/service.model");
+const Booking = require("../models/booking.model");
+const Subscription = require("../models/subscription.model");
 
 // Utils
 const AppError = require("../utils/appError.util");
 const catchAsync = require("../utils/catchAsync.util");
 const formatName = require("../utils/formatName.util");
+const { assertNotReferenced } = require("../utils/referentialGuard.util");
 
 // GET /api/v1/special-request -> paginated list (public, so the booking wizard
 // can show the available add-ons).
@@ -133,6 +137,14 @@ const editSpecialRequest = catchAsync(async (req, res, next) => {
 // DELETE /api/v1/special-request/:id -> remove an add-on (admin only)
 const deleteSpecialRequest = catchAsync(async (req, res, next) => {
     const { id } = req.params;
+
+    // Existing bookings price their add-ons by id at edit time, so deleting one
+    // silently changes historical totals. Disable instead.
+    await assertNotReferenced([
+        { model: Booking, filter: { specialRequests: id }, noun: "bookings" },
+        { model: Subscription, filter: { specialRequests: id }, noun: "recurring subscriptions" },
+        { model: Service, filter: { specialRequests: id }, noun: "service add-on lists" }
+    ], "add-on");
 
     const specialRequest = await SpecialRequest.findByIdAndDelete(id);
 

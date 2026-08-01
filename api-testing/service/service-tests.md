@@ -23,6 +23,8 @@ A service looks like this:
   "pricePerHour": 19.9,
   "allCities": false,
   "cities": ["CITY_ID_1", "CITY_ID_2"],
+  "recurringEnabled": true,
+  "recurringIntervalDays": [7, 14],
   "enabled": true
 }
 ```
@@ -33,6 +35,16 @@ Rules about **where a service is offered** (coverage) — this is the tricky par
 - `cities` can be **one id as text** (`"abc123"`) or a **list of ids** (`["abc","def"]`).
 - Every city id must be a **real city** that exists, or you get an error.
 - Other rules: `name` must be unique, `pricePerHour` cannot be negative.
+
+Rules about **recurring bookings** — the same shape, for cadences instead of cities:
+- `recurringEnabled: false` (the default) → the service can only be booked once.
+  Any `recurringIntervalDays` you send is cleared.
+- `recurringEnabled: true`, empty `recurringIntervalDays` → the customer picks any
+  cadence from **every 1 day up to every 14 days**.
+- `recurringEnabled: true` with a list → only those cadences are offered. Values are
+  deduplicated and sorted; each must be a whole number from 1 to 14 (30 is rejected).
+- Turning `recurringEnabled` off later clears the list and **pauses** any live
+  subscription on that service at its next charge.
 
 > **Tip:** Create at least one city first (see [city tests](../city/city-tests.md)),
 > so you have a real city id to use here.

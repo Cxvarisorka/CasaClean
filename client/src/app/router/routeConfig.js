@@ -14,6 +14,7 @@ import { ROUTES } from "@/constants/routes";
 // --- Lazy page imports (one chunk per page) --------------------------------
 const HomePage = lazy(() => import("@/pages/Home/HomePage"));
 const ServicesPage = lazy(() => import("@/pages/Services/ServicesPage"));
+const ServiceDetailPage = lazy(() => import("@/pages/Services/ServiceDetailPage"));
 const PricingPage = lazy(() => import("@/pages/Pricing/PricingPage"));
 const AboutPage = lazy(() => import("@/pages/About/AboutPage"));
 const ContactPage = lazy(() => import("@/pages/Contact/ContactPage"));
@@ -51,6 +52,7 @@ const AdminQualityPage = lazy(() => import("@/pages/Admin/QualityPage"));
 export const MAIN_ROUTES = [
   { path: ROUTES.home, element: HomePage, index: true },
   { path: ROUTES.services, element: ServicesPage },
+  { path: ROUTES.serviceDetail(), element: ServiceDetailPage },
   { path: ROUTES.pricing, element: PricingPage },
   { path: ROUTES.about, element: AboutPage },
   { path: ROUTES.contact, element: ContactPage },

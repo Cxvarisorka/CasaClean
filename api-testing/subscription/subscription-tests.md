@@ -25,9 +25,12 @@ Base address: `http://localhost:3000/api/v1/subscription`
 
 ## 1. Create a subscription through the first payment
 
-1. Sign in and use the normal booking payment flow with a future `bookingDate`.
-2. Send an allowed `intervalDays` (`2`, `3`, `5`, `7`, `14`, or `30`) plus
-   either `savePaymentMethod: true` or `savedPaymentMethodId`.
+1. Sign in and use the normal booking payment flow with a future `bookingDate`,
+   choosing a service whose `recurringEnabled` is `true`.
+2. Send an `intervalDays` the service accepts — one of its
+   `recurringIntervalDays` if that list is non-empty, otherwise any whole number
+   from `1` to `14` — plus either `savePaymentMethod: true` or
+   `savedPaymentMethodId`.
 3. Complete the first on-session Stripe confirmation. `4242 4242 4242 4242`
    covers the successful test-card path.
 4. Call `GET /my` and save the returned `_id` as `subscriptionId`.
@@ -37,6 +40,18 @@ active Subscription, `nextServiceDate` equal to the first date plus the
 interval, and (with the default lead) `nextChargeAt` at local midnight one day
 before that date. A recurring intent without a saved card is **400** with
 `A recurring booking requires a saved card.`
+
+Recurrence is per service, and enforced server-side on every path:
+
+- a service with `recurringEnabled: false` returns **400**
+  `The selected service can't be booked on a recurring schedule!`
+- a cadence outside a service's `recurringIntervalDays` returns **400**
+  `This service can only repeat every <list> days!`
+- an `intervalDays` below `1` or above `14` is rejected by the schema
+
+If an admin later disables recurrence on the service (or drops that cadence
+from the list), the next scheduled charge does not run: the subscription is
+paused with `pausedReason: "service-unavailable"` and the customer is emailed.
 
 ## 2. Customer routes
 

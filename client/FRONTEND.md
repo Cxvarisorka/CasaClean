@@ -138,7 +138,7 @@ Every page is **`React.lazy` imported** — one async chunk per route. Routes ar
 
 | Group | Layout | Routes |
 |-------|--------|--------|
-| `MAIN_ROUTES` | `MainLayout` (Navbar + Footer) | `/`, `/services`, `/pricing`, `/about`, `/contact`, `/faq`, `/careers`, `/blog`, `/blog/:slug` |
+| `MAIN_ROUTES` | `MainLayout` (Navbar + Footer) | `/`, `/services`, `/services/:slug`, `/pricing`, `/about`, `/contact`, `/faq`, `/careers`, `/blog`, `/blog/:slug` |
 | `FOCUSED_ROUTES` | `EmptyLayout` (minimal header) | `/booking` |
 | `BARE_ROUTES` | None (page owns chrome) | `/signin`, `/signup` |
 | `FALLBACK_ROUTE` | `MainLayout` | `*` → NotFound |
@@ -169,6 +169,7 @@ Pages are **thin orchestrators**: they set `<Seo>` / `PAGE_META`, optionally inj
 |------|------|------------|
 | `HomePage` | `/` | 11 sections + `CtaSection`; `localBusinessSchema` + FAQ schema |
 | `ServicesPage` | `/services` | Service catalog from `data/services`; `ServiceCard` feature |
+| `ServiceDetailPage` | `/services/:slug` | Full service profile (inclusions, add-ons, coverage) via `useService`; every CTA links to `/booking?service=<id>` so the wizard opens pre-selected. Service + Breadcrumb schema |
 | `PricingPage` | `/pricing` | Plans from `data/pricing`; `PricingCard` |
 | `AboutPage` | `/about` | Company story from `data/company` |
 | `ContactPage` | `/contact` | `ContactForm`, `NewsletterForm` |
@@ -486,7 +487,6 @@ npm run lint     # ESLint (React hooks + refresh plugins)
 
 - `DashboardLayout` is scaffolded but **not registered** in `routeConfig`
 - `ROUTES.privacy` and `ROUTES.terms` exist in constants but **no pages** are wired
-- `serviceDetail(slug)` route constant exists; dedicated service detail **page route** may be future work
 - Google OAuth button is UI-ready; full OAuth flow depends on backend configuration
 
 These gaps are useful when planning the next front-end milestones without surprises.

@@ -10,6 +10,8 @@
 // It also exports promotePendingBooking and refundBookingPayment, which are
 // reused by the webhook handler and the booking controller respectively.
 
+const Sentry = require('@sentry/node');
+
 const stripe = require('../config/stripe.config');
 
 const Booking = require('../models/booking.model');
@@ -61,6 +63,38 @@ const ensureStripeCustomer = async (user) => {
  * @param {Object} [paymentIntent]  the Stripe PI object (for stripeStatus)
  * @returns {Promise<Object|null>} the booking, or null if there's nothing to do
  */
+/**
+ * Create the recurring template for an already-created, already-PAID booking.
+ *
+ * The money has moved and the reservation exists by the time this runs, so a
+ * failure here must never propagate: throwing would hand the customer an error
+ * for a booking they were correctly charged for, and — because the caller only
+ * deletes the PendingBooking on the success path — would leave the draft behind
+ * so Stripe retries the webhook into the same failure forever.
+ *
+ * Instead we swallow, report to Sentry, and let the missing subscription be
+ * reconciled out-of-band. The booking itself is already correct and complete.
+ */
+const attachSubscriptionSafely = async ({ pending, booking, paymentIntent }) => {
+  try {
+    return await createSubscriptionFromFirstBooking({ pending, booking, paymentIntent });
+  } catch (err) {
+    console.error(
+      `Recurring template creation failed for paid booking ${booking?._id} ` +
+      `(intent ${pending?.paymentIntentId}):`,
+      err.message
+    );
+    Sentry.captureException(err, {
+      extra: {
+        stage: 'createSubscriptionFromFirstBooking',
+        bookingId: String(booking?._id),
+        paymentIntentId: pending?.paymentIntentId
+      }
+    });
+    return null;
+  }
+};
+
 const promotePendingBooking = async (paymentIntentId, paymentIntent = null) => {
   // Already promoted? Return the existing booking (idempotent).
   const existing = await Booking.findOne({ paymentIntentId });
@@ -70,7 +104,7 @@ const promotePendingBooking = async (paymentIntentId, paymentIntent = null) => {
     // keeps this safe across finalize/webhook races.
     const existingPending = await PendingBooking.findOne({ paymentIntentId });
     if (existingPending?.recurrence?.intervalDays) {
-      await createSubscriptionFromFirstBooking({
+      await attachSubscriptionSafely({
         pending: existingPending,
         booking: existing,
         paymentIntent
@@ -124,7 +158,7 @@ const promotePendingBooking = async (paymentIntentId, paymentIntent = null) => {
     if (err.code === 11000) {
       const alreadyPromoted = await Booking.findOne({ paymentIntentId });
       if (pending.recurrence?.intervalDays && alreadyPromoted) {
-        await createSubscriptionFromFirstBooking({
+        await attachSubscriptionSafely({
           pending,
           booking: alreadyPromoted,
           paymentIntent
@@ -138,9 +172,10 @@ const promotePendingBooking = async (paymentIntentId, paymentIntent = null) => {
 
   // First-cycle payment and Booking creation succeeded. Only now create the
   // recurring template; helper-level firstPaymentIntentId idempotency handles
-  // a concurrent finalize/webhook promotion.
+  // a concurrent finalize/webhook promotion. A failure here is contained — the
+  // paid booking stands on its own.
   if (pending.recurrence?.intervalDays) {
-    const subscription = await createSubscriptionFromFirstBooking({
+    const subscription = await attachSubscriptionSafely({
       pending,
       booking,
       paymentIntent
@@ -195,7 +230,14 @@ const refundBookingPayment = async (booking) => {
     return null;
   }
 
-  const refund = await stripe.refunds.create({ payment_intent: booking.paymentIntentId });
+  // Idempotency key scoped to the booking, mirroring the subscription charge
+  // worker. Callers already claim the cancellation atomically, but two requests
+  // that slip through (or a retried request) must never produce two refunds —
+  // Stripe replays the original refund for a repeated key instead.
+  const refund = await stripe.refunds.create(
+    { payment_intent: booking.paymentIntentId },
+    { idempotencyKey: `refund:booking:${booking._id}` }
+  );
 
   return {
     paymentStatus: 'refunded',
@@ -348,7 +390,12 @@ const finalizeBooking = catchAsync(async (req, res, next) => {
     // The customer HAS been charged, so never keep the money against nothing —
     // refund immediately instead of parking it on "contact support".
     try {
-      await stripe.refunds.create({ payment_intent: paymentIntentId });
+      // Keyed on the intent (there is no booking to key on): a retried finalize
+      // for the same orphaned payment must not issue a second refund.
+      await stripe.refunds.create(
+        { payment_intent: paymentIntentId },
+        { idempotencyKey: `refund:intent:${paymentIntentId}` }
+      );
       return next(new AppError(
         "Your booking request expired before the payment completed, so the charge has been refunded. Please book again.",
         409

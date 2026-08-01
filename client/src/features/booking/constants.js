@@ -8,16 +8,26 @@
 
 export const BOOKING_STEPS = [
   {
+    // City and service live together here on purpose: they constrain each other,
+    // so separating them is what let a pre-selected service disappear silently
+    // one step later. See PropertyStep for the one-way filtering rule.
     id: "property",
-    title: "Property details",
-    subtitle: "Where are we cleaning?",
-    fields: ["cityId", "street", "houseNumber", "propertySize", "doorbellName"],
+    title: "Service & address",
+    subtitle: "What you need and where",
+    fields: [
+      "cityId",
+      "serviceId",
+      "street",
+      "houseNumber",
+      "propertySize",
+      "doorbellName",
+    ],
   },
   {
     id: "preferences",
     title: "Cleaning preferences",
     subtitle: "Tailor the turnover",
-    fields: ["serviceId", "hours", "cleaners", "additionalServices", "cleaningTools"],
+    fields: ["hours", "cleaners", "additionalServices", "cleaningTools"],
   },
   {
     id: "schedule",
@@ -45,30 +55,49 @@ export const BOOKING_STEPS = [
   },
 ];
 
-export const ADDITIONAL_SERVICES = [
-  { value: "deep-clean", label: "Deep clean", price: 89 },
-  { value: "linens", label: "Hotel-grade linens", price: 29 },
-  { value: "restock", label: "Supply restocking", price: 19 },
-  { value: "staging", label: "Guest-ready staging", price: 35 },
-];
+// Time slots are NOT a constant: they depend on the chosen city's working hours
+// and the booking duration, both of which the server enforces. See
+// utils/timeSlots.js — a fixed list here shipped options (e.g. 17:00) that
+// checkout always rejected.
 
-export const TIME_SLOTS = [
-  "09:00",
-  "10:00",
-  "11:00",
-  "12:00",
-  "14:00",
-  "15:00",
-  "16:00",
-  "17:00",
-];
+// Add-ons and cleaning tools come from the live catalogue via
+// useSpecialRequests / useCleaningTools; there is no static fallback list.
 
+// Selectable durations. Must stay within the server's accepted range and match
+// the `hours` bound in validation/bookingSchema.js.
 export const HOURS_RANGE = [1, 2, 3, 4, 5, 6];
+
+// Selectable cleaner counts, mirrored by the `cleaners` bound in
+// validation/bookingSchema.js and by the max on the PreferencesStep input.
 export const CLEANERS_RANGE = [1, 2, 3];
 
-// The public recurring-booking choices. The API also accepts two-day intervals
-// for compatibility, but that cadence is intentionally not offered in the UI.
-// Labels live in i18n because the value is used by OptionGroup as the form value.
-export const RECURRENCE_OPTIONS = [0, 3, 5, 7, 14, 30];
+// Recurrence is decided per service, not globally: a service opts in
+// (`recurringEnabled`) and may pin the exact cadences it repeats on
+// (`recurringIntervalDays`). When it pins none, the customer picks any whole
+// number of days in this range — mirrored by MIN/MAX_INTERVAL_DAYS in the
+// server's utils/date.util.js, which rejects anything outside it.
+export const MIN_INTERVAL_DAYS = 1;
+export const MAX_INTERVAL_DAYS = 14;
+
+/**
+ * The cadences (in days) a service can be booked on, for the frequency picker.
+ * Returns [] when the service can't repeat at all, so the caller can hide the
+ * control entirely rather than render a one-option group. `0` — the one-time
+ * sentinel — is added by the step itself, not here.
+ */
+export function recurrenceChoices(service) {
+  if (!service?.recurringEnabled) return [];
+
+  const pinned = (service.recurringIntervalDays || [])
+    .map(Number)
+    .filter((days) => Number.isInteger(days) && days >= MIN_INTERVAL_DAYS && days <= MAX_INTERVAL_DAYS);
+
+  if (pinned.length > 0) return [...new Set(pinned)].sort((a, b) => a - b);
+
+  return Array.from(
+    { length: MAX_INTERVAL_DAYS - MIN_INTERVAL_DAYS + 1 },
+    (_, index) => MIN_INTERVAL_DAYS + index
+  );
+}
 
 export const BOOKING_STORAGE_KEY = "casaclean:booking-draft";

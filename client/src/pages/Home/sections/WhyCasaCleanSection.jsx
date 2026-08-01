@@ -12,6 +12,8 @@ import { viewportOnce } from "@/animations/pageTransitions";
  * -------------------
  * The differentiators band on a warm sand surface. A two-up layout pairs a
  * sticky heading with a staggered list of reasons — scannable and calm.
+ *
+ * Reason copy is shared with the About page, so both read from `values.*`.
  */
 
 export function WhyCasaCleanSection() {
@@ -47,10 +49,10 @@ export function WhyCasaCleanSection() {
                   <Icon name={item.icon} className="size-6" />
                 </span>
                 <h3 className="mt-5 text-heading-sm text-ink-900">
-                  {t(`why.items.${item.id}.title`)}
+                  {t(`values.${item.id}.title`)}
                 </h3>
                 <p className="mt-2 text-body-md text-ink-500">
-                  {t(`why.items.${item.id}.description`)}
+                  {t(`values.${item.id}.description`)}
                 </p>
               </motion.div>
             ))}

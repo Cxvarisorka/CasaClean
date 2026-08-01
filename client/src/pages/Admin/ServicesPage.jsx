@@ -12,6 +12,7 @@ import {
 } from "@/features/admin";
 import { useTranslation } from "@/i18n";
 import { assetUrl } from "@/services/api";
+import { MAX_INTERVAL_DAYS, MIN_INTERVAL_DAYS } from "@/features/booking/constants";
 
 /*
  * Services management
@@ -48,6 +49,23 @@ export default function ServicesPage() {
   const specialRequestOptions = useMemo(
     () => specialRequests.map((s) => ({ value: s._id, label: s.name })),
     [specialRequests]
+  );
+
+  // Every cadence the platform accepts (1–14 days). Selecting none is the
+  // meaningful "let the customer choose" state, so this field is never required.
+  const intervalOptions = useMemo(
+    () =>
+      Array.from(
+        { length: MAX_INTERVAL_DAYS - MIN_INTERVAL_DAYS + 1 },
+        (_, i) => MIN_INTERVAL_DAYS + i
+      ).map((days) => ({
+        value: days,
+        label:
+          days === 1
+            ? t("admin.services.everyDay")
+            : t("admin.services.everyDays", { days }),
+      })),
+    [t]
   );
 
   const fields = useMemo(
@@ -113,13 +131,30 @@ export default function ServicesPage() {
         show: (v) => !v.all_special_requests,
       },
       {
+        name: "recurring_enabled",
+        label: t("admin.services.field.recurringEnabled"),
+        hint: t("admin.services.field.recurringEnabledHint"),
+        type: "switch",
+        full: true,
+      },
+      {
+        name: "recurring_interval_days",
+        label: t("admin.services.field.recurringIntervalDays"),
+        type: "multiselect",
+        options: intervalOptions,
+        hint: t("admin.services.field.recurringIntervalDaysHint"),
+        full: true,
+        // Cadences only mean anything once the service repeats at all.
+        show: (v) => Boolean(v.recurring_enabled),
+      },
+      {
         name: "enabled",
         label: t("admin.services.field.enabled"),
         type: "switch",
         full: true,
       },
     ],
-    [cityOptions, specialRequestOptions, t]
+    [cityOptions, specialRequestOptions, intervalOptions, t]
   );
 
   const handleSubmit = async (values) => {
@@ -161,6 +196,25 @@ export default function ServicesPage() {
       key: "price_per_hour",
       header: t("admin.services.col.pricePerHr"),
       render: (s) => <span className="font-medium">{eur(s.price_per_hour)}</span>,
+    },
+    {
+      key: "recurring_enabled",
+      header: t("admin.services.col.recurring"),
+      // Three states worth distinguishing at a glance: one-off only, repeats on
+      // a cadence the admin pinned, or repeats on whatever the customer picks.
+      render: (s) => {
+        if (!s.recurring_enabled) return <span className="text-ink-300">—</span>;
+        const days = Array.isArray(s.recurring_interval_days)
+          ? s.recurring_interval_days
+          : [];
+        return (
+          <Badge variant="brand" size="sm">
+            {days.length === 0
+              ? t("admin.services.recurringFlexible")
+              : t("admin.services.recurringFixed", { days: days.join(", ") })}
+          </Badge>
+        );
+      },
     },
     {
       key: "cities",
@@ -254,6 +308,8 @@ export default function ServicesPage() {
             cities: [],
             all_special_requests: false,
             special_requests: [],
+            recurring_enabled: false,
+            recurring_interval_days: [],
             enabled: true,
           }
         }

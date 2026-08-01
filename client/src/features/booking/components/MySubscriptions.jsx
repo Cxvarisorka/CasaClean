@@ -24,7 +24,11 @@ import {
   updateSubscriptionCard,
 } from "../api/subscriptionApi";
 import { listSavedCards } from "../api/paymentApi";
-import { formatLocalDateString, formatTimestampDate } from "../utils/recurrence";
+import {
+  formatLocalDateString,
+  formatTimestampDate,
+  intervalLabel,
+} from "../utils/recurrence";
 
 const DATE_OPTIONS = { day: "numeric", month: "long", year: "numeric" };
 
@@ -68,7 +72,7 @@ function SubscriptionRow({
           )}
         </div>
         <span className="rounded-full bg-brand-50 px-2.5 py-1 text-caption font-semibold text-brand-700">
-          {t("profile.subscriptions.everyDays", { days: subscription.intervalDays })}
+          {intervalLabel(t, subscription.intervalDays)}
         </span>
       </div>
 

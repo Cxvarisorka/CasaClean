@@ -289,6 +289,24 @@ describe("listing and scoping", () => {
 });
 
 describe("PATCH /api/v1/booking/:id (admin edit)", () => {
+    test("re-pointing a booking at another service is rejected, not silently ignored", async () => {
+        const admin = await createAdmin();
+        const user = await createUser();
+        const service = await createService();
+        const otherService = await createService({ pricePerHour: 99 });
+        const city = await createCity();
+        const booking = await createPaidBooking(user, service, city, { totalAmount: 40 });
+
+        const res = await api.patch(`/api/v1/booking/${booking._id}`)
+            .set("Cookie", cookieFor(admin))
+            .send({ serviceId: String(otherService._id) });
+
+        expect(res.status).toBe(400);
+        const fresh = await Booking.findById(booking._id);
+        expect(String(fresh.serviceId)).toBe(String(service._id));
+        expect(fresh.totalAmount).toBe(40);
+    });
+
     test("recomputes the total when hours change", async () => {
         const admin = await createAdmin();
         const user = await createUser();
@@ -344,9 +362,12 @@ describe("PATCH /api/v1/booking/:id (admin edit)", () => {
             .send({ status: "cancelled" });
 
         expect(res.status).toBe(200);
-        expect(stripeMock.refunds.create).toHaveBeenCalledWith({
-            payment_intent: booking.paymentIntentId
-        });
+        // The idempotency key is what stops two concurrent cancels producing
+        // two refunds, so assert it explicitly rather than ignoring the option.
+        expect(stripeMock.refunds.create).toHaveBeenCalledWith(
+            { payment_intent: booking.paymentIntentId },
+            { idempotencyKey: `refund:booking:${booking._id}` }
+        );
         const fresh = await Booking.findById(booking._id);
         expect(fresh.status).toBe("cancelled");
         expect(fresh.paymentStatus).toBe("refunded");
@@ -402,6 +423,52 @@ describe("PATCH /api/v1/booking/:id/cancel (customer self-cancel)", () => {
         const fresh = await Booking.findById(booking._id);
         expect(fresh.status).toBe("cancelled");
         expect(fresh.paymentStatus).toBe("refunded");
+    });
+
+    test("two concurrent cancels issue exactly one refund", async () => {
+        const user = await createUser();
+        const service = await createService();
+        const city = await createCity();
+        const booking = await createPaidBooking(user, service, city, dateTimeIn(72));
+
+        stripeMock.refunds.create.mockResolvedValue({ id: "re_race_1" });
+        const cookie = cookieFor(user);
+
+        // Both requests race the same booking. Only the one that wins the atomic
+        // status claim may talk to Stripe; the loser must be rejected outright.
+        const [a, b] = await Promise.all([
+            api.patch(`/api/v1/booking/${booking._id}/cancel`).set("Cookie", cookie),
+            api.patch(`/api/v1/booking/${booking._id}/cancel`).set("Cookie", cookie)
+        ]);
+
+        const statuses = [a.status, b.status].sort();
+        expect(statuses).toEqual([200, 400]);
+        expect(stripeMock.refunds.create).toHaveBeenCalledTimes(1);
+
+        const fresh = await Booking.findById(booking._id);
+        expect(fresh.status).toBe("cancelled");
+        expect(fresh.paymentStatus).toBe("refunded");
+    });
+
+    test("a failed refund leaves the booking uncancelled", async () => {
+        const user = await createUser();
+        const service = await createService();
+        const city = await createCity();
+        const booking = await createPaidBooking(user, service, city, dateTimeIn(72));
+
+        stripeMock.refunds.create.mockRejectedValue(
+            Object.assign(new Error("Stripe is down"), { type: "StripeAPIError" })
+        );
+
+        const res = await api.patch(`/api/v1/booking/${booking._id}/cancel`)
+            .set("Cookie", cookieFor(user));
+
+        expect(res.status).toBe(502);
+        // The atomic claim must be rolled back — a booking cancelled while the
+        // customer is still charged is the exact state this guards against.
+        const fresh = await Booking.findById(booking._id);
+        expect(fresh.status).toBe("confirmed");
+        expect(fresh.paymentStatus).toBe("paid");
     });
 
     test("cancelling inside the 24h window keeps the money (no refund)", async () => {

@@ -323,9 +323,10 @@ describe("POST /api/v1/payment/booking/finalize", () => {
 
         expect(res.status).toBe(409);
         expect(res.body.message).toMatch(/refunded/i);
-        expect(stripeMock.refunds.create).toHaveBeenCalledWith({
-            payment_intent: intent.paymentIntentId
-        });
+        expect(stripeMock.refunds.create).toHaveBeenCalledWith(
+            { payment_intent: intent.paymentIntentId },
+            { idempotencyKey: `refund:intent:${intent.paymentIntentId}` }
+        );
         expect(await Booking.countDocuments()).toBe(0);
     });
 });

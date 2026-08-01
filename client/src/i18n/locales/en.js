@@ -160,7 +160,7 @@ export default {
 
   footer: {
     blurb:
-      "Professional home and office cleaning across Italy. Vetted, insured cleaners, transparent prices and a guarantee behind every visit.",
+      "Professional cleaning for apartments, holiday homes, Airbnb properties, hotels, offices and commercial spaces in Rome. Qualified staff, transparent prices and dedicated support.",
     newsletterTitle: "Get home care tips, monthly",
     subscribe: "Subscribe",
     subscribed: "You're subscribed — watch your inbox.",
@@ -178,10 +178,12 @@ export default {
       Careers: "Careers",
       Blog: "Blog",
       Contact: "Contact",
-      "Home cleaning": "Home cleaning",
+      "Regular cleaning": "Regular cleaning",
       "Deep cleaning": "Deep cleaning",
-      "Office cleaning": "Office cleaning",
       "Move-out cleaning": "Move-out cleaning",
+      "Office & commercial cleaning": "Office & commercial cleaning",
+      "Holiday home & Airbnb cleaning": "Holiday home & Airbnb cleaning",
+      "Emergency cleaning": "Emergency cleaning",
       Pricing: "Pricing",
       FAQ: "FAQ",
       "Book a cleaning": "Book a cleaning",
@@ -290,36 +292,15 @@ export default {
       "From a weekly home refresh to office contracts and end-of-lease deep cleans — pick what you need, we handle the rest.",
     exploreAll: "Explore all services",
     bookNow: "Book now",
+    viewDetails: "View details",
     mostBooked: "Most booked",
   },
 
   why: {
     eyebrow: "Why CasaClean",
-    title: "Cleaning you can finally stop thinking about",
+    title: "Why choose CasaClean?",
     subtitle:
-      "We sweat the small stuff — vetting, scheduling, quality — so booking a cleaner feels as easy as ordering a taxi.",
-    items: {
-      reliability: {
-        title: "On time, every time",
-        description:
-          "Punctual professionals, live scheduling and a 99.6% on-time arrival rate — even for same-day requests.",
-      },
-      standards: {
-        title: "Background-checked professionals",
-        description:
-          "Every cleaner is identity-verified, background-checked, insured and trained on our 50-point standard before their first visit.",
-      },
-      allinone: {
-        title: "One team for home and office",
-        description:
-          "Regular cleaning, deep cleans, offices, move-outs, laundry and disinfection — one booking, one invoice, one standard.",
-      },
-      guarantee: {
-        title: "The Spotless Guarantee",
-        description:
-          "Not happy with a clean? Tell us within 48 hours and we'll re-clean for free — or refund the visit.",
-      },
-    },
+      "High-quality cleaning, transparent pricing, flexible scheduling and outstanding customer support — for every home and business in Rome.",
   },
 
   workflow: {
@@ -465,10 +446,10 @@ export default {
   // ----- Service catalog content (keyed by service id) -----
   services: {
     1: {
-      name: "Home Cleaning",
-      tagline: "Your regular clean, made effortless",
+      name: "Regular Cleaning",
+      tagline: "Your routine clean, made effortless",
       description:
-        "A thorough clean of your whole home — kitchen, bathrooms, bedrooms and living areas — as a one-off or on a schedule that suits you.",
+        "A thorough clean of your whole home — kitchen, bathrooms, bedrooms and living areas — as a one-time visit or on a schedule that suits you.",
       features: [
         "Kitchen & bathroom sanitation",
         "Dusting, vacuuming & mopping",
@@ -489,22 +470,10 @@ export default {
       ],
     },
     3: {
-      name: "Office Cleaning",
-      tagline: "A workspace your team enjoys",
-      description:
-        "Reliable cleaning for offices, studios and shops — scheduled around your working hours, with one simple monthly invoice.",
-      features: [
-        "Desks, meeting rooms & kitchens",
-        "High-touch points sanitized",
-        "Evening & early-morning slots",
-        "Monthly invoicing available",
-      ],
-    },
-    4: {
       name: "Move-In / Move-Out Cleaning",
       tagline: "Leave nothing behind but shine",
       description:
-        "A rigorous end-of-lease clean that helps deposits come back in full and new chapters start fresh — landlord-checklist thorough.",
+        "A rigorous clean before or after a move that helps deposits come back in full and new chapters start fresh — landlord-checklist thorough.",
       features: [
         "Full-property deep clean",
         "Inside all appliances & storage",
@@ -512,28 +481,40 @@ export default {
         "Deposit-friendly documentation",
       ],
     },
-    5: {
-      name: "Laundry & Ironing",
-      tagline: "Fresh, folded and put away",
+    4: {
+      name: "Office & Commercial Cleaning",
+      tagline: "A workspace your team enjoys",
       description:
-        "Add washing, ironing and folding to any cleaning visit — or book it on its own. Your wardrobe and linen cupboard, handled.",
+        "Reliable cleaning for offices, studios, shops and commercial spaces — scheduled around your working hours, with one simple monthly invoice.",
       features: [
-        "Wash, dry & fold",
-        "Ironing & garment care",
-        "Bed linen & towel rotation",
-        "Add-on to any cleaning",
+        "Desks, meeting rooms & kitchens",
+        "High-touch points sanitized",
+        "Evening & early-morning slots",
+        "Monthly invoicing available",
+      ],
+    },
+    5: {
+      name: "Holiday Home, Airbnb & Hotel Cleaning",
+      tagline: "Guest-ready between every stay",
+      description:
+        "Fast, reliable turnovers for holiday homes, Airbnb properties and hotels in Rome — cleaned, reset and presented to hospitality standards.",
+      features: [
+        "Checkout-to-checkin turnovers",
+        "Fresh linen & towel changes",
+        "Property reset & presentation",
+        "Flexible, short-notice scheduling",
       ],
     },
     6: {
-      name: "Sanitization & Disinfection",
-      tagline: "Certified clean, down to the details",
+      name: "Emergency Cleaning",
+      tagline: "When it can't wait until tomorrow",
       description:
-        "Professional-grade disinfection of high-touch surfaces for homes and workplaces — ideal after illness, tenants or renovations.",
+        "Urgent cleaning when plans change or something goes wrong — a qualified team at short notice, with the same standards as every other visit.",
       features: [
-        "Certified professional disinfectants",
-        "High-touch surface treatment",
-        "Kitchen & bathroom focus",
-        "Suitable for homes & offices",
+        "Short-notice availability",
+        "Same qualified professionals",
+        "Homes, offices & rentals",
+        "Professional products included",
       ],
     },
   },
@@ -552,9 +533,9 @@ export default {
           "It's completely up to you. Many customers hand over keys, use a smart lock or leave them with a concierge. Your cleaner confirms arrival and completion, so you always know where things stand.",
       },
       q2: {
-        question: "Which cities do you serve?",
+        question: "Which areas do you serve?",
         answer:
-          "We currently operate in 12 Italian cities including Rome, Milan, Florence, Naples and Venice — and we expand every quarter. Enter your address at booking to confirm coverage.",
+          "We operate in Rome, covering apartments, holiday homes, Airbnb properties, hotels, offices and commercial spaces. Enter your address at booking to confirm coverage.",
       },
       q3: {
         question: "Does my cleaner bring supplies and equipment?",
@@ -596,11 +577,50 @@ export default {
 
   // ----- Per-page (heroes + section headings) -----
   pages: {
+    serviceDetail: {
+      metaSuffix: "Service details & booking",
+      allServices: "All services",
+      eyebrow: "Service details",
+      allCitiesBadge: "Available everywhere",
+      perHour: "/ hour",
+      bookCta: "Book this service",
+      preselectNote:
+        "We'll open the booking wizard with this service already selected.",
+      includedTitle: "What's included",
+      includedSubtitle: "Everything this service covers on every visit.",
+      addonsTitle: "Optional add-ons",
+      addonsSubtitle:
+        "Extras you can switch on while booking — the price updates as you go.",
+      coverageTitle: "Where it's available",
+      coverageAll: "This service is offered in every city we operate in.",
+      coverageSome: "This service is offered in the cities below.",
+      coverageEmpty:
+        "No city is enabled for this service yet — get in touch and we'll check your area.",
+      summaryTitle: "Ready when you are",
+      summaryBody:
+        "Book {service} in about a minute — pick your city, date and time and you're done.",
+      how: [
+        "Tell us about your place",
+        "Pick a date and time",
+        "Pay securely and relax",
+      ],
+      trustVetted: "Vetted, background-checked professionals",
+      trustInsured: "Fully insured, satisfaction guaranteed",
+      relatedEyebrow: "Keep exploring",
+      relatedTitle: "Other services you might need",
+      ctaTitle: "Book this clean today",
+      ctaSubtitle:
+        "Pick a slot that suits you — we'll confirm within minutes and take it from there.",
+      notFoundTitle: "Service not found",
+      notFoundBody:
+        "This service may have been renamed or is no longer offered. Browse the full catalogue to find the right clean.",
+      backToServices: "Browse all services",
+    },
     services: {
       heroEyebrow: "Our services",
       heroTitle: "Professional cleaning for every space and situation",
       heroSubtitle:
-        "One-off, regular, deep, office or end-of-lease — book exactly the clean you need, delivered by vetted professionals.",
+        "Regular, deep, move-in/move-out, office, holiday-home or emergency cleaning — book exactly the clean you need, delivered by qualified staff.",
       emptyTitle: "Services coming soon",
       emptyDescription:
         "We're putting the finishing touches on our service lineup. Get in touch and we'll tailor a plan for you.",
@@ -641,24 +661,33 @@ export default {
         "No plan required. Book one visit, see the difference, then decide.",
     },
     about: {
-      heroEyebrow: "Our story",
-      heroTitle: "We started CasaClean to make great cleaning simple to book",
+      heroEyebrow: "About us",
+      heroTitle: "Professional cleaning services in Rome",
       heroSubtitle:
-        "What began with three cleaners and a borrowed van is now a vetted team keeping thousands of homes and workplaces spotless across Italy.",
+        "Homes, holiday properties and businesses across Rome — cleaned by qualified staff, with transparent pricing and support you can count on.",
       missionLabel: "Our mission",
+      mission:
+        "To provide high-quality cleaning services, transparent pricing, flexible scheduling and outstanding customer support.",
       imageAlt1: "A styled, freshly cleaned living room",
       imageAlt2: "A spotless, ready-to-use kitchen",
       imageAlt3: "A sanitized, hotel-grade bathroom",
-      mission:
-        "To give people their time back — by making professional, trustworthy cleaning as easy to book as a taxi, for every home and workplace.",
-      valuesEyebrow: "What we value",
-      valuesTitle: "The principles behind every visit",
-      milestonesEyebrow: "Milestones",
-      milestonesTitle: "How we got here",
-      teamEyebrow: "Leadership",
-      teamTitle: "The people behind CasaClean",
-      ctaTitle: "Join thousands of customers who trust CasaClean",
-      ctaSubtitle: "Experience a clean you can count on — at home and at work.",
+      introEyebrow: "About us",
+      introTitle: "Cleaning you can rely on",
+      intro: [
+        "CasaClean offers professional cleaning services for apartments, holiday homes, Airbnb properties, hotels, offices and commercial spaces in Rome.",
+        "Every cleaning service is carried out by qualified staff using professional cleaning products and paying close attention to every detail.",
+        "Whether you need a one-time cleaning, regular cleaning, deep cleaning or a move-in/move-out cleaning service, CasaClean always guarantees reliability and high-quality results.",
+      ],
+      servicesEyebrow: "What we do",
+      servicesTitle: "Our services",
+      valuesEyebrow: "Why CasaClean",
+      valuesTitle: "Why choose CasaClean?",
+      legalLabel: "Company information",
+      legal:
+        "CasaClean is a brand managed by Vacanze Romane SRLS, a legally registered Italian company operating in full compliance with Italian regulations and providing professional cleaning services.",
+      ctaTitle: "Book your cleaning with CasaClean",
+      ctaSubtitle:
+        "Easy and fast booking, transparent pricing and qualified staff — at home and at work.",
     },
     contact: {
       heroEyebrow: "Contact",
@@ -814,42 +843,33 @@ export default {
     staging: { label: "Interior windows", note: "Glass, frames and sills" },
   },
 
-  // ----- Company (values, milestones, leadership) -----
+  // ----- Company (why choose CasaClean) -----
   values: {
-    hospitality: {
-      title: "Care in every corner",
+    staff: {
+      title: "Qualified and experienced staff",
       description:
-        "We clean every home as if the owner were watching — because trust is earned in the details.",
+        "Every cleaning is carried out by qualified staff using professional cleaning products and paying close attention to every detail.",
     },
-    accountability: {
-      title: "Radical accountability",
+    pricing: {
+      title: "Transparent pricing",
       description:
-        "Clear checklists and honest feedback loops. If we miss something, we own it and make it right, fast.",
+        "You see the price before you confirm — no contracts, no hidden fees and no surprises after the visit.",
     },
-    craft: {
-      title: "Pride in the craft",
+    booking: {
+      title: "Easy and fast booking",
       description:
-        "Cleaning is a skill. We train, certify and reward the professionals who do it brilliantly.",
+        "Book online in about a minute and choose the time that suits you — a one-time visit or a regular schedule.",
     },
-    scale: {
-      title: "Built to grow with you",
+    support: {
+      title: "Dedicated customer support",
       description:
-        "From a studio apartment to a chain of offices, our team and tooling scale without dropping a visit.",
+        "A real team you can reach before, during and after your cleaning. Outstanding support is part of the service.",
     },
-  },
-
-  milestones: {
-    m1: { title: "Founded in Rome", description: "Started with three cleaners and one promise: cleaning people can rely on." },
-    m2: { title: "1,000th booking", description: "Word of mouth carried us to Florence and Milan within the first year." },
-    m3: { title: "The Spotless Guarantee", description: "Launched our 50-point standard and re-clean-for-free guarantee." },
-    m4: { title: "12 cities, 48k+ cleans", description: "Became the go-to cleaning partner for homes and offices alike." },
-  },
-
-  leadership: {
-    founder: { role: "Co-founder & CEO", bio: "Former hotel housekeeping director who led cleaning teams across 200+ rooms and suites." },
-    ops: { role: "Co-founder & COO", bio: "Built and ran multi-city field operations for an on-demand logistics company." },
-    product: { role: "Head of Product", bio: "Product leader focused on tools that make booking and managing a clean feel effortless." },
-    quality: { role: "Head of Quality", bio: "Defined the 50-point standard that every CasaClean visit is measured against." },
+    standards: {
+      title: "High cleaning standards",
+      description:
+        "Apartments, holiday homes, offices or hotels — every property is cleaned to the same high standard, every time.",
+    },
   },
 
   // ----- Careers (perks + roles) -----
@@ -884,7 +904,7 @@ export default {
     back: "Back",
     confirm: "Confirm booking",
     steps: {
-      property: { title: "Property details", subtitle: "Where are we cleaning?" },
+      property: { title: "Service & address", subtitle: "What you need and where" },
       preferences: { title: "Cleaning preferences", subtitle: "Tailor your clean" },
       schedule: { title: "Schedule", subtitle: "Pick a date and time" },
       contact: { title: "Your details", subtitle: "Where to reach you" },
@@ -894,10 +914,14 @@ export default {
     schedule: {
       date: "Preferred date",
       time: "Preferred time slot",
+      noCity: "Choose a city first — available times depend on its opening hours.",
+      noSlots: "No start times fit this duration within the city's opening hours. Try a shorter booking or another date.",
+      cityHours: "{city} is open {start}–{end}. Times shown leave enough room to finish before closing.",
       note: "We'll confirm the exact crew arrival window by message once your booking is received. Same-day turnovers are subject to availability.",
       repeat: {
         label: "Frequency",
         oneTime: "One-time",
+        everyDay: "Every day",
         everyDays: "Every {days} days",
         hint: "We'll charge your saved card 1 day before each visit.",
       },
@@ -950,9 +974,20 @@ export default {
       tools: "Cleaning tools",
     },
     property: {
+      groupClean: "Your clean",
+      groupAddress: "Your address",
       city: "City",
       cityLoading: "Loading cities…",
       cityPlaceholder: "Select your city",
+      cityNotForService: "not available for this service",
+      thisCity: "this city",
+      service: "Choose a service",
+      perHour: "{amount}/hr",
+      serviceDropped:
+        "{service} isn't available in {city}. Pick another service below, or choose a city that offers it to get it back.",
+      noServices: "No services are available right now.",
+      noServicesInCity:
+        "No services are available in {city} yet. Try choosing a different city.",
       street: "Street name",
       streetPlaceholder: "Via Giovanni Giorgi",
       houseNumber: "House number",
@@ -963,10 +998,9 @@ export default {
       doorbellPlaceholder: "Who should the crew look for?",
     },
     preferences: {
-      service: "Choose a service",
-      noServices:
-        "No services are available in the selected city yet. Try choosing a different city.",
-      perHour: "{amount}/hr",
+      chosenService: "Your service",
+      noServiceChosen: "No service chosen yet",
+      changeService: "Change",
       hours: "Estimated hours",
       cleaners: "Number of cleaners",
       cleanersHint: "Between 1 and 3 cleaners",
@@ -981,7 +1015,7 @@ export default {
       notesPlaceholder: "Anything the crew should know before arriving…",
     },
     review: {
-      property: "Property",
+      property: "Service & address",
       address: "Address",
       size: "Size",
       doorbell: "Doorbell",
@@ -1175,10 +1209,15 @@ export default {
       deleteTitle: "Delete service",
       popular: "Popular",
       allCitiesBadge: "All cities",
+      everyDay: "Every day",
+      everyDays: "Every {days} days",
+      recurringFlexible: "Customer's choice",
+      recurringFixed: "Every {days} days",
       col: {
         service: "Service",
         pricePerHr: "Price / hr",
         cities: "Coverage",
+        recurring: "Recurring",
         popular: "Popular",
         status: "Status",
       },
@@ -1203,6 +1242,10 @@ export default {
         allSpecialRequestsHint: "When on, every special request add-on is available for this service and the list below is ignored.",
         specialRequests: "Special requests enabled for this service",
         specialRequestsHint: "Select which add-ons customers can attach when booking this service.",
+        recurringEnabled: "Can be booked on a repeating schedule",
+        recurringEnabledHint: "When off, this service can only be booked as a one-off visit.",
+        recurringIntervalDays: "Repeat frequencies offered",
+        recurringIntervalDaysHint: "Pick the exact frequencies customers may choose. Select none to let them choose any frequency from every day up to every 14 days.",
         enabled: "Enabled (visible on site)",
       },
     },

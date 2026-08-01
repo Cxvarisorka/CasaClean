@@ -13,7 +13,7 @@ const sendEmail = require('../utils/email.util');
 const AppError = require('../utils/appError.util');
 const { toMinorUnits, fromMinorUnits } = require('../utils/money.util');
 const {
-  ALLOWED_INTERVAL_DAYS,
+  isValidIntervalDays,
   addDaysToDateString,
   localMidnight,
   todayString
@@ -22,6 +22,7 @@ const {
   resolveServiceAndCity,
   resolveSpecialRequests,
   resolveCleaningTools,
+  assertRecurrenceAllowed,
   computeBookingTotal,
   renderBookingConfirmationEmail,
   formatEuro
@@ -183,7 +184,7 @@ const sendCycleReceipt = ({ subscription, serviceName, serviceDate, amount }) =>
  */
 const createSubscriptionFromFirstBooking = async ({ pending, booking, paymentIntent }) => {
   const intervalDays = Number(pending?.recurrence?.intervalDays);
-  if (!ALLOWED_INTERVAL_DAYS.includes(intervalDays)) return null;
+  if (!isValidIntervalDays(intervalDays)) return null;
 
   const paymentIntentId = paymentIntent?.id || pending.paymentIntentId;
   let resolvedPaymentIntent = paymentIntent;
@@ -253,6 +254,14 @@ const priceSubscriptionCycle = async (subscription) => {
     String(subscription.serviceId),
     String(subscription.cityId)
   );
+
+  // An admin can stop offering recurrence on a service (or narrow its cadences)
+  // long after a plan was created. Re-check it per cycle, alongside the rest of
+  // reference resolution, so the plan pauses instead of quietly charging on a
+  // cadence the service no longer sells. The caller turns this AppError into a
+  // 'service-unavailable' pause and notifies the customer.
+  assertRecurrenceAllowed(service, subscription.intervalDays);
+
   const specialRequests = await resolveSpecialRequests(subscription.specialRequests, service);
   const cleaningTools = await resolveCleaningTools(subscription.cleaningTools, service);
 
@@ -692,6 +701,21 @@ const ensureSubscriptionCycleBooking = async (paymentIntent) => {
 
   const amount = fromMinorUnits(paymentIntent.amount);
   if (!Number.isFinite(amount) || amount < 0) return null;
+
+  // Idempotent fast path: the charge worker normally created this cycle's
+  // booking synchronously, so a duplicate/late delivery just returns it.
+  const existing = await Booking.findOne({ paymentIntentId: paymentIntent.id });
+  if (existing) return existing;
+
+  // Nothing exists yet, so this really is the crash-repair path. Only create a
+  // booking if the plan is STILL on this exact cycle — the same predicate
+  // markCycleSucceeded uses. Without this gate a late webhook retry could add a
+  // fresh confirmed booking to a subscription the customer has since paused or
+  // cancelled (the schedule advance would correctly refuse, leaving the two
+  // records disagreeing about whether the cycle happened).
+  if (subscription.status !== 'active' || subscription.nextServiceDate !== serviceDate) {
+    return null;
+  }
 
   const booking = await createBookingFromSubscription({
     subscription,

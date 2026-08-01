@@ -1,9 +1,10 @@
-import { describe, test, expect, vi, beforeEach } from "vitest";
+import { describe, test, expect, vi } from "vitest";
 
 vi.mock("@/services/api", () => ({ request: vi.fn() }));
 
 import { request } from "@/services/api";
-import { toBookingPayload, createBooking, cancelMyBooking, getMyBookings } from "./bookingApi";
+import * as bookingApi from "./bookingApi";
+import { toBookingPayload, cancelMyBooking, getMyBookings } from "./bookingApi";
 
 const wizardValues = {
   serviceId: "svc1",
@@ -72,51 +73,13 @@ describe("toBookingPayload", () => {
   });
 });
 
-describe("createBooking", () => {
-  beforeEach(() => {
-    request.mockReset();
-  });
-
-  test("posts the payload and normalises the response", async () => {
-    request.mockResolvedValue({
-      booking: {
-        _id: "abc123def456",
-        customerName: "Mario Rossi",
-        bookingDate: "2026-08-01",
-        bookingTime: "10:00",
-        totalAmount: 152,
-        status: "confirmed",
-      },
-    });
-
-    const result = await createBooking(toBookingPayload(wizardValues));
-
-    expect(request).toHaveBeenCalledWith(
-      expect.objectContaining({ method: "POST", url: "/booking" })
-    );
-    expect(result.id).toBe("CC-DEF456"); // reference from the id tail
-    expect(result.total_amount).toBe(152);
-    expect(result.status).toBe("confirmed");
-    expect(result.simulated).toBeUndefined();
-  });
-
-  test("simulates success ONLY when the API is unreachable (status 0)", async () => {
-    request.mockRejectedValue({ status: 0, message: "Network Error" });
-
-    const result = await createBooking({
-      payload: toBookingPayload(wizardValues),
-      display: { customerName: "Mario Rossi", totalAmount: 152 },
-    });
-
-    expect(result.simulated).toBe(true);
-    expect(result.status).toBe("confirmed");
-    expect(result.customer_name).toBe("Mario Rossi");
-  });
-
-  test("re-throws real server errors (no fake confirmations)", async () => {
-    request.mockRejectedValue({ status: 400, message: "Validation failed!" });
-    await expect(createBooking(toBookingPayload(wizardValues)))
-      .rejects.toMatchObject({ status: 400 });
+describe("customer booking creation", () => {
+  test("exposes no createBooking helper", () => {
+    // Customers must go through the pay-first flow in paymentApi.js. A helper
+    // posting to the admin-only POST /booking could only 403 — and the old one
+    // faked a "confirmed" result on a network error, showing a confirmation for
+    // a booking that was never created or paid for.
+    expect(bookingApi.createBooking).toBeUndefined();
   });
 });
 

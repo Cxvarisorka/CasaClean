@@ -41,8 +41,8 @@ const parseServiceBody = [
     sanitizeMongo,
     coerceMultipart({
         numbers: ['pricePerHour'],
-        booleans: ['allCities', 'allSpecialRequests', 'enabled'],
-        arrays: ['includes', 'cities', 'specialRequests']
+        booleans: ['allCities', 'allSpecialRequests', 'enabled', 'recurringEnabled'],
+        arrays: ['includes', 'cities', 'specialRequests', 'recurringIntervalDays']
     })
 ];
 

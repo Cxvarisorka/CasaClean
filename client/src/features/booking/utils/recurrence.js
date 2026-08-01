@@ -7,6 +7,19 @@
 
 const DATE_STRING = /^(\d{4})-(\d{2})-(\d{2})$/;
 
+/**
+ * The human label for a cadence, in days. Cadences start at 1 now that a
+ * service can offer a daily plan, so the singular case needs its own phrase
+ * ("Every day", not "Every 1 days"). 0 is the one-time sentinel.
+ */
+export function intervalLabel(t, days) {
+  const value = Number(days) || 0;
+  if (value <= 0) return t("booking.schedule.repeat.oneTime");
+  return value === 1
+    ? t("booking.schedule.repeat.everyDay")
+    : t("booking.schedule.repeat.everyDays", { days: value });
+}
+
 export function localDateFromDateString(value) {
   const match = typeof value === "string" ? value.match(DATE_STRING) : null;
   if (!match) return null;

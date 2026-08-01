@@ -29,10 +29,12 @@ export const FOOTER_NAV = [
   {
     title: "Services",
     links: [
-      { label: "Home cleaning", href: ROUTES.services },
+      { label: "Regular cleaning", href: ROUTES.services },
       { label: "Deep cleaning", href: ROUTES.services },
-      { label: "Office cleaning", href: ROUTES.services },
       { label: "Move-out cleaning", href: ROUTES.services },
+      { label: "Office & commercial cleaning", href: ROUTES.services },
+      { label: "Holiday home & Airbnb cleaning", href: ROUTES.services },
+      { label: "Emergency cleaning", href: ROUTES.services },
     ],
   },
   {

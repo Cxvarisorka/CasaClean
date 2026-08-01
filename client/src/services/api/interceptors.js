@@ -44,6 +44,23 @@ export function attachInterceptors(client) {
     (config) => {
       // Hook point for correlation ids / auth headers if needed later.
       config.metadata = { startedAt: Date.now() };
+
+      // A FormData payload (the service cover-image upload) must go out as
+      // multipart/form-data with a boundary only the browser can generate.
+      // The instance sets `Content-Type: application/json` as a default, and
+      // axios 1.x takes that literally: transformRequest sees a JSON content
+      // type on a FormData body and serialises it with formDataToJSON, so the
+      // request arrives as JSON with every field flattened to a string and the
+      // file dropped — which the API's strict schema rejects as a validation
+      // error. Clearing the header lets axios/the browser negotiate multipart.
+      if (typeof FormData !== "undefined" && config.data instanceof FormData) {
+        if (typeof config.headers?.delete === "function") {
+          config.headers.delete("Content-Type");
+        } else if (config.headers) {
+          delete config.headers["Content-Type"];
+        }
+      }
+
       return config;
     },
     (error) => Promise.reject(normalizeError(error))

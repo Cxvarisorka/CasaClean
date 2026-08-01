@@ -10,6 +10,7 @@ import {
   Building2,
   Shirt,
   SprayCan,
+  Zap,
   // Differentiators / values
   ShieldCheck,
   Layers,
@@ -47,6 +48,7 @@ const REGISTRY = {
   Building2,
   Shirt,
   SprayCan,
+  Zap,
   ShieldCheck,
   Layers,
   BadgeCheck,

@@ -1,6 +1,22 @@
 // Modules
 const { z } = require("zod");
 
+const { MIN_INTERVAL_DAYS, MAX_INTERVAL_DAYS } = require("../utils/date.util");
+
+// Recurrence cadences an admin may pin on a service. An empty array is the
+// meaningful "no restriction — the customer picks any cadence in range" value,
+// so it is deliberately allowed. The max item count is the size of the range
+// itself: a longer list could only contain duplicates.
+const recurringIntervalDays = z
+    .array(
+        z
+            .number()
+            .int({ message: "Recurring intervals must be whole days!" })
+            .min(MIN_INTERVAL_DAYS, { message: `A recurring interval can't be shorter than ${MIN_INTERVAL_DAYS} day!` })
+            .max(MAX_INTERVAL_DAYS, { message: `A recurring interval can't be longer than ${MAX_INTERVAL_DAYS} days!` })
+    )
+    .max(MAX_INTERVAL_DAYS - MIN_INTERVAL_DAYS + 1, { message: "Too many recurring intervals!" });
+
 // Accepted forms for the `image` field, in order:
 //   1. a hosted HTTPS URL,
 //   2. a path to a file this server stores and serves (the multer upload —
@@ -64,7 +80,15 @@ const createServiceSchema = z.object({
 
     specialRequests: z
         .array(z.string())
-        .optional()
+        .optional(),
+
+    // Opt-in recurring bookings. The optional cadence list is only meaningful
+    // when recurringEnabled is true — the controller clears it otherwise.
+    recurringEnabled: z
+        .boolean()
+        .optional(),
+
+    recurringIntervalDays: recurringIntervalDays.optional()
 }).strict({ message: "Unknown fields are not allowed!" });
 
 // Schema for validate edit service request body
@@ -116,6 +140,12 @@ const editServiceSchema = z.object({
     specialRequests: z
         .array(z.string())
         .optional(),
+
+    recurringEnabled: z
+        .boolean()
+        .optional(),
+
+    recurringIntervalDays: recurringIntervalDays.optional(),
 
     // Soft on/off switch: a disabled service is hidden from the public site and
     // can't be booked, without deleting it. Only editable, not set on create.

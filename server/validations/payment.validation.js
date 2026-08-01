@@ -1,6 +1,6 @@
 const { z } = require("zod");
 const { createBookingSchema } = require("./booking.validation");
-const { ALLOWED_INTERVAL_DAYS } = require('../utils/date.util');
+const { MIN_INTERVAL_DAYS, MAX_INTERVAL_DAYS } = require('../utils/date.util');
 
 // Booking payment-intent body = the full booking payload (re-validated by the
 // same rules as the create endpoint) PLUS two optional payment options:
@@ -19,12 +19,16 @@ const bookingIntentSchema = createBookingSchema
             .optional(),
         // Omitted for a one-off booking. A recurring first cycle is still an
         // on-session payment, but must establish an off-session card mandate.
+        //
+        // These are only the platform-wide bounds. Whether the CHOSEN service
+        // repeats at all — and whether it pins a narrower cadence list — is a
+        // per-service rule the schema can't see; buildValidatedBookingDraft
+        // enforces it against the resolved service (assertRecurrenceAllowed).
         intervalDays: z
             .number()
-            .int()
-            .refine((value) => ALLOWED_INTERVAL_DAYS.includes(value), {
-                message: `intervalDays must be one of: ${ALLOWED_INTERVAL_DAYS.join(', ')}`
-            })
+            .int({ message: "intervalDays must be a whole number of days!" })
+            .min(MIN_INTERVAL_DAYS, { message: `A booking can repeat at most once every ${MIN_INTERVAL_DAYS} day!` })
+            .max(MAX_INTERVAL_DAYS, { message: `A booking can repeat at least once every ${MAX_INTERVAL_DAYS} days!` })
             .optional()
     })
     .strict({ message: "Unknown fields are not allowed!" });

@@ -4,14 +4,13 @@ import { Container } from "@/components/ui/Container";
 import { Image } from "@/components/ui/Image";
 import { PageHero, CtaSection } from "@/components/sections";
 import { SectionHeading } from "@/components/shared/SectionHeading";
-import { AnimatedNumber } from "@/components/shared/AnimatedNumber";
 import { Icon } from "@/components/shared/Icon";
 import { Reveal } from "@/components/shared/Reveal";
 import { Seo } from "@/seo";
 import { PAGE_META } from "@/constants/metadata";
 import { IMAGES } from "@/constants/images";
-import { COMPANY_VALUES, LEADERSHIP, COMPANY_MILESTONES } from "@/data/company";
-import { STATS } from "@/data/stats";
+import { COMPANY_VALUES } from "@/data/company";
+import { SERVICES } from "@/data/services";
 import { useTranslation } from "@/i18n";
 import { staggerContainer, staggerItem } from "@/animations/stagger";
 import { viewportOnce } from "@/animations/pageTransitions";
@@ -19,12 +18,16 @@ import { viewportOnce } from "@/animations/pageTransitions";
 /*
  * AboutPage
  * ---------
- * The brand story: mission, values, milestones, team and proof. Sections reuse
- * shared heading/animation primitives for a consistent narrative rhythm.
+ * The official company presentation: what CasaClean does, its mission, the
+ * services it offers, why customers choose it and the legal entity behind the
+ * brand. Copy lives in `pages.about.*` so every language says the same thing.
  */
 
 const AboutPage = () => {
   const { t } = useTranslation();
+
+  const intro = t("pages.about.intro");
+  const paragraphs = Array.isArray(intro) ? intro : [intro];
 
   return (
     <Page>
@@ -84,30 +87,72 @@ const AboutPage = () => {
         </Container>
       </section>
 
-      {/* Stats */}
+      {/* Who we are */}
       <section className="pb-16 lg:pb-24">
-        <Container>
+        <Container size="md">
+          <SectionHeading
+            eyebrow={t("pages.about.introEyebrow")}
+            title={t("pages.about.introTitle")}
+          />
           <motion.div
             variants={staggerContainer(0.1)}
             initial="hidden"
             whileInView="visible"
             viewport={viewportOnce}
-            className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4"
+            className="mt-10 space-y-5"
           >
-            {STATS.map((stat) => (
-              <motion.div key={stat.id} variants={staggerItem} className="text-center">
-                <p className="text-heading-xl font-bold text-gradient">
-                  <AnimatedNumber value={stat.value} decimals={stat.decimals || 0} suffix={stat.suffix} />
-                </p>
-                <p className="mt-2 text-body-sm text-ink-500">{t(`stats.${stat.id}`)}</p>
-              </motion.div>
+            {paragraphs.map((paragraph) => (
+              <motion.p
+                key={paragraph}
+                variants={staggerItem}
+                className="text-body-lg text-ink-600"
+              >
+                {paragraph}
+              </motion.p>
             ))}
           </motion.div>
         </Container>
       </section>
 
-      {/* Values */}
+      {/* Our services */}
       <section className="bg-sand-50 py-20 lg:py-28">
+        <Container>
+          <SectionHeading
+            eyebrow={t("pages.about.servicesEyebrow")}
+            title={t("pages.about.servicesTitle")}
+          />
+          <motion.ul
+            variants={staggerContainer(0.08)}
+            initial="hidden"
+            whileInView="visible"
+            viewport={viewportOnce}
+            className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+          >
+            {SERVICES.map((service) => (
+              <motion.li
+                key={service.id}
+                variants={staggerItem}
+                className="flex items-start gap-4 rounded-2xl border border-ink-100 bg-surface p-6 shadow-soft"
+              >
+                <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-50 text-brand-600">
+                  <Icon name={service.icon} className="size-5" />
+                </span>
+                <div>
+                  <h3 className="text-heading-sm text-ink-900">
+                    {t(`services.${service.id}.name`)}
+                  </h3>
+                  <p className="mt-2 text-body-sm text-ink-500">
+                    {t(`services.${service.id}.tagline`)}
+                  </p>
+                </div>
+              </motion.li>
+            ))}
+          </motion.ul>
+        </Container>
+      </section>
+
+      {/* Why choose CasaClean */}
+      <section className="py-20 lg:py-28">
         <Container>
           <SectionHeading
             eyebrow={t("pages.about.valuesEyebrow")}
@@ -118,7 +163,7 @@ const AboutPage = () => {
             initial="hidden"
             whileInView="visible"
             viewport={viewportOnce}
-            className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4"
+            className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
           >
             {COMPANY_VALUES.map((value) => (
               <motion.div
@@ -141,80 +186,17 @@ const AboutPage = () => {
         </Container>
       </section>
 
-      {/* Timeline */}
-      <section className="py-20 lg:py-28">
+      {/* Legal entity */}
+      <section className="pb-20 lg:pb-28">
         <Container size="md">
-          <SectionHeading
-            eyebrow={t("pages.about.milestonesEyebrow")}
-            title={t("pages.about.milestonesTitle")}
-          />
-          <motion.ol
-            variants={staggerContainer(0.12)}
-            initial="hidden"
-            whileInView="visible"
-            viewport={viewportOnce}
-            className="relative mt-14 border-l border-ink-200 pl-8"
-          >
-            {COMPANY_MILESTONES.map((m) => (
-              <motion.li key={m.id} variants={staggerItem} className="relative mb-10 last:mb-0">
-                <span className="absolute -left-[2.15rem] top-1 grid size-7 place-items-center rounded-full border-2 border-white bg-brand-600 text-caption font-bold text-white shadow-soft">
-                  ✦
-                </span>
-                <p className="text-caption font-bold uppercase tracking-wider text-brand-600">
-                  {m.year}
-                </p>
-                <h3 className="mt-1 text-heading-sm text-ink-900">
-                  {t(`milestones.${m.id}.title`)}
-                </h3>
-                <p className="mt-1 text-body-md text-ink-500">
-                  {t(`milestones.${m.id}.description`)}
-                </p>
-              </motion.li>
-            ))}
-          </motion.ol>
-        </Container>
-      </section>
-
-      {/* Team */}
-      <section className="bg-sand-50 py-20 lg:py-28">
-        <Container>
-          <SectionHeading
-            eyebrow={t("pages.about.teamEyebrow")}
-            title={t("pages.about.teamTitle")}
-          />
-          <motion.div
-            variants={staggerContainer(0.1)}
-            initial="hidden"
-            whileInView="visible"
-            viewport={viewportOnce}
-            className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4"
-          >
-            {LEADERSHIP.map((person) => (
-              <motion.div
-                key={person.id}
-                variants={staggerItem}
-                className="rounded-2xl border border-ink-100 bg-surface p-6 text-center shadow-soft"
-              >
-                <Image
-                  src={person.photo}
-                  alt={person.name}
-                  rounded="rounded-2xl"
-                  zoomOnHover
-                  className="mx-auto size-20"
-                  gradient="from-brand-500 to-brand-700"
-                />
-                <h3 className="mt-4 text-body-md font-semibold text-ink-900">
-                  {person.name}
-                </h3>
-                <p className="text-body-sm font-medium text-brand-600">
-                  {t(`leadership.${person.id}.role`)}
-                </p>
-                <p className="mt-2 text-body-sm text-ink-500">
-                  {t(`leadership.${person.id}.bio`)}
-                </p>
-              </motion.div>
-            ))}
-          </motion.div>
+          <Reveal className="rounded-3xl border border-ink-100 bg-sand-50 p-8 text-center sm:p-10">
+            <p className="text-eyebrow text-brand-600">
+              {t("pages.about.legalLabel")}
+            </p>
+            <p className="mt-4 text-body-lg text-ink-600">
+              {t("pages.about.legal")}
+            </p>
+          </Reveal>
         </Container>
       </section>
 

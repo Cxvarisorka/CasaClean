@@ -402,6 +402,11 @@ const deleteUser = catchAsync(async (req, res, next) => {
     // A deleted account must never remain eligible for an unattended charge.
     // Do this before removing the User so an update failure leaves the account
     // intact rather than orphaning an active subscription.
+    //
+    // Only ACTIVE plans are touched, deliberately: the charge sweep already
+    // filters on status 'active', so a paused plan cannot bill anyone, and
+    // rewriting its pausedReason/pausedAt would destroy why it stopped. See
+    // tests/integration/subscriptionAccountDeletion.test.js.
     await Subscription.updateMany(
         { user: user._id, status: "active" },
         { $set: { status: "cancelled", cancelledAt: new Date(), processingAt: null } }
@@ -651,7 +656,8 @@ const deleteMe = catchAsync(async (req, res, next) => {
     // as business/financial records (they already carry the customer details
     // they need) but are detached from the deleted account.
     // Stop every still-active recurring plan before detaching/deleting the
-    // account. Paused plans cannot charge and remain historical state.
+    // account. Paused plans cannot charge (the sweep filters on 'active') and
+    // are left exactly as they are so their pause reason survives as history.
     await Subscription.updateMany(
         { user: user._id, status: "active" },
         { $set: { status: "cancelled", cancelledAt: new Date(), processingAt: null } }

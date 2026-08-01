@@ -1,11 +1,14 @@
 // Models
 const CleaningTool = require("../models/cleaningTool.model");
 const Service = require("../models/service.model");
+const Booking = require("../models/booking.model");
+const Subscription = require("../models/subscription.model");
 
 // Utils
 const AppError = require("../utils/appError.util");
 const catchAsync = require("../utils/catchAsync.util");
 const formatName = require("../utils/formatName.util");
+const { assertNotReferenced } = require("../utils/referentialGuard.util");
 
 // Fail closed on the service references: every id must point to a real Service
 // document, otherwise a typo would silently create a tool that never matches
@@ -154,6 +157,13 @@ const editCleaningTool = catchAsync(async (req, res, next) => {
 // DELETE /api/v1/cleaning-tool/:id -> remove a tool (admin only)
 const deleteCleaningTool = catchAsync(async (req, res, next) => {
     const { id } = req.params;
+
+    // Same reasoning as add-ons: a booking's stored tool ids are re-priced on
+    // edit, so deleting the catalogue entry rewrites history. Disable instead.
+    await assertNotReferenced([
+        { model: Booking, filter: { cleaningTools: id }, noun: "bookings" },
+        { model: Subscription, filter: { cleaningTools: id }, noun: "recurring subscriptions" }
+    ], "cleaning tool");
 
     const cleaningTool = await CleaningTool.findByIdAndDelete(id);
 

@@ -13,6 +13,11 @@ const City = require('../models/city.model');
 const Service = require('../models/service.model');
 
 const AppError = require('../utils/appError.util');
+const {
+  MIN_INTERVAL_DAYS,
+  MAX_INTERVAL_DAYS,
+  isValidIntervalDays
+} = require('../utils/date.util');
 
 // Single source of truth for booking price. Cleaners multiply labour only.
 const computeBookingTotal = ({ service, hours, cleaners, specialRequests = [], cleaningTools = [] }) =>
@@ -40,7 +45,7 @@ const resolveServiceAndCity = async (serviceId, cityId) => {
 
   const [service, city] = await Promise.all([
     Service.findById(serviceId)
-      .select("name enabled allCities cities allSpecialRequests specialRequests pricePerHour")
+      .select("name enabled allCities cities allSpecialRequests specialRequests pricePerHour recurringEnabled recurringIntervalDays")
       .lean(),
     City.findById(cityId)
       .select("enabled workingHourStarts workingHourEnds")
@@ -67,6 +72,47 @@ const resolveServiceAndCity = async (serviceId, cityId) => {
   }
 
   return { service, city };
+};
+
+/**
+ * Validate a recurring cadence against the service that would repeat.
+ *
+ * Fail-closed, and the mirror of the add-on rule: recurrence is opt-in per
+ * service (`recurringEnabled`), and a service that pins an explicit cadence list
+ * may only repeat on one of those cadences. With no list the customer chooses
+ * freely inside MIN_INTERVAL_DAYS..MAX_INTERVAL_DAYS.
+ *
+ * Called for every path that can create or continue a recurring plan — the
+ * first on-session payment AND each unattended cycle — so turning recurrence off
+ * on a service stops future charges instead of only hiding the option in the UI.
+ *
+ * @param {Object} service       resolved Service doc (from resolveServiceAndCity)
+ * @param {number} intervalDays  requested cadence in days
+ */
+const assertRecurrenceAllowed = (service, intervalDays) => {
+  if (!service?.recurringEnabled) {
+    throw new AppError("The selected service can't be booked on a recurring schedule!", 400);
+  }
+
+  const allowed = (service.recurringIntervalDays || []).map(Number);
+  const requested = Number(intervalDays);
+
+  if (allowed.length > 0) {
+    if (!allowed.includes(requested)) {
+      throw new AppError(
+        `This service can only repeat every ${allowed.join(', ')} days!`,
+        400
+      );
+    }
+    return;
+  }
+
+  if (!isValidIntervalDays(requested)) {
+    throw new AppError(
+      `A recurring booking must repeat every ${MIN_INTERVAL_DAYS} to ${MAX_INTERVAL_DAYS} days!`,
+      400
+    );
+  }
 };
 
 // "HH:MM" -> minutes since midnight. Inputs are zero-padded and pre-validated
@@ -258,6 +304,13 @@ const buildValidatedBookingDraft = async (payload, user) => {
   }
 
   const { service, city } = await resolveServiceAndCity(serviceId, cityId);
+
+  // A recurring first cycle only gets to exist if THIS service offers that
+  // cadence. Checked here, inside the single fail-closed entry point, so the
+  // payment controller can't create an intent for a plan that can never repeat.
+  if (payload.intervalDays !== undefined) {
+    assertRecurrenceAllowed(service, payload.intervalDays);
+  }
 
   // Start inside working hours, end before closing, and not in the past today.
   assertBookingWindow(city, bookingDate, bookingTime, hours);
@@ -488,6 +541,7 @@ module.exports = {
   resolveSpecialRequests,
   resolveCleaningTools,
   assertBookingWindow,
+  assertRecurrenceAllowed,
   buildValidatedBookingDraft,
   renderBookingConfirmationEmail,
   renderRefundEmail,

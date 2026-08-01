@@ -23,6 +23,7 @@ import { subscriptionApi } from "@/features/admin/api/adminApi";
 import {
   formatLocalDateString,
   formatTimestampDate,
+  intervalLabel,
 } from "@/features/booking/utils/recurrence";
 import { useTranslation } from "@/i18n";
 
@@ -120,9 +121,13 @@ export default function SubscriptionsPage() {
   const [viewing, setViewing] = useState(null);
   const [cancelTarget, setCancelTarget] = useState(null);
 
+  // The status filter is part of the query key so it round-trips to the server
+  // (subscriptionApi.list applies it as ?status=). Filtering client-side only
+  // ever searched the first page of results.
   const subscriptionsQuery = useQuery({
-    queryKey: ["admin-subscriptions"],
-    queryFn: () => subscriptionApi.list(),
+    queryKey: ["admin-subscriptions", statusFilter],
+    queryFn: () => subscriptionApi.list({ status: statusFilter || undefined }),
+    placeholderData: (previous) => previous,
   });
   const detailQuery = useQuery({
     queryKey: ["admin-subscription", viewing?._id],
@@ -139,13 +144,8 @@ export default function SubscriptionsPage() {
     },
   });
 
-  const subscriptions = useMemo(
-    () =>
-      (subscriptionsQuery.data ?? []).filter(
-        (subscription) => !statusFilter || subscription.status === statusFilter
-      ),
-    [subscriptionsQuery.data, statusFilter]
-  );
+  // Already filtered server-side — no second pass here.
+  const subscriptions = subscriptionsQuery.data ?? [];
   const statusOptions = useMemo(
     () =>
       Object.entries(SUBSCRIPTION_STATUS_META).map(([value, meta]) => ({
@@ -182,7 +182,7 @@ export default function SubscriptionsPage() {
     {
       key: "interval_days",
       header: t("admin.subscriptions.col.interval"),
-      render: (subscription) => t("admin.subscriptions.everyDays", { days: subscription.interval_days }),
+      render: (subscription) => intervalLabel(t, subscription.interval_days),
     },
     {
       key: "next_charge_at",
@@ -400,7 +400,7 @@ export default function SubscriptionsPage() {
             <DetailRow label={t("admin.subscriptions.detail.email")} value={detailQuery.data.subscription.customer_email} />
             <DetailRow label={t("admin.subscriptions.detail.service")} value={detailQuery.data.subscription.service_name} />
             <DetailRow label={t("admin.subscriptions.detail.city")} value={detailQuery.data.subscription.city_name} />
-            <DetailRow label={t("admin.subscriptions.detail.interval")} value={t("admin.subscriptions.everyDays", { days: detailQuery.data.subscription.interval_days })} />
+            <DetailRow label={t("admin.subscriptions.detail.interval")} value={intervalLabel(t, detailQuery.data.subscription.interval_days)} />
             <DetailRow label={t("admin.subscriptions.detail.nextService")} value={formatLocalDateString(detailQuery.data.subscription.next_service_date, dateLocale, DATE_OPTIONS)} />
             <DetailRow label={t("admin.subscriptions.detail.nextCharge")} value={formatTimestampDate(detailQuery.data.subscription.next_charge_at, dateLocale, DATE_OPTIONS)} />
             {detailQuery.data.subscription.last_error && (

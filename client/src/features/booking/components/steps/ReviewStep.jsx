@@ -8,7 +8,7 @@ import { useCities } from "../../hooks/useCities";
 import { useSpecialRequests } from "../../hooks/useSpecialRequests";
 import { useCleaningTools } from "../../hooks/useCleaningTools";
 import { computeQuote } from "../../utils/pricing";
-import { formatLocalDateString } from "../../utils/recurrence";
+import { formatLocalDateString, intervalLabel } from "../../utils/recurrence";
 
 /*
  * ReviewStep
@@ -82,7 +82,10 @@ export function ReviewStep({ submitError }) {
 
   return (
     <div className="space-y-4">
+      {/* Service now lives in step 1 alongside the city that constrains it, so
+          its edit link must point there too. */}
       <Group title={t("booking.review.property")} stepIndex={0}>
+        <Row label={t("booking.review.service")} value={quote.service?.name} />
         <Row
           label={t("booking.review.address")}
           value={`${v.street} ${v.houseNumber}, ${city || ""}`}
@@ -99,7 +102,6 @@ export function ReviewStep({ submitError }) {
       </Group>
 
       <Group title={t("booking.review.cleaning")} stepIndex={1}>
-        <Row label={t("booking.review.service")} value={quote.service?.name} />
         <Row
           label={t("booking.review.duration")}
           value={t("booking.units.duration", {
@@ -136,7 +138,7 @@ export function ReviewStep({ submitError }) {
         {intervalDays > 0 && (
           <Row
             label={t("booking.schedule.repeat.label")}
-            value={t("booking.schedule.repeat.everyDays", { days: intervalDays })}
+            value={intervalLabel(t, intervalDays)}
           />
         )}
       </Group>

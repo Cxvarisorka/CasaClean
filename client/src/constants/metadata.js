@@ -7,10 +7,10 @@
 
 export const SITE = {
   name: "CasaClean",
-  legalName: "CasaClean S.r.l.",
-  tagline: "Professional home & office cleaning across Italy",
+  legalName: "Vacanze Romane SRLS",
+  tagline: "Professional cleaning services in Rome",
   description:
-    "CasaClean connects you with vetted, insured cleaning professionals for homes and offices — regular cleaning, deep cleans, move-outs, laundry and more, booked online in about a minute.",
+    "CasaClean offers professional cleaning services for apartments, holiday homes, Airbnb properties, hotels, offices and commercial spaces in Rome — regular, deep, move-in/move-out and emergency cleaning, booked online in about a minute.",
   url: import.meta.env.VITE_SITE_URL || "https://casaclean.com",
   locale: "en_US",
   email: "hello@casaclean.com",
@@ -30,14 +30,14 @@ export const SITE = {
 /** Per-page SEO presets keyed by a stable id used in each page component. */
 export const PAGE_META = {
   home: {
-    title: "CasaClean — Professional Home & Office Cleaning in Italy",
+    title: "CasaClean — Professional Cleaning Services in Rome",
     description: SITE.description,
     path: "/",
   },
   services: {
-    title: "Services — Home, Deep, Office & Move-Out Cleaning",
+    title: "Services — Regular, Deep, Office & Holiday Home Cleaning",
     description:
-      "Every kind of clean under one roof: regular home cleaning, deep cleans, office cleaning, move-in/move-out, laundry & ironing and disinfection — by vetted professionals.",
+      "Every kind of clean under one roof: regular cleaning, deep cleaning, move-in/move-out, office & commercial, holiday home / Airbnb / hotel and emergency cleaning — by qualified staff in Rome.",
     path: "/services",
   },
   pricing: {
@@ -47,9 +47,9 @@ export const PAGE_META = {
     path: "/pricing",
   },
   about: {
-    title: "About CasaClean — Cleaning You Can Count On",
+    title: "About CasaClean — Professional Cleaning in Rome",
     description:
-      "We're on a mission to make professional, trustworthy cleaning as easy to book as a taxi — for every home and workplace in Italy.",
+      "CasaClean provides high-quality cleaning for apartments, holiday homes, Airbnb properties, hotels, offices and commercial spaces in Rome. A brand managed by Vacanze Romane SRLS.",
     path: "/about",
   },
   contact: {

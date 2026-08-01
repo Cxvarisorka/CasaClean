@@ -147,6 +147,46 @@ describe("runSubscriptionCharges", () => {
         expect(sendEmailMock).toHaveBeenCalledTimes(3);
     });
 
+    test("pauses instead of charging once the service stops offering that cadence", async () => {
+        const { service, subscription } = await dueSubscription({ intervalDays: 3 });
+        mockOwnedCard(subscription);
+
+        // The admin narrows the service to a fortnightly cadence, orphaning this
+        // three-day plan. The unattended charge must not go through.
+        service.recurringIntervalDays = [14];
+        await service.save();
+
+        const result = await runSubscriptionCharges();
+
+        expect(result).toMatchObject({ skipped: false, processed: 1 });
+        expect(stripeMock.paymentIntents.create).not.toHaveBeenCalled();
+
+        const fresh = await Subscription.findById(subscription._id);
+        expect(fresh.status).toBe("paused");
+        expect(fresh.pausedReason).toBe("service-unavailable");
+        expect(fresh.lastError).toMatch(/can only repeat every 14 days/i);
+        expect(fresh.processingAt).toBeNull();
+        expect(await Booking.countDocuments({ subscriptionId: subscription._id })).toBe(0);
+        expect(sendEmailMock).toHaveBeenCalledWith(
+            expect.objectContaining({ email: subscription.customerEmail })
+        );
+    });
+
+    test("pauses when recurrence is switched off on the service entirely", async () => {
+        const { service, subscription } = await dueSubscription();
+        mockOwnedCard(subscription);
+
+        service.recurringEnabled = false;
+        await service.save();
+
+        await runSubscriptionCharges();
+
+        const fresh = await Subscription.findById(subscription._id);
+        expect(fresh.status).toBe("paused");
+        expect(fresh.pausedReason).toBe("service-unavailable");
+        expect(stripeMock.paymentIntents.create).not.toHaveBeenCalled();
+    });
+
     test("clears its claim but leaves schedule and retry state unchanged for non-Stripe failures", async () => {
         const { subscription } = await dueSubscription();
         const originalChargeAt = new Date(subscription.nextChargeAt);

@@ -1,7 +1,11 @@
 const City = require("../models/city.model");
+const Service = require("../models/service.model");
+const Booking = require("../models/booking.model");
+const Subscription = require("../models/subscription.model");
 const AppError = require("../utils/appError.util");
 const catchAsync = require("../utils/catchAsync.util");
 const formatName = require("../utils/formatName.util");
+const { assertNotReferenced } = require("../utils/referentialGuard.util");
 
 // GET /api/v1/city -> paginated list of cities
 const getCities = catchAsync(async (req, res) => {
@@ -91,6 +95,14 @@ const addCity = catchAsync(async (req, res, next) => {
 // DELETE /api/v1/city/:id -> remove a city (admin only)
 const deleteCity = catchAsync(async (req, res, next) => {
     const { id } = req.params;
+
+    // Refuse to orphan records that point at this city. Disabling is the
+    // supported way to stop offering a city (see referentialGuard.util.js).
+    await assertNotReferenced([
+        { model: Booking, filter: { cityId: id }, noun: "bookings" },
+        { model: Subscription, filter: { cityId: id }, noun: "recurring subscriptions" },
+        { model: Service, filter: { cities: id }, noun: "service coverage areas" }
+    ], "city");
 
     const deletedCity = await City.findByIdAndDelete(id);
 

@@ -92,10 +92,15 @@ const createBookingSchema = z.object({
         .trim()
         .min(1, { message: "Doorbell name can't be empty!" }),
 
+    // An explicit ceiling as well as a floor. assertBookingWindow already caps
+    // the duration against the city's closing time, but that is a per-city rule;
+    // without a hard bound here an absurd value reaches the pricing maths and
+    // the Stripe amount before anything rejects it.
     hours: z
         .number()
         .int({ message: "Hours must be a whole number!" })
-        .min(1, { message: "A booking must be at least 1 hour!" }),
+        .min(1, { message: "A booking must be at least 1 hour!" })
+        .max(12, { message: "A booking cannot exceed 12 hours!" }),
 
     cleaners: z
         .number()
@@ -145,11 +150,16 @@ const createBookingSchema = z.object({
 }).strict({ message: "Unknown fields are not allowed!" });
 
 // Schema for validate edit booking request body
+//
+// serviceId / cityId are deliberately ABSENT. They used to be accepted here
+// while editBooking's field whitelist ignored them, so a request to move a
+// booking to another service returned 200 and changed nothing — a silent
+// no-op, and one that would have re-priced against the OLD service anyway.
+// With .strict() below, sending either now fails loudly instead of lying.
+// Re-pointing a booking at a different service/city means re-resolving add-on
+// and tool eligibility and re-settling an already-captured charge; until that
+// is designed, cancel and re-book.
 const editBookingSchema = z.object({
-    serviceId: objectId.optional(),
-
-    cityId: objectId.optional(),
-
     customerPhone: z
         .string()
         .trim()
@@ -199,6 +209,7 @@ const editBookingSchema = z.object({
         .number()
         .int({ message: "Hours must be a whole number!" })
         .min(1, { message: "A booking must be at least 1 hour!" })
+        .max(12, { message: "A booking cannot exceed 12 hours!" })
         .optional(),
 
     cleaners: z

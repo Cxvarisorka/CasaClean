@@ -2,10 +2,9 @@ import { useEffect, useMemo } from "react";
 import { Controller, useFormContext, useWatch } from "react-hook-form";
 import { Icon } from "@/components/shared/Icon";
 import { Input } from "@/components/ui/Input";
-import { cn } from "@/lib/cn";
-import { formatCurrency } from "@/utils/formatCurrency";
 import { useTranslation } from "@/i18n";
 import { useServices } from "@/features/services";
+import { useBookingNav } from "../../store/BookingContext";
 import { OptionGroup } from "../fields/OptionGroup";
 import { ToggleCard } from "../fields/ToggleCard";
 import { useSpecialRequests } from "../../hooks/useSpecialRequests";
@@ -15,9 +14,11 @@ import { HOURS_RANGE } from "../../constants";
 /*
  * PreferencesStep
  * ---------------
- * Step 2 — the heart of the configurator: choose a service, sizing (hours ×
- * cleaners) and optional add-ons/cleaning tools. Single-selects use a Controller with
- * OptionGroup; multi-selects manage arrays via Controller + ToggleCard.
+ * Step 2 — sizing (hours × cleaners) and the optional add-ons/tools the chosen
+ * service unlocks. The service itself is picked in step 1, alongside the city
+ * that constrains it; here it's only echoed, with a link back to change it.
+ * Single-selects use a Controller with OptionGroup; multi-selects manage arrays
+ * via Controller + ToggleCard.
  */
 
 function toggleInArray(arr = [], value) {
@@ -32,37 +33,18 @@ export function PreferencesStep() {
     setValue,
     formState: { errors },
   } = useFormContext();
+  const { goTo } = useBookingNav();
   const { services } = useServices();
   const { data: addons = [] } = useSpecialRequests();
   const { data: cleaningTools = [] } = useCleaningTools();
 
-  // The city is chosen in the previous step; only services available in that
-  // city may be offered. Static (non-DB) services and services set to "all
-  // cities" are available everywhere; otherwise the city must be in the
-  // service's explicit city list.
-  const cityId = useWatch({ control, name: "cityId" });
-  const availableServices = useMemo(() => {
-    if (!cityId) return services;
-    return services.filter(
-      (s) =>
-        !s.fromDb || s.allCities || (s.cities || []).includes(String(cityId))
-    );
-  }, [services, cityId]);
-
-  // The currently chosen service drives which add-ons are offered.
+  // Step 1 guarantees the chosen service is offered in the chosen city, so all
+  // this step needs is to resolve it — for display and to filter the extras.
   const serviceId = useWatch({ control, name: "serviceId" });
   const selectedService = useMemo(
-    () => availableServices.find((s) => String(s.id) === String(serviceId)),
-    [availableServices, serviceId]
+    () => services.find((s) => String(s.id) === String(serviceId)) ?? null,
+    [services, serviceId]
   );
-
-  // If switching city makes the chosen service unavailable, clear it so the
-  // user can't book a service that isn't offered in their city.
-  useEffect(() => {
-    if (serviceId && !selectedService) {
-      setValue("serviceId", "", { shouldValidate: true });
-    }
-  }, [serviceId, selectedService, setValue]);
 
   // Only offer the add-ons enabled on the chosen service. Static (non-DB)
   // services and any service set to "all special requests" offer them all;
@@ -113,62 +95,29 @@ export function PreferencesStep() {
 
   return (
     <div className="space-y-8">
-      {/* Service */}
-      <Controller
-        control={control}
-        name="serviceId"
-        render={({ field }) => (
-          <fieldset>
-            <legend className="mb-3 text-body-sm font-semibold text-ink-800">
-              {t("booking.preferences.service")}{" "}
-              <span className="text-brand-600">*</span>
-            </legend>
-            {availableServices.length === 0 && (
-              <p className="rounded-xl border border-dashed border-ink-200 px-4 py-3 text-body-sm text-ink-500">
-                {t("booking.preferences.noServices")}
-              </p>
-            )}
-            <div className="grid gap-3 sm:grid-cols-2">
-              {availableServices.map((service) => {
-                const selected = String(field.value) === String(service.id);
-                return (
-                  <button
-                    key={service.id}
-                    type="button"
-                    onClick={() => field.onChange(String(service.id))}
-                    className={cn(
-                      "flex items-start gap-3 rounded-xl border p-4 text-left transition-all",
-                      selected
-                        ? "border-brand-600 bg-brand-50 ring-2 ring-brand-500/15"
-                        : "border-ink-200 bg-surface hover:border-brand-300"
-                    )}
-                  >
-                    <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-surface text-brand-600 shadow-soft">
-                      <Icon name={service.icon} className="size-5" />
-                    </span>
-                    <span>
-                      <span className="block text-body-sm font-semibold text-ink-900">
-                        {service.name}
-                      </span>
-                      <span className="block text-caption text-ink-500">
-                        {t("booking.preferences.perHour", {
-                          amount: formatCurrency(service.pricePerHour),
-                        })}
-                        {service.tagline ? ` · ${service.tagline}` : ""}
-                      </span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-            {errors.serviceId && (
-              <p className="mt-1.5 text-body-sm text-red-600">
-                {errors.serviceId.message}
-              </p>
-            )}
-          </fieldset>
-        )}
-      />
+      {/* The service, decided in step 1 — echoed read-only, with a way back. */}
+      <div className="flex items-center gap-3 rounded-xl border border-ink-200 bg-surface p-4">
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600">
+          <Icon name={selectedService?.icon || "Sparkles"} className="size-5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-caption text-ink-500">
+            {t("booking.preferences.chosenService")}
+          </span>
+          <span className="block truncate text-body-sm font-semibold text-ink-900">
+            {selectedService
+              ? selectedService.name
+              : t("booking.preferences.noServiceChosen")}
+          </span>
+        </span>
+        <button
+          type="button"
+          onClick={() => goTo(0)}
+          className="shrink-0 text-body-sm font-semibold text-brand-600 transition-colors hover:text-brand-700"
+        >
+          {t("booking.preferences.changeService")}
+        </button>
+      </div>
 
       {/* Sizing */}
       <div className="grid gap-6 sm:grid-cols-2">

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { request, assetUrl } from "@/services/api";
 import { IMAGES } from "@/constants/images";
+import { generateSlug } from "@/utils/generateSlug";
 
 /*
  * useServices
@@ -28,6 +29,10 @@ const FALLBACK_IMAGES = [
 function normalizeDbService(s, index) {
   return {
     id: s._id, // string id → no i18n entry, so ServiceCard uses these fields directly
+    // Readable URL key for the detail page (`/services/:slug`). Derived from the
+    // name, which the API keeps unique, so the slug is unique too. The id stays
+    // the booking identifier — the slug is only ever a lookup key.
+    slug: generateSlug(s.name) || String(s._id),
     name: s.name,
     description: s.description,
     // Admin-authored sub-title and inclusion list drive the card's tagline and
@@ -57,6 +62,14 @@ function normalizeDbService(s, index) {
     allSpecialRequests: Boolean(s.allSpecialRequests),
     specialRequests: Array.isArray(s.specialRequests)
       ? s.specialRequests.map((sr) => String(sr?._id ?? sr))
+      : [],
+    // Recurrence: whether this service can be booked on a repeating schedule at
+    // all, and (optionally) the exact cadences the admin pinned. An empty list
+    // means the customer picks any cadence in the platform range — see
+    // recurrenceChoices() in features/booking/constants.js.
+    recurringEnabled: Boolean(s.recurringEnabled),
+    recurringIntervalDays: Array.isArray(s.recurringIntervalDays)
+      ? s.recurringIntervalDays.map(Number).filter(Number.isInteger)
       : [],
   };
 }

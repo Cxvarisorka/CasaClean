@@ -154,7 +154,7 @@ export default {
 
   footer: {
     blurb:
-      "Pulizie professionali per case e uffici in tutta Italia. Addetti selezionati e assicurati, prezzi trasparenti e una garanzia dietro ogni visita.",
+      "Pulizie professionali per appartamenti, case vacanze, Airbnb, hotel, uffici e spazi commerciali a Roma. Personale qualificato, prezzi trasparenti e assistenza dedicata.",
     newsletterTitle: "Ricevi consigli per la casa, ogni mese",
     subscribe: "Iscriviti",
     subscribed: "Iscrizione completata — controlla la tua casella.",
@@ -172,10 +172,12 @@ export default {
       Careers: "Lavora con noi",
       Blog: "Blog",
       Contact: "Contatti",
-      "Home cleaning": "Pulizie di casa",
+      "Regular cleaning": "Pulizia ordinaria",
       "Deep cleaning": "Pulizia profonda",
-      "Office cleaning": "Pulizie uffici",
-      "Move-out cleaning": "Pulizie di fine locazione",
+      "Move-out cleaning": "Pulizia post trasloco",
+      "Office & commercial cleaning": "Pulizia uffici e attività commerciali",
+      "Holiday home & Airbnb cleaning": "Pulizia case vacanze e Airbnb",
+      "Emergency cleaning": "Pulizie urgenti",
       Pricing: "Prezzi",
       FAQ: "FAQ",
       "Book a cleaning": "Prenota una pulizia",
@@ -285,36 +287,15 @@ export default {
       "Dal riordino settimanale di casa ai contratti per uffici e alle pulizie di fine locazione — scegli ciò che ti serve, al resto pensiamo noi.",
     exploreAll: "Esplora tutti i servizi",
     bookNow: "Prenota ora",
+    viewDetails: "Vedi dettagli",
     mostBooked: "Più richiesto",
   },
 
   why: {
     eyebrow: "Perché CasaClean",
-    title: "Pulizie a cui puoi finalmente smettere di pensare",
+    title: "Perché scegliere CasaClean",
     subtitle:
-      "Ci occupiamo noi dei dettagli — selezione, pianificazione, qualità — così prenotare una pulizia diventa facile come chiamare un taxi.",
-    items: {
-      reliability: {
-        title: "Puntuali, ogni volta",
-        description:
-          "Professionisti puntuali, pianificazione in tempo reale e un tasso di arrivi puntuali del 99,6% — anche per richieste in giornata.",
-      },
-      standards: {
-        title: "Professionisti con verifiche approfondite",
-        description:
-          "Ogni addetto è identificato, sottoposto a controlli, assicurato e formato sul nostro standard di 50 punti prima della prima visita.",
-      },
-      allinone: {
-        title: "Un solo team per casa e ufficio",
-        description:
-          "Pulizie regolari, pulizie profonde, uffici, fine locazione, lavanderia e disinfezione — una prenotazione, una fattura, un unico standard.",
-      },
-      guarantee: {
-        title: "La Garanzia Impeccabile",
-        description:
-          "Non sei soddisfatto di una pulizia? Comunicacelo entro 48 ore e ripuliamo gratis — oppure rimborsiamo la visita.",
-      },
-    },
+      "Pulizie di alta qualità, prezzi trasparenti, flessibilità negli interventi e un servizio clienti eccellente — per ogni casa e attività a Roma.",
   },
 
   workflow: {
@@ -460,7 +441,7 @@ export default {
 
   services: {
     1: {
-      name: "Pulizie di Casa",
+      name: "Pulizia Ordinaria",
       tagline: "La tua pulizia di routine, senza pensieri",
       description:
         "Una pulizia accurata di tutta la casa — cucina, bagni, camere e zone giorno — una tantum o con la frequenza che preferisci.",
@@ -484,22 +465,10 @@ export default {
       ],
     },
     3: {
-      name: "Pulizie Uffici",
-      tagline: "Uno spazio di lavoro che il team apprezza",
-      description:
-        "Pulizie affidabili per uffici, studi e negozi — programmate intorno ai tuoi orari di lavoro, con un'unica semplice fattura mensile.",
-      features: [
-        "Scrivanie, sale riunioni e cucine",
-        "Punti di contatto sanificati",
-        "Fasce serali e mattutine",
-        "Fatturazione mensile disponibile",
-      ],
-    },
-    4: {
-      name: "Pulizie Trasloco / Fine Locazione",
+      name: "Pulizia Post Trasloco",
       tagline: "Lascia dietro di te solo splendore",
       description:
-        "Una pulizia di fine locazione rigorosa che aiuta a riottenere la caparra per intero e a iniziare da zero — accurata come la checklist di un proprietario.",
+        "Una pulizia rigorosa prima o dopo un trasloco, che aiuta a riottenere la caparra per intero e a iniziare da zero — accurata come la checklist di un proprietario.",
       features: [
         "Pulizia profonda dell'intero immobile",
         "Interno di elettrodomestici e armadi",
@@ -507,28 +476,40 @@ export default {
         "Documentazione utile per la caparra",
       ],
     },
-    5: {
-      name: "Lavanderia e Stiratura",
-      tagline: "Fresco, piegato e riposto",
+    4: {
+      name: "Pulizia di Uffici e Attività Commerciali",
+      tagline: "Uno spazio di lavoro che il team apprezza",
       description:
-        "Aggiungi lavaggio, stiratura e piegatura a qualsiasi pulizia — o prenotalo da solo. Il tuo guardaroba e la tua biancheria, gestiti.",
+        "Pulizie affidabili per uffici, studi, negozi e spazi commerciali — programmate intorno ai tuoi orari di lavoro, con un'unica semplice fattura mensile.",
       features: [
-        "Lavaggio, asciugatura e piegatura",
-        "Stiratura e cura dei capi",
-        "Rotazione di lenzuola e asciugamani",
-        "Extra abbinabile a ogni pulizia",
+        "Scrivanie, sale riunioni e cucine",
+        "Punti di contatto sanificati",
+        "Fasce serali e mattutine",
+        "Fatturazione mensile disponibile",
+      ],
+    },
+    5: {
+      name: "Pulizia per Case Vacanze, Airbnb e Hotel",
+      tagline: "Pronti per gli ospiti, dopo ogni soggiorno",
+      description:
+        "Cambi rapidi e affidabili per case vacanze, appartamenti Airbnb e hotel a Roma — puliti, riordinati e presentati secondo gli standard dell'ospitalità.",
+      features: [
+        "Cambi tra check-out e check-in",
+        "Cambio di biancheria e asciugamani",
+        "Riordino e presentazione dell'immobile",
+        "Programmazione flessibile e last minute",
       ],
     },
     6: {
-      name: "Sanificazione e Disinfezione",
-      tagline: "Pulizia certificata, fin nei dettagli",
+      name: "Pulizie Urgenti",
+      tagline: "Quando non può aspettare domani",
       description:
-        "Disinfezione di livello professionale delle superfici di contatto per case e luoghi di lavoro — ideale dopo malattie, inquilini o ristrutturazioni.",
+        "Pulizie urgenti quando i piani cambiano o qualcosa va storto — un team qualificato disponibile in breve tempo, con gli stessi standard di ogni altro intervento.",
       features: [
-        "Disinfettanti professionali certificati",
-        "Trattamento delle superfici di contatto",
-        "Focus su cucina e bagni",
-        "Adatta a case e uffici",
+        "Disponibilità in tempi brevi",
+        "Sempre personale qualificato",
+        "Case, uffici e affitti",
+        "Prodotti professionali inclusi",
       ],
     },
   },
@@ -546,9 +527,9 @@ export default {
           "Dipende solo da te. Molti clienti consegnano le chiavi, usano una serratura smart o le lasciano al portiere. Il tuo addetto conferma arrivo e completamento, così sai sempre a che punto siamo.",
       },
       q2: {
-        question: "In quali città operate?",
+        question: "In quali zone operate?",
         answer:
-          "Operiamo attualmente in 12 città italiane tra cui Roma, Milano, Firenze, Napoli e Venezia — e ci espandiamo ogni trimestre. Inserisci il tuo indirizzo in fase di prenotazione per confermare la copertura.",
+          "Operiamo a Roma, per appartamenti, case vacanze, Airbnb, hotel, uffici e spazi commerciali. Inserisci il tuo indirizzo in fase di prenotazione per confermare la copertura.",
       },
       q3: {
         question: "L'addetto porta prodotti e attrezzatura?",
@@ -589,11 +570,50 @@ export default {
   },
 
   pages: {
+    serviceDetail: {
+      metaSuffix: "Dettagli del servizio e prenotazione",
+      allServices: "Tutti i servizi",
+      eyebrow: "Dettagli del servizio",
+      allCitiesBadge: "Disponibile ovunque",
+      perHour: "/ ora",
+      bookCta: "Prenota questo servizio",
+      preselectNote:
+        "Apriremo la procedura di prenotazione con questo servizio già selezionato.",
+      includedTitle: "Cosa è incluso",
+      includedSubtitle: "Tutto ciò che questo servizio copre a ogni visita.",
+      addonsTitle: "Extra opzionali",
+      addonsSubtitle:
+        "Extra che puoi attivare durante la prenotazione — il prezzo si aggiorna in tempo reale.",
+      coverageTitle: "Dove è disponibile",
+      coverageAll: "Questo servizio è offerto in tutte le città in cui operiamo.",
+      coverageSome: "Questo servizio è offerto nelle città elencate qui sotto.",
+      coverageEmpty:
+        "Nessuna città è ancora attiva per questo servizio — contattaci e verificheremo la tua zona.",
+      summaryTitle: "Quando vuoi tu",
+      summaryBody:
+        "Prenota {service} in circa un minuto — scegli città, data e orario e il gioco è fatto.",
+      how: [
+        "Raccontaci della tua casa",
+        "Scegli data e orario",
+        "Paga in sicurezza e rilassati",
+      ],
+      trustVetted: "Professionisti selezionati e verificati",
+      trustInsured: "Completamente assicurati, soddisfazione garantita",
+      relatedEyebrow: "Continua a esplorare",
+      relatedTitle: "Altri servizi che potrebbero servirti",
+      ctaTitle: "Prenota questa pulizia oggi",
+      ctaSubtitle:
+        "Scegli l'orario che preferisci — confermiamo in pochi minuti e pensiamo a tutto noi.",
+      notFoundTitle: "Servizio non trovato",
+      notFoundBody:
+        "Questo servizio potrebbe essere stato rinominato o non essere più offerto. Sfoglia il catalogo completo per trovare la pulizia giusta.",
+      backToServices: "Sfoglia tutti i servizi",
+    },
     services: {
       heroEyebrow: "I nostri servizi",
       heroTitle: "Pulizie professionali per ogni spazio e situazione",
       heroSubtitle:
-        "Una tantum, regolare, profonda, per l'ufficio o di fine locazione — prenota esattamente la pulizia che ti serve, da professionisti selezionati.",
+        "Ordinaria, profonda, post trasloco, per uffici, case vacanze o urgente — prenota esattamente la pulizia che ti serve, con personale qualificato.",
       emptyTitle: "Servizi in arrivo",
       emptyDescription:
         "Stiamo ultimando la nostra gamma di servizi. Contattaci e creeremo un piano su misura per te.",
@@ -634,25 +654,33 @@ export default {
         "Nessun piano richiesto. Prenota una visita, vedi la differenza, poi decidi.",
     },
     about: {
-      heroEyebrow: "La nostra storia",
-      heroTitle: "Abbiamo creato CasaClean per rendere semplici le grandi pulizie",
+      heroEyebrow: "Chi siamo",
+      heroTitle: "Servizi professionali di pulizia a Roma",
       heroSubtitle:
-        "Ciò che è iniziato con tre addetti e un furgone in prestito è oggi un team selezionato che mantiene impeccabili migliaia di case e luoghi di lavoro in tutta Italia.",
+        "Case, case vacanze e attività a Roma — pulite da personale qualificato, con prezzi trasparenti e un'assistenza su cui puoi contare.",
       missionLabel: "La nostra missione",
+      mission:
+        "Garantire pulizie di alta qualità, prezzi trasparenti, flessibilità negli interventi e un servizio clienti eccellente.",
       imageAlt1: "Un soggiorno curato e appena pulito",
       imageAlt2: "Una cucina impeccabile e pronta all'uso",
       imageAlt3: "Un bagno igienizzato, di livello alberghiero",
-      mission:
-        "Restituire alle persone il loro tempo — rendendo le pulizie professionali e affidabili facili da prenotare come un taxi, per ogni casa e luogo di lavoro.",
-      valuesEyebrow: "I nostri valori",
-      valuesTitle: "I principi dietro ogni visita",
-      milestonesEyebrow: "Tappe",
-      milestonesTitle: "Come siamo arrivati fin qui",
-      teamEyebrow: "Leadership",
-      teamTitle: "Le persone dietro CasaClean",
-      ctaTitle: "Unisciti a migliaia di clienti che si affidano a CasaClean",
+      introEyebrow: "Chi siamo",
+      introTitle: "Pulizie su cui puoi contare",
+      intro: [
+        "CasaClean offre servizi professionali di pulizia per appartamenti, case vacanze, Airbnb, hotel, uffici e spazi commerciali a Roma.",
+        "Ogni intervento viene eseguito da personale qualificato con prodotti professionali e grande attenzione ai dettagli.",
+        "Che si tratti di una pulizia occasionale, periodica, profonda o di un servizio di pulizia post trasloco, CasaClean garantisce sempre affidabilità e risultati di alta qualità.",
+      ],
+      servicesEyebrow: "Cosa facciamo",
+      servicesTitle: "I nostri servizi",
+      valuesEyebrow: "Perché CasaClean",
+      valuesTitle: "Perché scegliere CasaClean",
+      legalLabel: "Informazioni societarie",
+      legal:
+        "CasaClean è un marchio gestito da Vacanze Romane SRLS, società italiana regolarmente registrata che opera nel rispetto della normativa italiana offrendo servizi professionali di pulizia.",
+      ctaTitle: "Prenota la tua pulizia con CasaClean",
       ctaSubtitle:
-        "Scopri una pulizia su cui puoi contare — a casa e al lavoro.",
+        "Prenotazione semplice e veloce, prezzi trasparenti e personale qualificato — a casa e al lavoro.",
     },
     contact: {
       heroEyebrow: "Contatti",
@@ -808,40 +836,31 @@ export default {
   },
 
   values: {
-    hospitality: {
-      title: "Cura in ogni angolo",
+    staff: {
+      title: "Personale qualificato",
       description:
-        "Puliamo ogni casa come se il proprietario ci stesse guardando — perché la fiducia si guadagna nei dettagli.",
+        "Ogni intervento viene eseguito da personale qualificato con prodotti professionali e grande attenzione ai dettagli.",
     },
-    accountability: {
-      title: "Responsabilità radicale",
+    pricing: {
+      title: "Prezzi trasparenti",
       description:
-        "Checklist chiare e feedback onesti. Se ci sfugge qualcosa, ce ne assumiamo la responsabilità e la sistemiamo, in fretta.",
+        "Vedi il prezzo prima di confermare — niente contratti, niente costi nascosti e nessuna sorpresa dopo l'intervento.",
     },
-    craft: {
-      title: "Orgoglio del mestiere",
+    booking: {
+      title: "Prenotazione semplice e veloce",
       description:
-        "Pulire è un'abilità. Formiamo, certifichiamo e premiamo i professionisti che lo fanno in modo eccellente.",
+        "Prenoti online in circa un minuto e scegli l'orario che preferisci — un intervento singolo o periodico.",
     },
-    scale: {
-      title: "Creato per crescere con te",
+    support: {
+      title: "Assistenza clienti dedicata",
       description:
-        "Da un monolocale a una catena di uffici, il nostro team e i nostri strumenti crescono senza saltare una visita.",
+        "Un team reale a cui rivolgerti prima, durante e dopo la pulizia. L'assistenza fa parte del servizio.",
     },
-  },
-
-  milestones: {
-    m1: { title: "Fondata a Roma", description: "Iniziata con tre addetti e una promessa: pulizie su cui contare." },
-    m2: { title: "Millesima prenotazione", description: "Il passaparola ci ha portati a Firenze e Milano nel primo anno." },
-    m3: { title: "La Garanzia Impeccabile", description: "Lanciati il nostro standard di 50 punti e la garanzia di ripulitura gratuita." },
-    m4: { title: "12 città, 48k+ pulizie", description: "Diventati il partner di pulizie di riferimento per case e uffici." },
-  },
-
-  leadership: {
-    founder: { role: "Co-fondatrice e CEO", bio: "Ex direttrice housekeeping d'albergo, ha guidato squadre di pulizia su oltre 200 camere e suite." },
-    ops: { role: "Co-fondatore e COO", bio: "Ha costruito e gestito operazioni sul campo multi-città per un'azienda di logistica on-demand." },
-    product: { role: "Head of Product", bio: "Leader di prodotto focalizzato su strumenti che rendono semplice prenotare e gestire una pulizia." },
-    quality: { role: "Head of Quality", bio: "Ha definito lo standard di 50 punti con cui viene misurata ogni visita CasaClean." },
+    standards: {
+      title: "Standard elevati di pulizia",
+      description:
+        "Appartamenti, case vacanze, uffici o hotel — ogni immobile è pulito con lo stesso standard elevato, ogni volta.",
+    },
   },
 
   perks: {
@@ -871,7 +890,7 @@ export default {
     back: "Indietro",
     confirm: "Conferma prenotazione",
     steps: {
-      property: { title: "Dettagli proprietà", subtitle: "Dove dobbiamo pulire?" },
+      property: { title: "Servizio e indirizzo", subtitle: "Cosa ti serve e dove" },
       preferences: { title: "Preferenze di pulizia", subtitle: "Personalizza la tua pulizia" },
       schedule: { title: "Calendario", subtitle: "Scegli data e ora" },
       contact: { title: "I tuoi dati", subtitle: "Come contattarti" },
@@ -881,10 +900,14 @@ export default {
     schedule: {
       date: "Data preferita",
       time: "Fascia oraria preferita",
+      noCity: "Scegli prima una città: gli orari disponibili dipendono dai suoi orari di apertura.",
+      noSlots: "Nessun orario di inizio è compatibile con questa durata negli orari di apertura della città. Prova una prenotazione più breve o un'altra data.",
+      cityHours: "{city} è aperta {start}–{end}. Gli orari mostrati lasciano tempo sufficiente per finire prima della chiusura.",
       note: "Confermeremo la finestra esatta di arrivo del team con un messaggio non appena riceviamo la tua prenotazione. Le pulizie in giornata sono soggette a disponibilità.",
       repeat: {
         label: "Frequenza",
         oneTime: "Una volta",
+        everyDay: "Ogni giorno",
         everyDays: "Ogni {days} giorni",
         hint: "Addebiteremo la carta salvata 1 giorno prima di ogni visita.",
       },
@@ -937,9 +960,20 @@ export default {
       tools: "Attrezzatura per la pulizia",
     },
     property: {
+      groupClean: "La tua pulizia",
+      groupAddress: "Il tuo indirizzo",
       city: "Città",
       cityLoading: "Caricamento città…",
       cityPlaceholder: "Seleziona la tua città",
+      cityNotForService: "non disponibile per questo servizio",
+      thisCity: "questa città",
+      service: "Scegli un servizio",
+      perHour: "{amount}/h",
+      serviceDropped:
+        "{service} non è disponibile a {city}. Scegli un altro servizio qui sotto, oppure seleziona una città che lo offre per riaverlo.",
+      noServices: "Al momento non ci sono servizi disponibili.",
+      noServicesInCity:
+        "Non ci sono ancora servizi disponibili a {city}. Prova a scegliere un'altra città.",
       street: "Nome della via",
       streetPlaceholder: "Via Giovanni Giorgi",
       houseNumber: "Numero civico",
@@ -950,10 +984,9 @@ export default {
       doorbellPlaceholder: "Chi deve cercare il team?",
     },
     preferences: {
-      service: "Scegli un servizio",
-      noServices:
-        "Non ci sono ancora servizi disponibili nella città selezionata. Prova a scegliere un'altra città.",
-      perHour: "{amount}/h",
+      chosenService: "Il tuo servizio",
+      noServiceChosen: "Nessun servizio selezionato",
+      changeService: "Modifica",
       hours: "Ore stimate",
       cleaners: "Numero di addetti",
       cleanersHint: "Da 1 a 3 addetti",
@@ -969,7 +1002,7 @@ export default {
       notesPlaceholder: "Tutto ciò che il team dovrebbe sapere prima di arrivare…",
     },
     review: {
-      property: "Proprietà",
+      property: "Servizio e indirizzo",
       address: "Indirizzo",
       size: "Superficie",
       doorbell: "Citofono",
@@ -1162,10 +1195,15 @@ export default {
       deleteTitle: "Elimina servizio",
       popular: "Popolare",
       allCitiesBadge: "Tutte le città",
+      everyDay: "Ogni giorno",
+      everyDays: "Ogni {days} giorni",
+      recurringFlexible: "Scelta del cliente",
+      recurringFixed: "Ogni {days} giorni",
       col: {
         service: "Servizio",
         pricePerHr: "Prezzo / ora",
         cities: "Città",
+        recurring: "Ricorrente",
         popular: "Popolare",
         status: "Stato",
       },
@@ -1194,6 +1232,10 @@ export default {
         allSpecialRequestsHint: "Se attivo, ogni richiesta speciale è disponibile per questo servizio e l'elenco qui sotto viene ignorato.",
         specialRequests: "Richieste speciali abilitate per questo servizio",
         specialRequestsHint: "Seleziona quali extra i clienti possono aggiungere prenotando questo servizio.",
+        recurringEnabled: "Prenotabile con cadenza ricorrente",
+        recurringEnabledHint: "Se disattivo, questo servizio può essere prenotato solo come intervento singolo.",
+        recurringIntervalDays: "Frequenze di ripetizione offerte",
+        recurringIntervalDaysHint: "Scegli le frequenze esatte tra cui i clienti possono selezionare. Non selezionarne nessuna per lasciarli scegliere liberamente, da ogni giorno fino a ogni 14 giorni.",
         popular: "Segna come popolare",
         enabled: "Attivo (visibile sul sito)",
       },

@@ -17,12 +17,11 @@ const createReview = catchAsync(async (req, res, next) => {
     return next(new AppError("Invalid booking ID provided in URL!", 400));
   }
 
-  if (!rating || rating < 1 || rating > 5 || !Number.isInteger(rating)) {
-    return next(new AppError("Please provide a valid integer rating between 1 and 5!", 400));
-  }
-  if (!review_text || typeof review_text !== "string" || !review_text.trim()) {
-    return next(new AppError("Review text cannot be empty!", 400));
-  }
+  // rating/review_text are already guaranteed by createReviewSchema (integer
+  // 1-5, non-empty trimmed string <= 2000 chars) via validate() on the route.
+  // The duplicate hand-rolled checks that used to live here drifted from the
+  // schema — they returned different messages for the same input and had to be
+  // kept in sync by hand.
 
   // The booking must be the signed-in user's OWN and COMPLETED. Scoping the
   // query to req.user means someone else's booking simply isn't found — no
@@ -63,13 +62,26 @@ const createReview = catchAsync(async (req, res, next) => {
 // GET /api/v1/review/my — the signed-in user's own reviews. The profile page
 // uses this to show which completed bookings are already rated.
 const getMyReviews = catchAsync(async (req, res, next) => {
-  const reviews = await Review.find({ user: req.user._id })
-    .sort({ createdAt: -1 })
-    .lean();
+  // Bounded like every other list endpoint — an unpaginated find() grows with
+  // the user's review history and was the only list left without a ceiling.
+  const page = Math.max(Number(req.query.page) || 1, 1);
+  const limit = Math.min(Math.max(Number(req.query.limit) || 100, 1), 200);
+
+  const [reviews, reviewCount] = await Promise.all([
+    Review.find({ user: req.user._id })
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean(),
+    Review.countDocuments({ user: req.user._id }),
+  ]);
 
   res.status(200).json({
     status: "success",
+    page,
+    limit,
     results: reviews.length,
+    reviewCount,
     data: { reviews },
   });
 });
