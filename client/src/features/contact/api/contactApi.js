@@ -3,11 +3,12 @@ import { request, ENDPOINTS } from "@/services/api";
 /*
  * Contact API
  * -----------
- * Transport functions for the contact and newsletter endpoints. They post to
- * the real API, but degrade gracefully: if the marketing endpoints aren't
- * provisioned in a given environment (e.g. a static preview), we resolve
- * optimistically so the UX still completes. Genuine validation/network errors
- * from a live endpoint still propagate.
+ * Transport functions for the contact and newsletter endpoints.
+ *
+ * `submitContact` posts to the real API (POST /contact) and lets every failure
+ * propagate — a contact message that didn't reach the server must never be
+ * reported as sent. Newsletter has no server implementation yet, so it keeps a
+ * graceful fallback until POST /newsletter/subscribe exists.
  */
 
 async function postWithGracefulFallback(url, payload) {
@@ -24,7 +25,7 @@ async function postWithGracefulFallback(url, payload) {
 }
 
 export const submitContact = (payload) =>
-  postWithGracefulFallback(ENDPOINTS.contact.create, payload);
+  request({ method: "POST", url: ENDPOINTS.contact.create, data: payload });
 
 export const subscribeNewsletter = (payload) =>
   postWithGracefulFallback(ENDPOINTS.newsletter.subscribe, payload);

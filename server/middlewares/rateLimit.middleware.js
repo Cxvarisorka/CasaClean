@@ -35,6 +35,20 @@ const emailLimiter = rateLimit(
     limiterOptions(5, 60 * 60 * 1000, "Too many requests. Please try again later.")
 );
 
+// Public contact form: unauthenticated, and every accepted submission both
+// writes a document and sends an outbound email — same posture as emailLimiter.
+// A real person writes to us once, not five times an hour.
+const contactLimiter = rateLimit(
+    limiterOptions(5, 60 * 60 * 1000, "Too many messages sent from this address. Please try again later.")
+);
+
+// Admin replies from the contact inbox. Authenticated and trusted, but each one
+// sends an outbound email, so it still gets a backstop — set high enough that an
+// admin clearing a real backlog never hits it.
+const contactReplyLimiter = rateLimit(
+    limiterOptions(60, 60 * 60 * 1000, "Too many replies sent. Please try again later.")
+);
+
 // Booking creation: tighter than the global limit to prevent booking-spam and
 // runaway test scripts from filling the collection.
 const bookingLimiter = rateLimit(
@@ -55,4 +69,4 @@ const reviewLimiter = rateLimit(
     limiterOptions(20, 15 * 60 * 1000, "Too many review requests. Please try again later.")
 );
 
-module.exports = { globalLimiter, signinLimiter, signupLimiter, emailLimiter, bookingLimiter, paymentLimiter, reviewLimiter };
+module.exports = { globalLimiter, signinLimiter, signupLimiter, emailLimiter, contactLimiter, contactReplyLimiter, bookingLimiter, paymentLimiter, reviewLimiter };
