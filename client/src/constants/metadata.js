@@ -40,12 +40,6 @@ export const PAGE_META = {
       "Every kind of clean under one roof: regular cleaning, deep cleaning, move-in/move-out, office & commercial, holiday home / Airbnb / hotel and emergency cleaning — by qualified staff in Rome.",
     path: "/services",
   },
-  pricing: {
-    title: "Pricing — Transparent Hourly Rates & Plans",
-    description:
-      "Simple, transparent cleaning prices. Pay per visit or save 20% with a regular plan — no contracts, no hidden fees, exact price shown before you book.",
-    path: "/pricing",
-  },
   about: {
     title: "About CasaClean — Professional Cleaning in Rome",
     description:
@@ -75,12 +69,6 @@ export const PAGE_META = {
     description:
       "Schedule a professional cleaning in minutes. Tell us about your place, pick a time, see the exact price and confirm — it's that simple.",
     path: "/booking",
-  },
-  blog: {
-    title: "Blog — Home Care Tips & Cleaning Guides",
-    description:
-      "Checklists, room-by-room guides and honest advice from professional cleaners for a cleaner home and office.",
-    path: "/blog",
   },
   notFound: {
     title: "Page Not Found — CasaClean",

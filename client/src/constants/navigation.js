@@ -9,9 +9,7 @@ import { ROUTES } from "./routes";
 
 export const PRIMARY_NAV = [
   { key: "services", label: "Services", href: ROUTES.services },
-  { key: "pricing", label: "Pricing", href: ROUTES.pricing },
   { key: "about", label: "About", href: ROUTES.about },
-  { key: "blog", label: "Blog", href: ROUTES.blog },
   { key: "faq", label: "FAQ", href: ROUTES.faq },
   { key: "contact", label: "Contact", href: ROUTES.contact },
 ];
@@ -22,7 +20,6 @@ export const FOOTER_NAV = [
     links: [
       { label: "About us", href: ROUTES.about },
       { label: "Careers", href: ROUTES.careers },
-      { label: "Blog", href: ROUTES.blog },
       { label: "Contact", href: ROUTES.contact },
     ],
   },
@@ -40,7 +37,6 @@ export const FOOTER_NAV = [
   {
     title: "Resources",
     links: [
-      { label: "Pricing", href: ROUTES.pricing },
       { label: "FAQ", href: ROUTES.faq },
       { label: "Book a cleaning", href: ROUTES.booking },
     ],

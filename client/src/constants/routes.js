@@ -9,7 +9,6 @@ export const ROUTES = {
   home: "/",
   services: "/services",
   serviceDetail: (slug = ":slug") => `/services/${slug}`,
-  pricing: "/pricing",
   about: "/about",
   contact: "/contact",
   faq: "/faq",
@@ -20,8 +19,6 @@ export const ROUTES = {
   forgotPassword: "/forgot-password",
   resetPassword: (token = ":token") => `/reset-password/${token}`,
   profile: "/profile",
-  blog: "/blog",
-  blogPost: (slug = ":slug") => `/blog/${slug}`,
   privacy: "/privacy",
   terms: "/terms",
   admin: {
@@ -30,6 +27,7 @@ export const ROUTES = {
     dashboard: "/admin",
     bookings: "/admin/bookings",
     subscriptions: "/admin/subscriptions",
+    invoices: "/admin/invoices",
     calendar: "/admin/calendar",
     services: "/admin/services",
     specialRequests: "/admin/special-requests",
@@ -39,6 +37,7 @@ export const ROUTES = {
     users: "/admin/users",
     workers: "/admin/workers",
     quality: "/admin/quality",
+    messages: "/admin/messages",
   },
   notFound: "*",
 };

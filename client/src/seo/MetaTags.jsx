@@ -9,7 +9,7 @@ import { SITE } from "@/constants/metadata";
  * @param {object} props
  * @param {string} props.title
  * @param {string} [props.description]
- * @param {string} [props.path] - canonical path (e.g. "/pricing")
+ * @param {string} [props.path] - canonical path (e.g. "/services")
  * @param {string} [props.image] - absolute or site-relative OG image
  * @param {"website"|"article"} [props.type="website"]
  * @param {boolean} [props.noIndex=false]
