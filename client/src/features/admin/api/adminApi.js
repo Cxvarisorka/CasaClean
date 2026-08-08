@@ -74,6 +74,12 @@ async function fetchAll(url, key, countKey) {
 const definedOnly = (obj) =>
   Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined));
 
+// Per-language copy, as the API returns it: an object keyed by locale code
+// ({ ka: { name, … } }). The server stores a Map, which serialises to a plain
+// object; anything else (a missing field on an older record) reads as "none".
+const translationsFromApi = (value) =>
+  value && typeof value === "object" ? value : {};
+
 /*
  * Multipart encoding for endpoints that accept a file upload.
  *
@@ -93,7 +99,10 @@ const toFormData = (fields) => {
   for (const [key, value] of Object.entries(fields)) {
     if (value === undefined) continue;
     if (value instanceof File || value instanceof Blob) form.append(key, value);
-    else if (Array.isArray(value)) form.append(key, JSON.stringify(value));
+    // Arrays and nested objects (the per-language `translations` map) are both
+    // JSON-encoded — the only encoding in which an empty one survives.
+    else if (value !== null && typeof value === "object")
+      form.append(key, JSON.stringify(value));
     else form.append(key, String(value));
   }
   return form;
@@ -104,6 +113,7 @@ const toFormData = (fields) => {
 const cityFromApi = (c) => ({
   _id: c._id,
   name: c.name,
+  translations: translationsFromApi(c.translations),
   working_hours_start: c.workingHourStarts,
   working_hours_end: c.workingHourEnds,
   enabled: c.enabled,
@@ -116,12 +126,13 @@ export const cityApi = {
     return cities.map(cityFromApi);
   },
   async create(v) {
-    // addCitySchema is strict: ONLY these three keys are allowed on create.
+    // addCitySchema is strict: ONLY these keys are allowed on create.
     const data = await request({
       method: "POST",
       url: "/city",
       data: {
         name: v.name,
+        translations: v.translations ?? {},
         workingHourStarts: v.working_hours_start,
         workingHourEnds: v.working_hours_end,
       },
@@ -129,12 +140,17 @@ export const cityApi = {
     return cityFromApi(data.city);
   },
   async update(id, patch) {
-    // editCitySchema allows name / workingHourStarts / workingHourEnds / enabled.
+    // editCitySchema allows name / translations / workingHourStarts /
+    // workingHourEnds / enabled.
     const data = await request({
       method: "PATCH",
       url: `/city/${id}`,
       data: definedOnly({
         name: patch.name,
+        // Sent whole (the dialog edits every language at once), so an omitted
+        // locale removes that translation server-side. Undefined when the
+        // caller didn't touch translations — e.g. the table's enable toggle.
+        translations: patch.translations,
         workingHourStarts: patch.working_hours_start,
         workingHourEnds: patch.working_hours_end,
         enabled: patch.enabled,
@@ -154,6 +170,7 @@ const serviceFromApi = (s) => ({
   description: s.description,
   image: s.image ?? "",
   includes: Array.isArray(s.includes) ? s.includes : [],
+  translations: translationsFromApi(s.translations),
   price_per_hour: s.pricePerHour,
   all_cities: Boolean(s.allCities),
   // `cities` may arrive populated (objects) or as raw ids depending on the
@@ -195,6 +212,7 @@ export const serviceApi = {
       description: v.description,
       image: v.image || "",
       includes: Array.isArray(v.includes) ? v.includes.filter(Boolean) : [],
+      translations: v.translations ?? {},
       pricePerHour: Number(v.price_per_hour),
       allCities,
       cities: allCities ? [] : (v.cities ?? []),
@@ -226,6 +244,10 @@ export const serviceApi = {
       includes: Array.isArray(patch.includes)
         ? patch.includes.filter(Boolean)
         : undefined,
+      // Sent whole (the dialog edits every language at once), so an omitted
+      // locale removes that translation server-side. Undefined when the caller
+      // didn't touch translations at all — e.g. the table's enable toggle.
+      translations: patch.translations,
       pricePerHour:
         patch.price_per_hour !== undefined
           ? Number(patch.price_per_hour)
@@ -258,6 +280,7 @@ const specialRequestFromApi = (s) => ({
   _id: s._id,
   name: s.name,
   description: s.description ?? "",
+  translations: translationsFromApi(s.translations),
   price: s.price,
   enabled: s.enabled,
   createdAt: s.createdAt,
@@ -276,7 +299,12 @@ export const specialRequestApi = {
     const data = await request({
       method: "POST",
       url: "/special-request",
-      data: { name: v.name, description: v.description, price: Number(v.price) },
+      data: {
+        name: v.name,
+        description: v.description,
+        translations: v.translations ?? {},
+        price: Number(v.price),
+      },
     });
     return specialRequestFromApi(data.specialRequest);
   },
@@ -287,6 +315,10 @@ export const specialRequestApi = {
       data: definedOnly({
         name: patch.name,
         description: patch.description,
+        // Sent whole (the dialog edits every language at once), so an omitted
+        // locale removes that translation server-side. Undefined when the
+        // caller didn't touch translations — e.g. the table's enable toggle.
+        translations: patch.translations,
         price: patch.price !== undefined ? Number(patch.price) : undefined,
         enabled: patch.enabled,
       }),
@@ -305,6 +337,7 @@ const cleaningToolFromApi = (t) => ({
   _id: t._id,
   name: t.name,
   description: t.description ?? "",
+  translations: translationsFromApi(t.translations),
   price: t.price,
   // May arrive populated (objects) or as raw ids — normalise to id strings
   // for the services multiselect.
@@ -329,6 +362,7 @@ export const cleaningToolApi = {
       data: {
         name: v.name,
         description: v.description,
+        translations: v.translations ?? {},
         price: Number(v.price),
         services: v.services ?? [],
       },
@@ -342,6 +376,10 @@ export const cleaningToolApi = {
       data: definedOnly({
         name: patch.name,
         description: patch.description,
+        // Sent whole (the dialog edits every language at once), so an omitted
+        // locale removes that translation server-side. Undefined when the
+        // caller didn't touch translations — e.g. the table's enable toggle.
+        translations: patch.translations,
         price: patch.price !== undefined ? Number(patch.price) : undefined,
         services: patch.services,
         enabled: patch.enabled,
@@ -433,6 +471,15 @@ const bookingFromApi = (b) => ({
   hours: b.hours,
   cleaners: b.cleaners,
   total_amount: b.totalAmount,
+  // VAT treatment snapshot: how this booking was actually taxed. 'reverse-charge'
+  // means a verified business was charged the net instead of the catalogue price.
+  tax_treatment: b.tax?.treatment ?? "standard",
+  customer_type: b.tax?.customerType ?? "individual",
+  vat_rate: b.tax?.vatRate ?? 0,
+  vat_amount: b.tax?.vatAmount ?? 0,
+  net_amount: b.tax?.netAmount ?? null,
+  vat_number: b.tax?.vatNumber ?? "",
+  company_name: b.tax?.companyName ?? "",
   status: b.status,
   // Payment posture (read-only in the admin UI): how it was paid and where the
   // money currently sits. 'manual' = offline/cash booking (no Stripe).
@@ -612,6 +659,10 @@ const reviewFromApi = (r) => {
     booking_address: b
       ? [b.streetName, b.houseNumber].filter(Boolean).join(" ")
       : "",
+    // Moderation: reviews are created hidden and only appear on the public site
+    // once an admin publishes them.
+    is_published: Boolean(r.isPublished),
+    published_at: r.publishedAt ?? null,
     createdAt: r.createdAt,
   };
 };
@@ -621,7 +672,69 @@ export const reviewApi = {
     const reviews = await fetchAll("/review", "reviews", "reviewCount");
     return reviews.map(reviewFromApi);
   },
+  // The only field an admin can write is the public-visibility flag — the
+  // content belongs to the customer. Anything else in the patch is ignored.
+  async update(id, patch) {
+    const data = await request({
+      method: "PATCH",
+      url: `/review/${id}/publish`,
+      data: { isPublished: Boolean(patch.is_published) },
+    });
+    return reviewFromApi(data.review);
+  },
   remove: (id) => request({ method: "DELETE", url: `/review/${id}` }),
+};
+
+/* ------------------------------------------------------- Contact messages */
+
+// Submitted through the public contact form. Nothing here is editable — the
+// text belongs to whoever wrote it — so the panel only reads, triages and
+// deletes. `handledBy` is populated by the server when present.
+const contactMessageFromApi = (m) => ({
+  _id: m._id,
+  name: m.name,
+  email: m.email,
+  phone: m.phone || "",
+  topic: m.topic,
+  message: m.message,
+  status: m.status || "new",
+  handled_at: m.handledAt ?? null,
+  handled_by_name: (m.handledBy && m.handledBy.fullname) || "",
+  // Answers already emailed to this customer, oldest first.
+  replies: Array.isArray(m.replies) ? m.replies : [],
+  createdAt: m.createdAt,
+});
+
+export const contactMessageApi = {
+  async list() {
+    const contactMessages = await fetchAll("/contact", "contactMessages", "contactMessageCount");
+    return contactMessages.map(contactMessageFromApi);
+  },
+  // Triage state is the only writable field.
+  async update(id, patch) {
+    const data = await request({
+      method: "PATCH",
+      url: `/contact/${id}`,
+      data: { status: patch.status === "handled" ? "handled" : "new" },
+    });
+    return contactMessageFromApi(data.contactMessage);
+  },
+  /**
+   * Email an answer to the customer.
+   *
+   * The server awaits the actual send, so a rejection here means the mail did
+   * NOT go out and nothing was recorded — surface it, never swallow it. On
+   * success the message comes back already marked handled.
+   */
+  async reply(id, body) {
+    const data = await request({
+      method: "POST",
+      url: `/contact/${id}/reply`,
+      data: { body },
+    });
+    return contactMessageFromApi(data.contactMessage);
+  },
+  remove: (id) => request({ method: "DELETE", url: `/contact/${id}` }),
 };
 
 /* ---------------------------------------------------------- Subscriptions */
@@ -688,6 +801,121 @@ export const subscriptionApi = {
   cancel: (id) => subscriptionAction(id, "admin-cancel"),
 };
 
+/* ---------------------------------------------------------------- Invoices */
+
+// Invoices are issued by the payment pipeline, never composed in the panel, so
+// this module is read + delivery only: list them, download the PDF, resend the
+// email, and issue the one a paid booking is missing. There is deliberately no
+// update/remove — the document is an immutable snapshot server-side.
+const invoiceFromApi = (i) => ({
+  _id: i._id,
+  number: i.number,
+  series: i.series,
+  status: i.status ?? "issued",
+  issued_at: i.issuedAt ?? null,
+  refunded_at: i.refundedAt ?? null,
+  booking_id: refId(i.booking),
+  // Same short reference scheme the Bookings page shows, so an admin can match
+  // an invoice to the row it came from at a glance.
+  booking_reference: i.booking
+    ? `CC-${String(refId(i.booking)).slice(-6).toUpperCase()}`
+    : "—",
+  subscription_id: refId(i.subscription) ?? null,
+  user_id: refId(i.user) ?? null,
+  customer_name: i.customer?.name || "—",
+  customer_email: i.customer?.email || "",
+  customer_phone: i.customer?.phone || "",
+  customer_address: (i.customer?.addressLines ?? []).join(", "),
+  service_name: i.service?.name || "—",
+  service_date: i.service?.date || "",
+  service_time: i.service?.time || "",
+  service_city: i.service?.city || "",
+  hours: i.service?.hours ?? null,
+  cleaners: i.service?.cleaners ?? null,
+  line_items: (i.lineItems ?? []).map((item) => ({
+    description: item.description,
+    detail: item.detail ?? "",
+    quantity: item.quantity ?? 1,
+    unit_price: item.unitPrice ?? 0,
+    amount: item.amount ?? 0,
+  })),
+  subtotal: i.subtotal ?? 0,
+  vat_rate: i.vatRate ?? 0,
+  vat_amount: i.vatAmount ?? 0,
+  // No VAT was charged because the customer is a verified EU business. The
+  // detail view has to say so — a zero VAT line with no explanation is not a
+  // valid B2B document.
+  reverse_charge: Boolean(i.reverseCharge),
+  customer_vat_number: i.customer?.vatNumber ?? "",
+  total: i.total ?? 0,
+  currency: i.currency ?? "eur",
+  payment_method: i.paymentMethod ?? "card",
+  payment_intent_id: i.paymentIntentId ?? "",
+  paid_at: i.paidAt ?? null,
+  // Delivery state, so the panel can show whether the customer ever got it.
+  emailed_to: i.emailedTo ?? "",
+  emailed_at: i.emailedAt ?? null,
+  email_count: Number(i.emailCount) || 0,
+  createdAt: i.createdAt,
+});
+
+/**
+ * Save a PDF blob to disk under a chosen filename.
+ *
+ * The filename comes from the invoice number rather than the response's
+ * Content-Disposition header: that header is not on the CORS-safelist, so the
+ * browser would hide it from JS unless the API opted into exposing it. Deriving
+ * it here keeps the download working without loosening CORS.
+ */
+const saveBlob = (blob, filename) => {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  // Revoking synchronously can cancel the download in some browsers; one turn of
+  // the task queue is enough for the click to have been handled.
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+};
+
+export const invoiceApi = {
+  async list() {
+    const invoices = await fetchAll("/invoice", "invoices", "invoiceCount");
+    return invoices.map(invoiceFromApi);
+  },
+  /** Download the exact PDF the customer was emailed. */
+  async downloadPdf(id, number = "") {
+    const response = await apiClient.request({
+      method: "GET",
+      url: `/invoice/${id}/pdf`,
+      responseType: "blob",
+    });
+    const filename = `invoice-${String(number || id).replace(/[^A-Za-z0-9._-]/g, "-")}.pdf`;
+    saveBlob(new Blob([response.data], { type: "application/pdf" }), filename);
+    return filename;
+  },
+  /** Re-send the invoice email (with the PDF attached) to the customer. */
+  async resend(id) {
+    const data = await request({ method: "POST", url: `/invoice/${id}/send`, data: {} });
+    return invoiceFromApi(data.invoice);
+  },
+  /**
+   * Issue the invoice for an already-paid booking that doesn't have one —
+   * historical bookings, and offline/manual bookings entered by an admin.
+   * Idempotent server-side.
+   */
+  async issueForBooking(bookingId, { send = true } = {}) {
+    const data = await request({
+      method: "POST",
+      url: `/invoice/booking/${bookingId}`,
+      data: { send },
+    });
+    return invoiceFromApi(data.invoice);
+  },
+};
+
 /* ----------------------------------------------------------------- Registry */
 
 // Collection name (as used by the admin pages) → its API module. The data
@@ -701,4 +929,5 @@ export const RESOURCES = {
   users: userApi,
   workers: workerApi,
   reviews: reviewApi,
+  contactMessages: contactMessageApi,
 };

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { CalendarCheck, Plus, Pencil, Trash2, Eye } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { CalendarCheck, FileText, Plus, Pencil, Trash2, Eye } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Select } from "@/components/ui/Select";
@@ -13,6 +14,7 @@ import {
   PAYMENT_STATUS_META,
   useCollection,
 } from "@/features/admin";
+import { invoiceApi } from "@/features/admin/api/adminApi";
 import { useTranslation } from "@/i18n";
 
 /*
@@ -29,6 +31,37 @@ const eur = (n) =>
   new Intl.NumberFormat("en-IE", { style: "currency", currency: "EUR" }).format(
     n || 0
   );
+
+/*
+ * The edit form seeds every field from the booking, so submitting it would
+ * re-send values the admin never touched. That matters server-side: re-sending
+ * `hours`/`cleaners` makes the API recompute the total against the service's
+ * CURRENT price (silently re-pricing an old booking), and re-sending the date
+ * or time triggers a working-hours re-check. Send only what actually changed.
+ */
+const sameValue = (a, b) => {
+  if (Array.isArray(a) || Array.isArray(b)) {
+    const x = Array.isArray(a) ? a : [];
+    const y = Array.isArray(b) ? b : [];
+    return x.length === y.length && x.every((v, i) => String(v) === String(y[i]));
+  }
+  // The form holds every non-number field as a string; a missing value on the
+  // record reads as "" there, so compare in string space (with null/undefined
+  // normalised) to avoid false "changed" hits.
+  if (typeof a === "number" || typeof b === "number") return Number(a) === Number(b);
+  return String(a ?? "") === String(b ?? "");
+};
+
+const changedOnly = (values, original) =>
+  Object.fromEntries(
+    Object.entries(values).filter(([key, val]) => !sameValue(val, original?.[key]))
+  );
+
+/*
+ * A booking only has an invoice once money has actually moved. 'unpaid' bookings
+ * have nothing to bill, and the API rejects them — so don't offer the button.
+ */
+const INVOICEABLE = ["paid", "refunded", "manual"];
 
 function DetailRow({ label, value }) {
   return (
@@ -176,11 +209,36 @@ export default function BookingsPage() {
     }));
   }, [items, statusFilter, dateFrom, dateTo, serviceNameById, cityNameById]);
 
+  /*
+   * Export the booking's invoice as a PDF.
+   *
+   * Issuing is idempotent server-side, so one call covers both cases: a booking
+   * paid through the normal flow already has its invoice and gets it back, while
+   * an offline/manual or pre-invoicing booking has one issued on the spot.
+   * `send: false` because this is an export — the admin is fetching a document,
+   * not (re)mailing the customer. Delivery lives on the Invoices page.
+   */
+  const invoiceMutation = useMutation({
+    mutationFn: async (booking) => {
+      const invoice = await invoiceApi.issueForBooking(booking._id, { send: false });
+      return invoiceApi.downloadPdf(invoice._id, invoice.number);
+    },
+    onError: (err) =>
+      window.alert(err?.message || t("admin.invoices.downloadFailed")),
+  });
+
   const handleSubmit = async (values) => {
-    const ok = editing
-      ? await update(editing._id, values)
-      : await create(values);
-    if (ok) setEditing(undefined);
+    if (!editing) {
+      if (await create(values)) setEditing(undefined);
+      return;
+    }
+    const patch = changedOnly(values, editing);
+    // Nothing edited — close without a pointless round trip.
+    if (Object.keys(patch).length === 0) {
+      setEditing(undefined);
+      return;
+    }
+    if (await update(editing._id, patch)) setEditing(undefined);
   };
 
   const columns = [
@@ -297,6 +355,20 @@ export default function BookingsPage() {
             <Button variant="ghost" size="icon" aria-label={t("admin.action.view")} onClick={() => setViewing(b)}>
               <Eye className="size-4.5" />
             </Button>
+            {INVOICEABLE.includes(b.payment_status) && (
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={t("admin.bookings.invoice")}
+                title={t("admin.bookings.invoice")}
+                loading={
+                  invoiceMutation.isPending && invoiceMutation.variables?._id === b._id
+                }
+                onClick={() => invoiceMutation.mutate(b)}
+              >
+                <FileText className="size-4.5" />
+              </Button>
+            )}
             <Button variant="ghost" size="icon" aria-label={t("admin.action.edit")} onClick={() => setEditing(b)}>
               <Pencil className="size-4.5" />
             </Button>
@@ -342,6 +414,20 @@ export default function BookingsPage() {
                 {eur(viewing.total_amount)}
               </span>
             </div>
+            {/* A business booking was charged the NET, so the total above reads
+                lower than the catalogue price. Say why, or it looks like a
+                pricing bug. */}
+            {viewing.tax_treatment === "reverse-charge" && (
+              <DetailRow
+                label={t("admin.bookings.detail.taxTreatment")}
+                value={t("admin.bookings.detail.reverseCharge", {
+                  vat: viewing.vat_number || "—",
+                })}
+              />
+            )}
+            {viewing.company_name && (
+              <DetailRow label={t("admin.bookings.detail.company")} value={viewing.company_name} />
+            )}
             <DetailRow label={t("admin.bookings.detail.customer")} value={viewing.customer_name} />
             <DetailRow label={t("admin.bookings.detail.email")} value={viewing.customer_email} />
             <DetailRow label={t("admin.bookings.detail.phone")} value={viewing.customer_phone} />

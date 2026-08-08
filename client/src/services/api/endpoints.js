@@ -7,8 +7,9 @@
  * (features/<domain>/api/*Api.js). The old services/cities/bookings/leads/blog
  * sections pointed at routes that never existed on the API and were removed.
  *
- * NOTE: contact/newsletter have no server implementation yet; contactApi.js
- * calls them with a graceful fallback that simulates success while the API
+ * NOTE: contact is live (POST /api/v1/contact stores the message and notifies
+ * the team). Newsletter is NOT implemented server-side yet — contactApi.js still
+ * calls it through a graceful fallback that simulates success while the API
  * returns 404 (see postWithGracefulFallback).
  */
 
@@ -21,6 +22,10 @@ export const ENDPOINTS = {
     forgotPassword: "/auth/forgot-password",
     resetPassword: (token) => `/auth/reset-password/${token}`,
     changePassword: "/auth/me/password",
+    // Billing/VAT profile: individual vs business, and the VAT number Stripe
+    // verifies against VIES.
+    taxProfile: "/auth/me/tax-profile",
+    taxProfileRefresh: "/auth/me/tax-profile/refresh",
     deleteMe: "/auth/me",
   },
   contact: {
