@@ -3,7 +3,8 @@ const coerceMultipart = require("../../middlewares/multipart.middleware");
 const middleware = coerceMultipart({
     numbers: ["pricePerHour"],
     booleans: ["allCities"],
-    arrays: ["cities"]
+    arrays: ["cities"],
+    objects: ["translations"]
 });
 
 /** Minimal req stub — only `is()` and `body` are read. */
@@ -37,12 +38,35 @@ describe("coerceMultipart", () => {
         expect(run({ cities: "" }).cities).toEqual([]);
     });
 
+    test("re-types a JSON-encoded object (the per-language translations map)", () => {
+        const body = run({
+            translations: '{"ka":{"name":"ღრმა დასუფთავება","includes":["სამზარეულო"]}}'
+        });
+
+        expect(body.translations).toEqual({
+            ka: { name: "ღრმა დასუფთავება", includes: ["სამზარეულო"] }
+        });
+    });
+
+    test("an empty object survives the round trip — 'all translations removed'", () => {
+        expect(run({ translations: "{}" }).translations).toEqual({});
+        expect(run({ translations: "" }).translations).toEqual({});
+    });
+
     test("leaves values it cannot re-type for Zod to reject", () => {
-        const body = run({ pricePerHour: "free", allCities: "yes", cities: "not-json" });
+        const body = run({
+            pricePerHour: "free",
+            allCities: "yes",
+            cities: "not-json",
+            translations: "not-json"
+        });
 
         expect(body.pricePerHour).toBe("free");
         expect(body.allCities).toBe("yes");
         expect(body.cities).toBe("not-json");
+        expect(body.translations).toBe("not-json");
+        // An array is not a translations map either — Zod must see it, not {}.
+        expect(run({ translations: "[1,2]" }).translations).toBe("[1,2]");
     });
 
     test("does not invent values for fields the client omitted", () => {

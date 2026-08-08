@@ -34,6 +34,68 @@ describe("service image validation", () => {
     });
 });
 
+describe("service translation validation", () => {
+    test("translations are optional on both schemas", () => {
+        expect(createServiceSchema.safeParse(service).success).toBe(true);
+        expect(editServiceSchema.safeParse({ translations: {} }).success).toBe(true);
+    });
+
+    test("accepts per-language copy for the supported locales", () => {
+        const result = createServiceSchema.safeParse({
+            ...service,
+            translations: {
+                ka: {
+                    name: "ღრმა დასუფთავება",
+                    subtitle: "სახლი ბრწყინავს",
+                    description: "სრული დასუფთავების სერვისი თქვენი სახლისთვის.",
+                    includes: ["სამზარეულო", "სააბაზანო"]
+                },
+                it: { name: "Pulizia profonda" }
+            }
+        });
+
+        expect(result.success).toBe(true);
+    });
+
+    test("accepts a partly filled language — blanks fall back to the base locale", () => {
+        expect(editServiceSchema.safeParse({
+            translations: { ru: { name: "", description: "Полная уборка вашего дома." } }
+        }).success).toBe(true);
+    });
+
+    test("rejects an unsupported language code", () => {
+        expect(editServiceSchema.safeParse({
+            translations: { fr: { name: "Nettoyage" } }
+        }).success).toBe(false);
+    });
+
+    test("rejects the default locale — it lives in the root fields", () => {
+        expect(editServiceSchema.safeParse({
+            translations: { en: { name: "Deep Cleaning" } }
+        }).success).toBe(false);
+    });
+
+    test("rejects unknown fields inside a language", () => {
+        expect(editServiceSchema.safeParse({
+            translations: { it: { name: "Pulizia", slug: "pulizia" } }
+        }).success).toBe(false);
+    });
+
+    test("holds translated copy to the same length limits as the base text", () => {
+        expect(editServiceSchema.safeParse({
+            translations: { it: { name: "x".repeat(51) } }
+        }).success).toBe(false);
+
+        expect(editServiceSchema.safeParse({
+            translations: { it: { description: "x".repeat(701) } }
+        }).success).toBe(false);
+
+        expect(editServiceSchema.safeParse({
+            translations: { it: { includes: Array(21).fill("voce") } }
+        }).success).toBe(false);
+    });
+});
+
 describe("service recurrence validation", () => {
     test("recurrence fields are optional on both schemas", () => {
         expect(createServiceSchema.safeParse(service).success).toBe(true);

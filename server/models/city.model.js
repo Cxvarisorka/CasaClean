@@ -1,6 +1,7 @@
 // Reference shape of a city record (from the original seed data).
-// NOTE: the localized names (name_it/name_ka/name_ru) and working_days are not
-// modelled yet — add them here if/when multilingual + per-day scheduling is needed.
+// NOTE: working_days is not modelled yet — add it here if/when per-day
+// scheduling is needed. The localized names shown below now live in
+// `translations` (see utils/translations.util.js).
 //  {
 //     "id": 1,
 //     "name": "Rome",
@@ -15,6 +16,9 @@
 
 const mongoose = require('mongoose');
 
+const { translationsPath } = require('./translations.schema');
+const { TRANSLATABLE_FIELDS } = require('../utils/translations.util');
+
 // Working hours are clock times ("09:00"), not calendar dates, so they're
 // stored as strings validated against HH:MM (00:00–23:59).
 const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -26,6 +30,9 @@ const citySchema = new mongoose.Schema({
         unique: true, // DB-level guard; the 11000 handler turns this into a 409
         trim: true
     },
+    // The city name in the other languages ("Rome" → "Roma" → "რომი"), keyed by
+    // locale code. The root name stays the default-locale one and the fallback.
+    translations: translationsPath(TRANSLATABLE_FIELDS.city),
     workingHourStarts: {
         type: String,
         required: [true, "A city must have a working hours start time."],

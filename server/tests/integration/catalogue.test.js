@@ -196,6 +196,71 @@ describe("services", () => {
         expect(recurring.body.data.service.recurringIntervalDays).toEqual([7, 14]);
     });
 
+    test("stores per-language copy, dropping the blanks a half-finished language leaves", async () => {
+        const admin = await createAdmin();
+
+        const res = await api.post("/api/v1/service")
+            .set("Cookie", cookieFor(admin))
+            .send({
+                name: "Translated Cleaning",
+                description: "Intensive top-to-bottom cleaning session.",
+                includes: ["Kitchen", "Bathroom"],
+                pricePerHour: 25,
+                allCities: true,
+                cities: [],
+                translations: {
+                    it: {
+                        name: "Pulizia Tradotta",
+                        // Left blank in the panel — must not be stored, so the
+                        // Italian card falls back to the English description.
+                        description: "   ",
+                        includes: ["Cucina", "  "]
+                    },
+                    // Nothing filled in at all: not a translation.
+                    ru: { name: "", subtitle: "" }
+                }
+            });
+
+        expect(res.status).toBe(201);
+        const { translations } = res.body.data.service;
+        expect(translations.it).toEqual({ name: "Pulizia Tradotta", includes: ["Cucina"] });
+        expect(translations.ru).toBeUndefined();
+    });
+
+    test("translations are replaced wholesale, and untouched by an unrelated edit", async () => {
+        const admin = await createAdmin();
+        const service = await createService({
+            translations: { it: { name: "Pulizia" }, ka: { name: "დასუფთავება" } }
+        });
+
+        // A price-only edit leaves every translation in place.
+        const priced = await api.patch(`/api/v1/service/${service._id}`)
+            .set("Cookie", cookieFor(admin))
+            .send({ pricePerHour: 21 });
+        expect(priced.status).toBe(200);
+        expect(Object.keys(priced.body.data.service.translations).sort()).toEqual(["it", "ka"]);
+
+        // Sending the map back without Georgian removes that translation.
+        const replaced = await api.patch(`/api/v1/service/${service._id}`)
+            .set("Cookie", cookieFor(admin))
+            .send({ translations: { it: { name: "Pulizia Profonda" } } });
+        expect(replaced.status).toBe(200);
+        expect(replaced.body.data.service.translations).toEqual({
+            it: { name: "Pulizia Profonda" }
+        });
+    });
+
+    test("rejects copy for a language the platform does not support", async () => {
+        const admin = await createAdmin();
+        const service = await createService();
+
+        const res = await api.patch(`/api/v1/service/${service._id}`)
+            .set("Cookie", cookieFor(admin))
+            .send({ translations: { fr: { name: "Nettoyage" } } });
+
+        expect(res.status).toBe(400);
+    });
+
     test("turning recurrence off clears the cadence list, and out-of-range cadences are rejected", async () => {
         const admin = await createAdmin();
         const service = await createService({
@@ -324,5 +389,111 @@ describe("workers", () => {
 
         const deleted = await api.delete(`/api/v1/worker/${id}`).set("Cookie", cookie);
         expect(deleted.status).toBe(200);
+    });
+});
+
+/*
+ * Multilingual copy is one shared implementation (utils/translations.util.js +
+ * models/translations.schema.js + validations/translations.validation.js) that
+ * every catalogue resource mounts, so the contract is exercised once per
+ * resource rather than re-specified per controller. Services get their own
+ * cases above — their copy has the most fields (including a list).
+ */
+describe("multilingual catalogue copy", () => {
+    const resources = [
+        {
+            label: "city",
+            url: "/api/v1/city",
+            key: "city",
+            create: { name: "Translated Town", workingHourStarts: "09:00", workingHourEnds: "18:00" }
+        },
+        {
+            label: "special request",
+            url: "/api/v1/special-request",
+            key: "specialRequest",
+            create: { name: "Translated Add-on", price: 12 }
+        },
+        {
+            label: "cleaning tool",
+            url: "/api/v1/cleaning-tool",
+            key: "cleaningTool",
+            create: { name: "Translated Tool", price: 5 }
+        }
+    ];
+
+    describe.each(resources)("$label", ({ url, key, create }) => {
+        test("stores per-language copy and drops the blanks a half-finished language leaves", async () => {
+            const admin = await createAdmin();
+
+            const res = await api.post(url)
+                .set("Cookie", cookieFor(admin))
+                .send({
+                    ...create,
+                    translations: {
+                        it: { name: "Nome Tradotto" },
+                        // Touched in the panel but never filled: not a translation.
+                        ru: { name: "   " }
+                    }
+                });
+
+            expect(res.status).toBe(201);
+            expect(res.body.data[key].translations).toEqual({ it: { name: "Nome Tradotto" } });
+        });
+
+        test("translations are replaced wholesale, and untouched by an unrelated edit", async () => {
+            const admin = await createAdmin();
+            const cookie = cookieFor(admin);
+
+            const created = await api.post(url)
+                .set("Cookie", cookie)
+                .send({
+                    ...create,
+                    translations: { it: { name: "Nome" }, ka: { name: "სახელი" } }
+                });
+            expect(created.status).toBe(201);
+            const id = created.body.data[key]._id;
+
+            // Flipping an unrelated field leaves every translation in place.
+            const toggled = await api.patch(`${url}/${id}`)
+                .set("Cookie", cookie)
+                .send({ enabled: false });
+            expect(toggled.status).toBe(200);
+            expect(Object.keys(toggled.body.data[key].translations).sort()).toEqual(["it", "ka"]);
+
+            // Sending the map back without Georgian removes that translation.
+            const replaced = await api.patch(`${url}/${id}`)
+                .set("Cookie", cookie)
+                .send({ translations: { it: { name: "Nuovo Nome" } } });
+            expect(replaced.status).toBe(200);
+            expect(replaced.body.data[key].translations).toEqual({ it: { name: "Nuovo Nome" } });
+
+            // An empty map clears them all without touching the default-locale copy.
+            const cleared = await api.patch(`${url}/${id}`)
+                .set("Cookie", cookie)
+                .send({ translations: {} });
+            expect(cleared.status).toBe(200);
+            expect(cleared.body.data[key].translations).toEqual({});
+            expect(cleared.body.data[key].name).toBe(created.body.data[key].name);
+        });
+
+        test("rejects copy for a language the platform does not support", async () => {
+            const admin = await createAdmin();
+
+            const res = await api.post(url)
+                .set("Cookie", cookieFor(admin))
+                .send({ ...create, translations: { fr: { name: "Nom" } } });
+
+            expect(res.status).toBe(400);
+        });
+
+        test("rejects the default locale — it lives in the root fields", async () => {
+            const admin = await createAdmin();
+
+            const res = await api.post(url)
+                .set("Cookie", cookieFor(admin))
+                .send({ ...create, translations: { en: { name: "Name" } } });
+
+            expect(res.status).toBe(400);
+        });
     });
 });

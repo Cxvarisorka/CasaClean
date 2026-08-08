@@ -20,6 +20,10 @@ A city looks like this:
 ```json
 {
   "name": "Rome",
+  "translations": {
+    "it": { "name": "Roma" },
+    "ka": { "name": "რომი" }
+  },
   "workingHourStarts": "09:00",
   "workingHourEnds": "17:30",
   "enabled": true
@@ -28,6 +32,10 @@ A city looks like this:
 
 Rules:
 - `name` must be unique. The server fixes the capital letter for you ("rOme" → "Rome").
+- `translations` holds the city name in the other languages ("Rome" → "Roma"). The
+  top-level `name` is the English one and the fallback. The shared rules for every
+  translated field live in **[translations.md](../translations.md)** — including
+  the language tests to run against this endpoint.
 - `workingHourStarts` and `workingHourEnds` must be in **HH:MM** format (00:00 to 23:59).
 - `enabled` is true/false; it is an on/off switch to hide a city without deleting it.
 

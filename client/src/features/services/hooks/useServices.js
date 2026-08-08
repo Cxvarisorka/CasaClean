@@ -1,17 +1,16 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { request, assetUrl } from "@/services/api";
 import { IMAGES } from "@/constants/images";
 import { generateSlug } from "@/utils/generateSlug";
+import { useTranslation, localizedField } from "@/i18n";
 
 /*
  * useServices
  * -----------
- * The service catalogue shown across the marketing site = the existing,
- * fully-designed static services PLUS any services an admin creates in the
- * database. The static ones are kept verbatim (their imagery, copy and
- * translations); new database services are normalised into the same shape so
- * ServiceCard renders them with identical design. A database service whose name
- * already matches a static one is skipped, so the curated originals always win.
+ * The service catalogue shown across the marketing site, loaded from the API and
+ * normalised into the shape ServiceCard renders. Copy is multilingual — see
+ * i18n/localizeRecord.js for how a language is resolved per field.
  */
 
 // Database services carry no presentation metadata (image/icon/features), so we
@@ -26,19 +25,22 @@ const FALLBACK_IMAGES = [
   IMAGES.restock,
 ];
 
-function normalizeDbService(s, index) {
+function normalizeDbService(s, index, locale) {
+  const includes = localizedField(s, "includes", locale);
+
   return {
     id: s._id, // string id → no i18n entry, so ServiceCard uses these fields directly
     // Readable URL key for the detail page (`/services/:slug`). Derived from the
-    // name, which the API keeps unique, so the slug is unique too. The id stays
-    // the booking identifier — the slug is only ever a lookup key.
+    // *default-locale* name, which the API keeps unique, so the slug is unique
+    // too — and, just as importantly, stable: a shared link keeps working when
+    // the visitor switches language. The id stays the booking identifier.
     slug: generateSlug(s.name) || String(s._id),
-    name: s.name,
-    description: s.description,
+    name: localizedField(s, "name", locale),
+    description: localizedField(s, "description", locale),
     // Admin-authored sub-title and inclusion list drive the card's tagline and
     // ticked features; fall back to neutral empties when not provided.
-    tagline: s.subtitle || "",
-    features: Array.isArray(s.includes) ? s.includes : [],
+    tagline: localizedField(s, "subtitle", locale) || "",
+    features: Array.isArray(includes) ? includes : [],
     icon: "Sparkles",
     // Prefer the admin-uploaded image (stored as a relative /uploads path, so
     // resolve it against the API origin); otherwise rotate through the curated
@@ -78,16 +80,26 @@ async function fetchDbServices() {
   const data = await request({ method: "GET", url: "/service?limit=100" });
   const list = data?.services ?? [];
   // Every enabled service the admin created — these are what the marketing pages
-  // actually render now (no static seed data is shown there anymore).
-  return list.filter((s) => s.enabled).map(normalizeDbService);
+  // actually render now (no static seed data is shown there anymore). Kept raw
+  // (translations included) so switching language costs no request.
+  return list.filter((s) => s.enabled);
 }
 
 export function useServices() {
-  const { data: dbServices = [], ...rest } = useQuery({
+  const { locale } = useTranslation();
+
+  const { data: records = [], ...rest } = useQuery({
     queryKey: ["services"],
     queryFn: fetchDbServices,
     staleTime: 5 * 60 * 1000, // catalogue changes rarely
   });
+
+  // Language is applied here rather than in the query so the cached catalogue is
+  // shared across languages — a switch re-derives, it doesn't re-fetch.
+  const dbServices = useMemo(
+    () => records.map((s, index) => normalizeDbService(s, index, locale)),
+    [records, locale]
+  );
 
   return { services: dbServices, dbServices, ...rest };
 }

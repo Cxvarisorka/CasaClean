@@ -42,7 +42,8 @@ const parseServiceBody = [
     coerceMultipart({
         numbers: ['pricePerHour'],
         booleans: ['allCities', 'allSpecialRequests', 'enabled', 'recurringEnabled'],
-        arrays: ['includes', 'cities', 'specialRequests', 'recurringIntervalDays']
+        arrays: ['includes', 'cities', 'specialRequests', 'recurringIntervalDays'],
+        objects: ['translations']
     })
 ];
 

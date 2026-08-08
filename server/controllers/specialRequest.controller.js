@@ -9,6 +9,12 @@ const AppError = require("../utils/appError.util");
 const catchAsync = require("../utils/catchAsync.util");
 const formatName = require("../utils/formatName.util");
 const { assertNotReferenced } = require("../utils/referentialGuard.util");
+const { TRANSLATABLE_FIELDS, normalizeTranslations } = require("../utils/translations.util");
+
+// Blank fields and empty languages are stripped before storing — see
+// utils/translations.util.js for why.
+const cleanTranslations = (translations) =>
+    normalizeTranslations(translations, TRANSLATABLE_FIELDS.specialRequest);
 
 // GET /api/v1/special-request -> paginated list (public, so the booking wizard
 // can show the available add-ons).
@@ -63,7 +69,7 @@ const getSpecialRequestById = catchAsync(async (req, res, next) => {
 
 // POST /api/v1/special-request -> create an add-on (admin only)
 const addSpecialRequest = catchAsync(async (req, res, next) => {
-    const { name, description, price, services } = req.body;
+    const { name, description, translations, price, services } = req.body;
 
     // Guard required fields up-front so we never hit `name[0]` on undefined and
     // the client gets a clear 400. Price is compared against undefined so a
@@ -83,6 +89,7 @@ const addSpecialRequest = catchAsync(async (req, res, next) => {
     const specialRequest = await SpecialRequest.create({
         name: formattedName,
         description,
+        translations: cleanTranslations(translations),
         price,
         services
     });
@@ -97,7 +104,7 @@ const addSpecialRequest = catchAsync(async (req, res, next) => {
 // PATCH /api/v1/special-request/:id -> partial update (admin only)
 const editSpecialRequest = catchAsync(async (req, res, next) => {
     const { id } = req.params;
-    const { name, description, price, enabled, services = [] } = req.body;
+    const { name, description, translations, price, enabled, services = [] } = req.body;
 
     const specialRequest = await SpecialRequest.findById(id);
 
@@ -120,6 +127,11 @@ const editSpecialRequest = catchAsync(async (req, res, next) => {
     }
 
     if (description !== undefined) specialRequest.description = description;
+    // Replaced wholesale rather than merged: the panel edits every language in
+    // one dialog and posts the complete set, so a locale missing from the body
+    // is an explicit "remove this translation". A request that omits the field
+    // entirely (e.g. the row-level enable toggle) leaves translations untouched.
+    if (translations !== undefined) specialRequest.translations = cleanTranslations(translations);
     if (price !== undefined) specialRequest.price = price;
     // Compared against undefined (not truthiness) so `enabled: false` is honoured.
     if (enabled === true || enabled === false) specialRequest.enabled = enabled;

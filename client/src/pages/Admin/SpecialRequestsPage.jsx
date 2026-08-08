@@ -8,6 +8,9 @@ import {
   ResourceModal,
   ConfirmDialog,
   useCollection,
+  contentField,
+  toContentValue,
+  fromContentValue,
 } from "@/features/admin";
 import { useTranslation } from "@/i18n";
 
@@ -18,6 +21,9 @@ import { useTranslation } from "@/i18n";
  * oven") backed by the real API. Each item has a name, optional description, a
  * flat surcharge and an availability toggle that controls whether it appears in
  * the booking wizard.
+ *
+ * Name and description are multilingual, edited one language at a time through
+ * the "i18n" field — see features/admin/utils/localizedContent.js.
  */
 
 const eur = (n) =>
@@ -31,20 +37,37 @@ export default function SpecialRequestsPage() {
   const [editing, setEditing] = useState(undefined);
   const [deleting, setDeleting] = useState(null);
 
-  const fields = useMemo(
+  // Declared once: drives both the localized form field and the API mapping.
+  const contentSubfields = useMemo(
     () => [
       { name: "name", label: t("admin.specialRequests.field.name"), required: true },
-      { name: "price", label: t("admin.specialRequests.field.price"), type: "number", required: true },
-      { name: "description", label: t("admin.specialRequests.field.description"), type: "textarea", full: true },
-      { name: "enabled", label: t("admin.specialRequests.field.enabled"), type: "switch" },
+      {
+        name: "description",
+        label: t("admin.specialRequests.field.description"),
+        type: "textarea",
+        rows: 3,
+      },
     ],
     [t]
   );
 
+  const fields = useMemo(
+    () => [
+      { name: "price", label: t("admin.specialRequests.field.price"), type: "number", required: true },
+      contentField(t("admin.specialRequests.field.content"), contentSubfields),
+      { name: "enabled", label: t("admin.specialRequests.field.enabled"), type: "switch" },
+    ],
+    [contentSubfields, t]
+  );
+
   const handleSubmit = async (values) => {
+    // Split the localized group back into the flat payload the API expects.
+    const { content, ...rest } = values;
+    const payload = { ...rest, ...fromContentValue(content, contentSubfields) };
+
     const ok = editing
-      ? await update(editing._id, values)
-      : await create(values);
+      ? await update(editing._id, payload)
+      : await create(payload);
     if (ok) setEditing(undefined);
   };
 
@@ -123,7 +146,15 @@ export default function SpecialRequestsPage() {
         onSubmit={handleSubmit}
         title={editing ? t("admin.specialRequests.editTitle") : t("admin.specialRequests.addTitle")}
         fields={fields}
-        initialValues={editing || { enabled: true, price: 0 }}
+        initialValues={
+          editing
+            ? { ...editing, content: toContentValue(editing, contentSubfields) }
+            : {
+                content: toContentValue(null, contentSubfields),
+                enabled: true,
+                price: 0,
+              }
+        }
         submitLabel={editing ? t("admin.form.saveChanges") : t("admin.form.create")}
       />
 

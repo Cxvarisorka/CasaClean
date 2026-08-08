@@ -22,6 +22,9 @@ A special request looks like this:
 {
   "name": "Fridge cleaning",
   "description": "Clean the inside of the fridge",
+  "translations": {
+    "it": { "name": "Pulizia frigorifero", "description": "Pulizia interna del frigo" }
+  },
   "price": 15,
   "enabled": true
 }
@@ -29,6 +32,10 @@ A special request looks like this:
 
 Rules to remember:
 - `name` is **required** and must be **unique**.
+- `translations` holds the name and description in the other languages; the
+  top-level ones are the English copy and the fallback. The shared rules — and
+  the language tests to run against this endpoint — live in
+  **[translations.md](../translations.md)**.
 - `price` is **required**. `0` is allowed (a free / informational add-on).
 - `price` cannot be **negative**.
 - The name is **auto-formatted**: the first letter becomes a capital and the

@@ -18,6 +18,7 @@ const {
     isValidIntervalDays
 } = require("../utils/date.util");
 const { serviceImageUrl, removeServiceImage } = require("../utils/upload.util");
+const { TRANSLATABLE_FIELDS, normalizeTranslations } = require("../utils/translations.util");
 
 /**
  * The image value to store for a write request.
@@ -29,6 +30,11 @@ const { serviceImageUrl, removeServiceImage } = require("../utils/upload.util");
  */
 const resolveImage = (req) =>
     req.file ? serviceImageUrl(req.file.filename) : req.body.image;
+
+// Blank fields and empty languages are stripped before storing — see
+// utils/translations.util.js for why.
+const cleanTranslations = (translations) =>
+    normalizeTranslations(translations, TRANSLATABLE_FIELDS.service);
 
 /**
  * Resolve and validate the coverage a service should have ("all cities",
@@ -213,7 +219,7 @@ const getServiceById = catchAsync(async (req, res, next) => {
 
 // POST /api/v1/service -> create a service (admin only)
 const createService = catchAsync(async (req, res, next) => {
-    const { name, subtitle, description, includes, pricePerHour, allCities, cities, allSpecialRequests, specialRequests, recurringEnabled, recurringIntervalDays } = req.body;
+    const { name, subtitle, description, includes, translations, pricePerHour, allCities, cities, allSpecialRequests, specialRequests, recurringEnabled, recurringIntervalDays } = req.body;
 
     // An uploaded file (multipart) takes precedence over an `image` URL in the
     // body. Any failure below leaves the file orphaned on disk — the service
@@ -248,6 +254,7 @@ const createService = catchAsync(async (req, res, next) => {
         image,
         // Drop empty/blank entries so the card never renders an empty bullet.
         includes: Array.isArray(includes) ? includes.map((i) => i.trim()).filter(Boolean) : undefined,
+        translations: cleanTranslations(translations),
         pricePerHour,
         ...coverage,
         ...specialRequest,
@@ -266,7 +273,7 @@ const createService = catchAsync(async (req, res, next) => {
 // PATCH /api/v1/service/:id -> partial update (admin only)
 const editService = catchAsync(async (req, res, next) => {
     const { id } = req.params;
-    const { name, subtitle, description, includes, pricePerHour, enabled, allCities, cities, allSpecialRequests, specialRequests, recurringEnabled, recurringIntervalDays } = req.body;
+    const { name, subtitle, description, includes, translations, pricePerHour, enabled, allCities, cities, allSpecialRequests, specialRequests, recurringEnabled, recurringIntervalDays } = req.body;
 
     const image = resolveImage(req);
 
@@ -302,6 +309,13 @@ const editService = catchAsync(async (req, res, next) => {
         service.includes = Array.isArray(includes)
             ? includes.map((i) => i.trim()).filter(Boolean)
             : [];
+    }
+    // Replaced wholesale rather than merged: the panel edits every language in
+    // one dialog and posts the complete set, so a locale missing from the body
+    // is an explicit "remove this translation". A request that omits the field
+    // entirely (e.g. the row-level enable toggle) leaves translations untouched.
+    if (translations !== undefined) {
+        service.translations = cleanTranslations(translations);
     }
     if (pricePerHour !== undefined) service.pricePerHour = pricePerHour;
     // Compared against undefined (not truthiness) so `enabled: false` is honoured.

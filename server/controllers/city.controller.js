@@ -6,6 +6,12 @@ const AppError = require("../utils/appError.util");
 const catchAsync = require("../utils/catchAsync.util");
 const formatName = require("../utils/formatName.util");
 const { assertNotReferenced } = require("../utils/referentialGuard.util");
+const { TRANSLATABLE_FIELDS, normalizeTranslations } = require("../utils/translations.util");
+
+// Blank fields and empty languages are stripped before storing — see
+// utils/translations.util.js for why.
+const cleanTranslations = (translations) =>
+    normalizeTranslations(translations, TRANSLATABLE_FIELDS.city);
 
 // GET /api/v1/city -> paginated list of cities
 const getCities = catchAsync(async (req, res) => {
@@ -65,7 +71,7 @@ const getCity = catchAsync(async (req, res, next) => {
 
 // POST /api/v1/city -> create a city (admin only)
 const addCity = catchAsync(async (req, res, next) => {
-    const { name, workingHourStarts, workingHourEnds } = req.body;
+    const { name, translations, workingHourStarts, workingHourEnds } = req.body;
 
     // Guard the required fields up-front so we never hit `name[0]` on undefined
     // and so the client gets a clear 400 instead of a generic schema error.
@@ -81,7 +87,12 @@ const addCity = catchAsync(async (req, res, next) => {
         return next(new AppError("City already exists!", 409));
     }
 
-    const city = await City.create({ name: formattedName, workingHourStarts, workingHourEnds });
+    const city = await City.create({
+        name: formattedName,
+        translations: cleanTranslations(translations),
+        workingHourStarts,
+        workingHourEnds
+    });
 
     res.status(201).json({
         status: "success",
@@ -118,7 +129,7 @@ const deleteCity = catchAsync(async (req, res, next) => {
 
 // PATCH /api/v1/city/:id -> partial update (admin only)
 const editCity = catchAsync(async (req, res, next) => {
-    const { name, workingHourStarts, workingHourEnds, enabled } = req.body;
+    const { name, translations, workingHourStarts, workingHourEnds, enabled } = req.body;
     const { id } = req.params;
 
     const city = await City.findById(id);
@@ -139,6 +150,12 @@ const editCity = catchAsync(async (req, res, next) => {
 
         city.name = formattedName;
     }
+
+    // Replaced wholesale rather than merged: the panel edits every language in
+    // one dialog and posts the complete set, so a locale missing from the body
+    // is an explicit "remove this translation". A request that omits the field
+    // entirely (e.g. the row-level enable toggle) leaves translations untouched.
+    if (translations !== undefined) city.translations = cleanTranslations(translations);
 
     if (workingHourStarts) city.workingHourStarts = workingHourStarts;
     if (workingHourEnds) city.workingHourEnds = workingHourEnds;

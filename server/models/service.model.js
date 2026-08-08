@@ -1,6 +1,4 @@
 // Reference shape of a service record (from the original seed data).
-// NOTE: the localized name/description fields (name_it/name_ka/name_ru, ...) are
-// not modelled yet — add them here if/when multilingual support is needed.
 //   {
 //     "id": 1,
 //     "name": "Regular Cleaning",
@@ -8,6 +6,8 @@
 //     "price_per_hour": 19.9,
 //     "enabled": true
 //   }
+// Localized copy lives in `translations` (see below): the root text fields hold
+// the default locale, `translations.<locale>` overrides them per language.
 
 const mongoose = require("mongoose");
 
@@ -16,6 +16,9 @@ const {
     MAX_INTERVAL_DAYS,
     isValidIntervalDays
 } = require("../utils/date.util");
+
+const { translationsPath } = require("./translations.schema");
+const { TRANSLATABLE_FIELDS } = require("../utils/translations.util");
 
 const serviceSchema = new mongoose.Schema({
     name: {
@@ -48,6 +51,10 @@ const serviceSchema = new mongoose.Schema({
         type: [String],
         default: []
     },
+    // Per-language overrides of the four customer-facing text fields above
+    // (name / subtitle / description / includes), keyed by locale code.
+    // See utils/translations.util.js for the shared contract.
+    translations: translationsPath(TRANSLATABLE_FIELDS.service),
     pricePerHour: {
         type: Number,
         required: [true, "Price is required!"],

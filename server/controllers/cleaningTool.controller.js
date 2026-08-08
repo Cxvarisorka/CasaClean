@@ -9,6 +9,12 @@ const AppError = require("../utils/appError.util");
 const catchAsync = require("../utils/catchAsync.util");
 const formatName = require("../utils/formatName.util");
 const { assertNotReferenced } = require("../utils/referentialGuard.util");
+const { TRANSLATABLE_FIELDS, normalizeTranslations } = require("../utils/translations.util");
+
+// Blank fields and empty languages are stripped before storing — see
+// utils/translations.util.js for why.
+const cleanTranslations = (translations) =>
+    normalizeTranslations(translations, TRANSLATABLE_FIELDS.cleaningTool);
 
 // Fail closed on the service references: every id must point to a real Service
 // document, otherwise a typo would silently create a tool that never matches
@@ -77,7 +83,7 @@ const getCleaningToolById = catchAsync(async (req, res, next) => {
 
 // POST /api/v1/cleaning-tool -> create a tool (admin only)
 const addCleaningTool = catchAsync(async (req, res, next) => {
-    const { name, description, price, services } = req.body;
+    const { name, description, translations, price, services } = req.body;
 
     // Guard required fields up-front so the client gets a clear 400. Price is
     // compared against undefined so a legitimate 0 (free tool) is accepted.
@@ -100,6 +106,7 @@ const addCleaningTool = catchAsync(async (req, res, next) => {
     const cleaningTool = await CleaningTool.create({
         name: formattedName,
         description,
+        translations: cleanTranslations(translations),
         price,
         services: serviceIds
     });
@@ -114,7 +121,7 @@ const addCleaningTool = catchAsync(async (req, res, next) => {
 // PATCH /api/v1/cleaning-tool/:id -> partial update (admin only)
 const editCleaningTool = catchAsync(async (req, res, next) => {
     const { id } = req.params;
-    const { name, description, price, enabled, services } = req.body;
+    const { name, description, translations, price, enabled, services } = req.body;
 
     const cleaningTool = await CleaningTool.findById(id);
 
@@ -137,6 +144,11 @@ const editCleaningTool = catchAsync(async (req, res, next) => {
     }
 
     if (description !== undefined) cleaningTool.description = description;
+    // Replaced wholesale rather than merged: the panel edits every language in
+    // one dialog and posts the complete set, so a locale missing from the body
+    // is an explicit "remove this translation". A request that omits the field
+    // entirely (e.g. the row-level enable toggle) leaves translations untouched.
+    if (translations !== undefined) cleaningTool.translations = cleanTranslations(translations);
     if (price !== undefined) cleaningTool.price = price;
     // Compared against undefined (not truthiness) so `enabled: false` is honoured.
     if (enabled === true || enabled === false) cleaningTool.enabled = enabled;

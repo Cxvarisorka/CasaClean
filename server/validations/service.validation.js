@@ -2,6 +2,8 @@
 const { z } = require("zod");
 
 const { MIN_INTERVAL_DAYS, MAX_INTERVAL_DAYS } = require("../utils/date.util");
+const { TRANSLATABLE_FIELDS } = require("../utils/translations.util");
+const { translationsSchema } = require("./translations.validation");
 
 // Recurrence cadences an admin may pin on a service. An empty array is the
 // meaningful "no restriction — the customer picks any cadence in range" value,
@@ -34,6 +36,10 @@ const serviceImage = z
         message: "Image must be an HTTPS URL, an uploaded image path or a supported base64 image data URL!"
     });
 
+// Per-language copy. The field list and the shared rules live in
+// utils/translations.util.js.
+const translations = translationsSchema(TRANSLATABLE_FIELDS.service);
+
 // Schema for validate create service request body
 const createServiceSchema = z.object({
     name: z
@@ -62,6 +68,9 @@ const createServiceSchema = z.object({
         .array(z.string().trim().min(1).max(200))
         .max(20, "Too many inclusions!")
         .optional(),
+
+    // Optional per-language overrides of the four text fields above.
+    translations: translations.optional(),
 
     pricePerHour: z
         .number()
@@ -119,6 +128,10 @@ const editServiceSchema = z.object({
         .array(z.string().trim().min(1).max(200))
         .max(20, "Too many inclusions!")
         .optional(),
+
+    // Sent whole, not merged: the panel always posts the full set of languages,
+    // so an omitted locale means "translation removed" (see the controller).
+    translations: translations.optional(),
 
     pricePerHour: z
         .number()

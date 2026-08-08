@@ -8,14 +8,20 @@ import {
   ResourceModal,
   ConfirmDialog,
   useCollection,
+  contentField,
+  toContentValue,
+  fromContentValue,
 } from "@/features/admin";
 import { useTranslation } from "@/i18n";
 
 /*
  * Cities management
  * -----------------
- * CRUD over service coverage areas: translated names, working days/hours and
- * an availability toggle that controls whether the city appears in booking.
+ * CRUD over service coverage areas: the name, working hours and an availability
+ * toggle that controls whether the city appears in booking.
+ *
+ * The name is multilingual ("Rome" → "Roma" → "რომი"), edited one language at a
+ * time through the "i18n" field — see features/admin/utils/localizedContent.js.
  */
 
 export default function CitiesPage() {
@@ -24,20 +30,37 @@ export default function CitiesPage() {
   const [editing, setEditing] = useState(undefined);
   const [deleting, setDeleting] = useState(null);
 
-  const fields = useMemo(
+  // Declared once: drives both the localized form field and the API mapping.
+  const contentSubfields = useMemo(
     () => [
-      { name: "name", label: t("admin.cities.field.name"), required: true },
-      { name: "working_hours_start", label: t("admin.cities.field.opensAt"), placeholder: "09:00", required: true },
-      { name: "working_hours_end", label: t("admin.cities.field.closesAt"), placeholder: "18:00", required: true },
-      { name: "enabled", label: t("admin.cities.field.enabled"), type: "switch" },
+      {
+        name: "name",
+        label: t("admin.cities.field.name"),
+        required: true,
+        hint: t("admin.cities.field.nameHint"),
+      },
     ],
     [t]
   );
 
+  const fields = useMemo(
+    () => [
+      contentField(t("admin.cities.field.content"), contentSubfields),
+      { name: "working_hours_start", label: t("admin.cities.field.opensAt"), placeholder: "09:00", required: true },
+      { name: "working_hours_end", label: t("admin.cities.field.closesAt"), placeholder: "18:00", required: true },
+      { name: "enabled", label: t("admin.cities.field.enabled"), type: "switch" },
+    ],
+    [contentSubfields, t]
+  );
+
   const handleSubmit = async (values) => {
+    // Split the localized group back into the flat payload the API expects.
+    const { content, ...rest } = values;
+    const payload = { ...rest, ...fromContentValue(content, contentSubfields) };
+
     const ok = editing
-      ? await update(editing._id, values)
-      : await create(values);
+      ? await update(editing._id, payload)
+      : await create(payload);
     if (ok) setEditing(undefined);
   };
 
@@ -115,11 +138,14 @@ export default function CitiesPage() {
         title={editing ? t("admin.cities.editTitle") : t("admin.cities.addTitle")}
         fields={fields}
         initialValues={
-          editing || {
-            enabled: true,
-            working_hours_start: "09:00",
-            working_hours_end: "18:00",
-          }
+          editing
+            ? { ...editing, content: toContentValue(editing, contentSubfields) }
+            : {
+                content: toContentValue(null, contentSubfields),
+                enabled: true,
+                working_hours_start: "09:00",
+                working_hours_end: "18:00",
+              }
         }
         submitLabel={editing ? t("admin.form.saveChanges") : t("admin.form.create")}
       />

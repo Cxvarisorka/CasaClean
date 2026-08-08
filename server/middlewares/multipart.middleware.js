@@ -53,15 +53,38 @@ const toArray = (value) => {
 };
 
 /**
+ * Nested structures (e.g. the per-language `translations` map) are sent as a
+ * JSON string for the same reason arrays are — multipart has no way to express
+ * an object, and `{}` has to survive the round trip so "all translations
+ * removed" reaches the controller as an empty map rather than a missing field.
+ */
+const toObject = (value) => {
+    if (value && typeof value === "object" && !Array.isArray(value)) return value;
+    if (typeof value !== "string") return value;
+
+    const trimmed = value.trim();
+    if (trimmed === "") return {};
+    if (!trimmed.startsWith("{")) return value;
+
+    try {
+        const parsed = JSON.parse(trimmed);
+        return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : value;
+    } catch {
+        return value;
+    }
+};
+
+/**
  * Build a middleware that re-types the named fields on multipart requests.
  *
  *   coerceMultipart({ numbers: ["pricePerHour"], booleans: ["allCities"] })
  */
-const coerceMultipart = ({ numbers = [], booleans = [], arrays = [] } = {}) => {
+const coerceMultipart = ({ numbers = [], booleans = [], arrays = [], objects = [] } = {}) => {
     const conversions = [
         [numbers, toNumber],
         [booleans, toBoolean],
-        [arrays, toArray]
+        [arrays, toArray],
+        [objects, toObject]
     ];
 
     return (req, res, next) => {

@@ -8,6 +8,9 @@ import {
   ResourceModal,
   ConfirmDialog,
   useCollection,
+  contentField,
+  toContentValue,
+  fromContentValue,
 } from "@/features/admin";
 import { useTranslation } from "@/i18n";
 
@@ -18,6 +21,9 @@ import { useTranslation } from "@/i18n";
  * the real API. Each tool has a name, optional description, a flat surcharge,
  * the services it can be used on (none selected = every service) and an
  * availability toggle.
+ *
+ * Name and description are multilingual, edited one language at a time through
+ * the "i18n" field — see features/admin/utils/localizedContent.js.
  */
 
 const eur = (n) =>
@@ -42,11 +48,24 @@ export default function CleaningToolsPage() {
     [services]
   );
 
-  const fields = useMemo(
+  // Declared once: drives both the localized form field and the API mapping.
+  const contentSubfields = useMemo(
     () => [
       { name: "name", label: t("admin.cleaningTools.field.name"), required: true },
+      {
+        name: "description",
+        label: t("admin.cleaningTools.field.description"),
+        type: "textarea",
+        rows: 3,
+      },
+    ],
+    [t]
+  );
+
+  const fields = useMemo(
+    () => [
       { name: "price", label: t("admin.cleaningTools.field.price"), type: "number", required: true },
-      { name: "description", label: t("admin.cleaningTools.field.description"), type: "textarea", full: true },
+      contentField(t("admin.cleaningTools.field.content"), contentSubfields),
       {
         name: "services",
         label: t("admin.cleaningTools.field.services"),
@@ -57,13 +76,17 @@ export default function CleaningToolsPage() {
       },
       { name: "enabled", label: t("admin.cleaningTools.field.enabled"), type: "switch" },
     ],
-    [serviceOptions, t]
+    [serviceOptions, contentSubfields, t]
   );
 
   const handleSubmit = async (values) => {
+    // Split the localized group back into the flat payload the API expects.
+    const { content, ...rest } = values;
+    const payload = { ...rest, ...fromContentValue(content, contentSubfields) };
+
     const ok = editing
-      ? await update(editing._id, values)
-      : await create(values);
+      ? await update(editing._id, payload)
+      : await create(payload);
     if (ok) setEditing(undefined);
   };
 
@@ -156,7 +179,16 @@ export default function CleaningToolsPage() {
         onSubmit={handleSubmit}
         title={editing ? t("admin.cleaningTools.editTitle") : t("admin.cleaningTools.addTitle")}
         fields={fields}
-        initialValues={editing || { enabled: true, price: 0, services: [] }}
+        initialValues={
+          editing
+            ? { ...editing, content: toContentValue(editing, contentSubfields) }
+            : {
+                content: toContentValue(null, contentSubfields),
+                enabled: true,
+                price: 0,
+                services: [],
+              }
+        }
         submitLabel={editing ? t("admin.form.saveChanges") : t("admin.form.create")}
       />
 

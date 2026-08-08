@@ -9,6 +9,9 @@ import {
   ResourceModal,
   ConfirmDialog,
   useCollection,
+  contentField,
+  toContentValue,
+  fromContentValue,
 } from "@/features/admin";
 import { useTranslation } from "@/i18n";
 import { assetUrl } from "@/services/api";
@@ -20,6 +23,12 @@ import { MAX_INTERVAL_DAYS, MIN_INTERVAL_DAYS } from "@/features/booking/constan
  * Full CRUD over the service catalog (backed by the real API): name,
  * description, price per hour and coverage — either every city, or an explicit
  * set chosen from the cities collection.
+ *
+ * The customer-facing copy (name, sub-title, description, inclusions) is
+ * multilingual. It is edited as a single "i18n" field so the dialog shows one
+ * language at a time instead of four inputs times five languages; on the wire it
+ * splits back into the API's shape — the default locale in the root fields, the
+ * rest in `translations` (see features/admin/utils/localizedContent.js).
  */
 
 const eur = (n) =>
@@ -68,6 +77,40 @@ export default function ServicesPage() {
     [t]
   );
 
+  // The translatable copy, declared once: it drives both the "one language at a
+  // time" form field and the mapping to/from the API payload.
+  const contentSubfields = useMemo(
+    () => [
+      {
+        name: "name",
+        label: t("admin.services.field.name"),
+        required: true,
+      },
+      {
+        name: "subtitle",
+        label: t("admin.services.field.subtitle"),
+        hint: t("admin.services.field.subtitleHint"),
+        placeholder: t("admin.services.field.subtitlePlaceholder"),
+      },
+      {
+        name: "description",
+        label: t("admin.services.field.description"),
+        type: "textarea",
+        required: true,
+        rows: 4,
+      },
+      {
+        name: "includes",
+        label: t("admin.services.field.includes"),
+        type: "list",
+        hint: t("admin.services.field.includesHint"),
+        placeholder: t("admin.services.field.includesPlaceholder"),
+        addLabel: t("admin.services.field.includesAdd"),
+      },
+    ],
+    [t]
+  );
+
   const fields = useMemo(
     () => [
       {
@@ -77,25 +120,8 @@ export default function ServicesPage() {
         hint: t("admin.services.field.imageHint"),
         full: true,
       },
-      { name: "name", label: t("admin.services.field.name"), required: true },
       { name: "price_per_hour", label: t("admin.services.field.pricePerHour"), type: "number", required: true },
-      {
-        name: "subtitle",
-        label: t("admin.services.field.subtitle"),
-        hint: t("admin.services.field.subtitleHint"),
-        placeholder: t("admin.services.field.subtitlePlaceholder"),
-        full: true,
-      },
-      { name: "description", label: t("admin.services.field.description"), type: "textarea", required: true, full: true },
-      {
-        name: "includes",
-        label: t("admin.services.field.includes"),
-        type: "list",
-        hint: t("admin.services.field.includesHint"),
-        placeholder: t("admin.services.field.includesPlaceholder"),
-        addLabel: t("admin.services.field.includesAdd"),
-        full: true,
-      },
+      contentField(t("admin.services.field.content"), contentSubfields),
       {
         name: "all_cities",
         label: t("admin.services.field.allCities"),
@@ -154,13 +180,17 @@ export default function ServicesPage() {
         full: true,
       },
     ],
-    [cityOptions, specialRequestOptions, intervalOptions, t]
+    [cityOptions, specialRequestOptions, intervalOptions, contentSubfields, t]
   );
 
   const handleSubmit = async (values) => {
+    // Split the localized group back into the flat payload the API expects.
+    const { content, ...rest } = values;
+    const payload = { ...rest, ...fromContentValue(content, contentSubfields) };
+
     const ok = editing
-      ? await update(editing._id, values)
-      : await create(values);
+      ? await update(editing._id, payload)
+      : await create(payload);
     if (ok) setEditing(undefined);
   };
 
@@ -300,18 +330,19 @@ export default function ServicesPage() {
         title={editing ? t("admin.services.editTitle") : t("admin.services.addTitle")}
         fields={fields}
         initialValues={
-          editing || {
-            image: "",
-            subtitle: "",
-            includes: [],
-            all_cities: true,
-            cities: [],
-            all_special_requests: false,
-            special_requests: [],
-            recurring_enabled: false,
-            recurring_interval_days: [],
-            enabled: true,
-          }
+          editing
+            ? { ...editing, content: toContentValue(editing, contentSubfields) }
+            : {
+                image: "",
+                content: toContentValue(null, contentSubfields),
+                all_cities: true,
+                cities: [],
+                all_special_requests: false,
+                special_requests: [],
+                recurring_enabled: false,
+                recurring_interval_days: [],
+                enabled: true,
+              }
         }
         submitLabel={editing ? t("admin.form.saveChanges") : t("admin.form.create")}
       />

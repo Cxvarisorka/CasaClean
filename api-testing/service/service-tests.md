@@ -25,9 +25,20 @@ A service looks like this:
   "cities": ["CITY_ID_1", "CITY_ID_2"],
   "recurringEnabled": true,
   "recurringIntervalDays": [7, 14],
-  "enabled": true
+  "enabled": true,
+  "translations": {
+    "it": { "name": "Pulizia regolare", "includes": ["Cucina"] },
+    "ka": { "name": "რეგულარული დასუფთავება" }
+  }
 }
 ```
+
+Rules about **languages** (`translations`): the top-level `name`, `subtitle`,
+`description` and `includes` are the English copy; `translations` holds the same
+four fields for `ka`, `it`, `el` and `ru`. The full contract (fallbacks, blanks,
+replace-not-merge on PATCH) is shared with the other catalogue endpoints and is
+written down once in **[translations.md](../translations.md)** — read it before
+running the language tests below.
 
 Rules about **where a service is offered** (coverage) — this is the tricky part:
 - `allCities: true` → the service is offered **everywhere**. The `cities` list is ignored.
@@ -135,6 +146,10 @@ curl -X POST http://localhost:3000/api/v1/service ^
 | 10| Send a negative price like `-5`                            | **400**         | message about price can't be negative                                |
 | 11| A normal user (not admin) tries this                       | **403**         | "You do not have permission to perform this action!"                 |
 | 12| Not logged in                                              | **401**         | "Authorization is required!"                                          |
+| 13| Send `translations` with `it` and `ka` filled in           | **201**         | `data.service.translations` holds both languages                      |
+| 14| Send a language where every field is blank                 | **201**         | That language is **not** in `data.service.translations`               |
+| 15| Send `translations: { "fr": { "name": "Nettoyage" } }`     | **400**         | message about supported translation languages                        |
+| 16| Send `translations: { "en": { "name": "Clean" } }`         | **400**         | Rejected — English belongs in the top-level fields                    |
 
 > **Check #7 carefully:** `pricePerHour: 0` is allowed (free). Only a **missing** price
 > is rejected. So sending `pricePerHour: 0` should succeed.
@@ -175,6 +190,9 @@ curl -X PATCH http://localhost:3000/api/v1/service/PASTE_SERVICE_ID ^
 | 8 | Set coverage to a city id that does not exist             | **400**         | "One or more selected cities do not exist!"      |
 | 9 | A normal user tries this                                   | **403**         | "You do not have permission..."                  |
 | 10| Not logged in                                             | **401**         | "Authorization is required!"                     |
+| 11| Change only the price (don't send `translations`)          | **200**         | All existing translations are still there        |
+| 12| Send `translations` with only `it` (a service that had `it` + `ka`) | **200** | Only `it` remains — `ka` was removed             |
+| 13| Send `translations: {}`                                    | **200**         | All translations removed; English copy untouched |
 
 ---
 
