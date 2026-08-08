@@ -52,9 +52,42 @@ export default {
   },
 
   profile: {
+    billing: {
+      title: "Billing details",
+      subtitle: "Bill as a person or as a company. With a verified VAT number, no VAT is added to your charges.",
+      individual: "Personal",
+      individualHint: "Prices exclude VAT; it is added at checkout.",
+      business: "Business",
+      businessHint: "No VAT is added once your number is verified.",
+      companyName: "Company name",
+      companyNamePlaceholder: "Acme S.r.l.",
+      vatNumber: "VAT number",
+      vatNumberHint: "Include the country prefix, e.g. IT01234567890. We verify it with the EU VIES registry.",
+      pendingNote: "We're checking your VAT number with the EU registry. Until it's confirmed, VAT is still charged.",
+      checkNow: "Check now",
+      unverifiedNote: "The EU registry didn't recognise this VAT number, so VAT is still charged. Check it and save again.",
+      reverseChargeActive: "VAT ({rate}%) is not added to your bookings under the EU reverse charge.",
+      save: "Save billing details",
+      saved: "Saved",
+      saveFailed: "We couldn't save your billing details. Please try again.",
+      refreshFailed: "We couldn't check your VAT number right now. Please try again.",
+      status: {
+        verified: "VAT number verified",
+        pending: "Verifying...",
+        unverified: "Not verified",
+      },
+    },
     title: "My profile",
     subtitle: "Manage your account details and preferences.",
     menu: "Profile",
+    // Section rail on the profile page.
+    nav: {
+      account: "Account",
+      bookings: "Bookings",
+      subscriptions: "Subscriptions",
+      billing: "Billing & payments",
+      security: "Security",
+    },
     account: "Account",
     personalInfo: "Personal information",
     emailHint: "Email can't be changed here.",
@@ -149,9 +182,7 @@ export default {
 
   nav: {
     services: "Services",
-    pricing: "Pricing",
     about: "About",
-    blog: "Blog",
     faq: "FAQ",
     contact: "Contact",
     careers: "Careers",
@@ -176,7 +207,6 @@ export default {
     links: {
       "About us": "About us",
       Careers: "Careers",
-      Blog: "Blog",
       Contact: "Contact",
       "Regular cleaning": "Regular cleaning",
       "Deep cleaning": "Deep cleaning",
@@ -184,7 +214,6 @@ export default {
       "Office & commercial cleaning": "Office & commercial cleaning",
       "Holiday home & Airbnb cleaning": "Holiday home & Airbnb cleaning",
       "Emergency cleaning": "Emergency cleaning",
-      Pricing: "Pricing",
       FAQ: "FAQ",
       "Book a cleaning": "Book a cleaning",
       "Privacy policy": "Privacy policy",
@@ -596,6 +625,12 @@ export default {
       coverageSome: "This service is offered in the cities below.",
       coverageEmpty:
         "No city is enabled for this service yet — get in touch and we'll check your area.",
+      reviews: {
+        title: "What customers say",
+        subtitle: "from {count} verified review(s) of this service",
+        anonymous: "Verified customer",
+        showAll: "Show all {count} reviews",
+      },
       summaryTitle: "Ready when you are",
       summaryBody:
         "Book {service} in about a minute — pick your city, date and time and you're done.",
@@ -643,22 +678,6 @@ export default {
       ctaTitle: "Not sure which clean you need?",
       ctaSubtitle:
         "Tell us about your place and we'll recommend the right service and duration.",
-    },
-    pricing: {
-      heroEyebrow: "Pricing",
-      heroTitle: "Simple pricing that scales with you",
-      heroSubtitle:
-        "Pay per visit or save with a regular plan. No contracts, no setup fees, no surprises.",
-      disclaimer:
-        "Prices shown are starting points and vary by property size. You'll see an exact quote before you confirm any booking.",
-      addonsEyebrow: "Add-ons",
-      addonsTitle: "Tailor any clean with extras",
-      addonsSubtitle: "Layer on exactly what your place needs, when it needs it.",
-      faqEyebrow: "Pricing FAQ",
-      faqTitle: "Good to know",
-      ctaTitle: "Start with a single clean",
-      ctaSubtitle:
-        "No plan required. Book one visit, see the difference, then decide.",
     },
     about: {
       heroEyebrow: "About us",
@@ -726,6 +745,18 @@ export default {
         partnership: "Offices / business cleaning",
         support: "Existing customer support",
       },
+      // Shown when the submission genuinely failed — the message was NOT stored.
+      errorBody:
+        "We couldn't send your message just now. Please try again, or email us directly.",
+      // Field validation. These are referenced as keys by contactSchema.js.
+      errors: {
+        name: "Please enter your full name",
+        email: "Enter a valid email address",
+        phone: "Enter a valid phone number",
+        topic: "Select a topic",
+        messageShort: "Tell us a little more (at least 10 characters)",
+        messageLong: "Please keep it under 1000 characters",
+      },
     },
     faq: {
       heroEyebrow: "Help center",
@@ -759,25 +790,6 @@ export default {
       sendCv: "Send your CV",
       learnAbout: "Learn about us",
     },
-    blog: {
-      heroEyebrow: "The CasaClean blog",
-      heroTitle: "Practical guides for a cleaner home and office",
-      heroSubtitle:
-        "Checklists, room-by-room guides and honest advice from professional cleaners.",
-      searchPlaceholder: "Search articles…",
-      noResultsTitle: "No articles found",
-      noResultsBody: "Try a different category or search term.",
-      minRead: "min read",
-      allArticles: "All articles",
-      relatedEyebrow: "Keep reading",
-      relatedTitle: "Related articles",
-      notFoundTitle: "Article not found",
-      notFoundBody: "This post may have been moved or removed.",
-      backToBlog: "Back to blog",
-      ctaEyebrow: "Put it into practice",
-      ctaTitle: "Stop reading about spotless homes. Book one.",
-      ctaSubtitle: "See the CasaClean standard in your own space.",
-    },
     notFound: {
       code: "404",
       title: "This page has been swept away",
@@ -787,60 +799,6 @@ export default {
       services: "Browse services",
       goBack: "Go back",
     },
-  },
-
-  // ----- Pricing plans (keyed by plan id) -----
-  pricingPlans: {
-    payg: {
-      name: "One-Time Clean",
-      description: "Perfect for a one-off refresh, a special occasion or a trial run.",
-      cadence: "Billed per visit",
-      cta: "Book a cleaning",
-      features: [
-        "Standard home cleaning",
-        "Professional supplies included",
-        "Vetted, insured professional",
-        "Secure online payment",
-        "Spotless Guarantee",
-      ],
-    },
-    host: {
-      name: "Regular Clean",
-      description: "For homes cleaned weekly or every two weeks — our most popular plan.",
-      cadence: "Billed monthly · save 20%",
-      badge: "Most popular",
-      cta: "Start a regular plan",
-      features: [
-        "Everything in One-Time Clean",
-        "The same trusted cleaner each visit",
-        "Priority & same-day scheduling",
-        "Skip or reschedule anytime",
-        "Laundry & ironing add-on discount",
-        "Dedicated support line",
-      ],
-    },
-    portfolio: {
-      name: "Business & Offices",
-      description: "Tailored cleaning for offices, studios, shops and landlords.",
-      cadence: "Tailored to your spaces",
-      unit: "Custom",
-      cta: "Talk to sales",
-      features: [
-        "Everything in Regular Clean",
-        "Out-of-hours scheduling",
-        "One monthly invoice",
-        "Dedicated account manager",
-        "Multiple locations, one contact",
-        "Custom SLAs & reporting",
-      ],
-    },
-  },
-
-  pricingAddons: {
-    deep: { label: "Deep clean", note: "Intensive top-to-bottom reset" },
-    linen: { label: "Laundry & ironing", note: "Washed, ironed and folded" },
-    restock: { label: "Inside fridge & oven", note: "Degreased and descaled, inside and out" },
-    staging: { label: "Interior windows", note: "Glass, frames and sills" },
   },
 
   // ----- Company (why choose CasaClean) -----
@@ -944,6 +902,10 @@ export default {
       },
     },
     quote: {
+      subtotal: "Subtotal (excl. VAT)",
+      vat: "VAT {rate}%",
+      vatReverseCharge: "VAT {rate}% — reverse charge",
+      reverseChargeNote: "No VAT is charged: your VAT number is verified, so VAT is accounted for by you under the EU reverse charge.",
       title: "Your quote",
       subtitle: "Updates as you build your booking.",
       empty: "Select a service to see your estimate.",
@@ -1101,6 +1063,22 @@ export default {
       imageProcessing: "Processing…",
       listAdd: "Add item",
       listRemove: "Remove",
+      i18n: {
+        progress: "{done} of {total} languages complete",
+        previous: "Previous language",
+        next: "Next language",
+        baseHint:
+          "Write the copy in {language} first — it's what customers see wherever a translation is missing.",
+        translationHint:
+          "Translate into {language}. Anything you leave blank keeps the {base} text.",
+        copyBase: "Copy {base} text",
+        clear: "Clear this language",
+        status: {
+          done: "Translated",
+          partial: "Partly translated",
+          empty: "Not translated",
+        },
+      },
     },
     confirm: {
       title: "Are you sure?",
@@ -1151,6 +1129,7 @@ export default {
       editTitle: "Edit booking",
       deleteTitle: "Delete booking",
       detailsTitle: "Booking details",
+      invoice: "Download invoice",
       col: {
         customer: "Customer",
         serviceCity: "Service / City",
@@ -1160,6 +1139,9 @@ export default {
         status: "Status",
       },
       detail: {
+        taxTreatment: "VAT treatment",
+        reverseCharge: "Reverse charge · VAT {vat}",
+        company: "Company",
         customer: "Customer",
         email: "Email",
         phone: "Phone",
@@ -1222,6 +1204,7 @@ export default {
         status: "Status",
       },
       field: {
+        content: "Service copy (per language)",
         name: "Name",
         image: "Service image",
         imageHint: "Shown on the service card. A wide (16:10) photo works best.",
@@ -1265,6 +1248,7 @@ export default {
         status: "Status",
       },
       field: {
+        content: "Add-on copy (per language)",
         name: "Name",
         price: "Surcharge (€)",
         description: "Description",
@@ -1289,6 +1273,7 @@ export default {
         status: "Status",
       },
       field: {
+        content: "Tool copy (per language)",
         name: "Name",
         price: "Extra price (€)",
         description: "Description",
@@ -1314,9 +1299,9 @@ export default {
         status: "Status",
       },
       field: {
-        name: "Name (English)",
-        nameIt: "Name (Italian)",
-        nameKa: "Name (Georgian)",
+        content: "City name (per language)",
+        name: "Name",
+        nameHint: "The city name as customers see it.",
         workingDays: "Working days",
         workingDaysHint: "Comma-separated, 1 = Monday … 7 = Sunday",
         opensAt: "Opens at",
@@ -1378,8 +1363,14 @@ export default {
     quality: {
       title: "Quality & reviews",
       description:
-        "Customer review scores and comments. Reviews can only be left by customers after a completed booking.",
+        "Customer review scores and comments. Reviews can only be left by customers after a completed booking, and nothing is shown on the public site until you publish it.",
       search: "Search reviews…",
+      publishAria: "Show this review on the public site",
+      publish: {
+        label: "Show on the public site",
+        onHint: "Published on {date} — visible to visitors.",
+        offHint: "Pending — not visible to visitors yet.",
+      },
       emptyTitle: "No reviews yet",
       emptyDescription:
         "Reviews appear here once customers rate their completed bookings.",
@@ -1394,6 +1385,8 @@ export default {
         totalHint: "All time",
         positive: "Positive (4–5★)",
         positiveHint: "{count} of {total}",
+        published: "Published",
+        publishedHint: "{count} waiting for approval",
       },
       col: {
         customer: "Customer",
@@ -1402,6 +1395,7 @@ export default {
         rating: "Rating",
         comment: "Comment",
         date: "Date",
+        published: "Public",
       },
       detail: {
         title: "Review detail",
@@ -1467,10 +1461,68 @@ export default {
         "user-request": "Paused by customer",
       },
     },
+    invoices: {
+      title: "Invoices",
+      description:
+        "Every payment's invoice, emailed to the customer as a PDF. Export or resend any of them here.",
+      search: "Search invoices…",
+      emptyTitle: "No invoices yet",
+      emptyDescription:
+        "An invoice is issued automatically after each successful payment.",
+      error: "We couldn't load invoices. Please try again.",
+      allStatuses: "All statuses",
+      items: "Items",
+      download: "Download PDF",
+      downloadPdf: "Download PDF",
+      resend: "Resend by email",
+      sent: "Sent",
+      notSent: "Not sent",
+      sentTo: "Sent to {email} on {date}",
+      paidByCard: "Paid by card",
+      paidOffline: "Paid offline",
+      downloadFailed: "The invoice PDF couldn't be downloaded. Please try again.",
+      sendFailed: "The invoice couldn't be sent. Please try again.",
+      detailTitle: "Invoice details",
+      reverseCharge: "Reverse charge · customer VAT {vat}",
+      col: {
+        number: "Invoice / booking",
+        customer: "Customer",
+        service: "Service / date",
+        issued: "Issued",
+        total: "Total",
+        delivery: "Delivery",
+        status: "Status",
+      },
+      detail: {
+        vatReverseCharge: "VAT — reverse charge",
+        taxTreatment: "VAT treatment",
+        number: "Invoice number",
+        issued: "Issue date",
+        booking: "Booking",
+        customer: "Customer",
+        email: "Email",
+        address: "Address",
+        service: "Service",
+        dateTime: "Date & time",
+        hoursCleaners: "Hours / cleaners",
+        payment: "Payment",
+        paymentRef: "Payment reference",
+        delivery: "Email delivery",
+        subtotal: "Subtotal (net)",
+        vat: "VAT {rate}%",
+        totalPaid: "Total paid",
+        totalRefunded: "Total refunded",
+      },
+      status: {
+        issued: "Issued",
+        refunded: "Refunded",
+      },
+    },
     nav: {
       dashboard: "Dashboard",
       bookings: "Bookings",
       subscriptions: "Subscriptions",
+      invoices: "Invoices",
       calendar: "Calendar",
       services: "Services",
       specialRequests: "Special requests",
@@ -1479,7 +1531,57 @@ export default {
       coverage: "Bookings map",
       workers: "Workers",
       quality: "Quality",
+      messages: "Messages",
       users: "Users",
+    },
+    messages: {
+      title: "Messages",
+      description:
+        "Messages sent through the website contact form. The team is emailed when one arrives — mark a message as handled once you've replied.",
+      search: "Search messages…",
+      replySubject: "Re: your message to CasaClean",
+      sentReplies: "Answers sent",
+      replyLabel: "Your answer",
+      replyHint: "Sent to {email} from CasaClean, and marks this message handled.",
+      replyPlaceholder: "Write your answer…",
+      sendReply: "Send answer",
+      replyInMailClient: "Open in mail app",
+      replyFailed: "The reply could not be sent. Nothing was recorded — try again.",
+      handledAria: "Mark this message as handled",
+      handled: {
+        label: "Handled",
+        onHint: "Answered — no longer waiting.",
+        offHint: "Still waiting for a reply.",
+      },
+      status: {
+        new: "New",
+        handled: "Handled",
+      },
+      emptyTitle: "No messages yet",
+      emptyDescription: "Messages sent from the contact page appear here.",
+      deleteTitle: "Delete message",
+      deleteConfirm: "Delete this message from {name}? This can't be undone.",
+      stat: {
+        new: "Waiting",
+        newHint: "Not answered yet",
+        handled: "Handled",
+        handledHint: "Already answered",
+        total: "Total messages",
+        totalHint: "All time",
+      },
+      col: {
+        from: "From",
+        topic: "Topic",
+        message: "Message",
+        received: "Received",
+        handled: "Handled",
+      },
+      detail: {
+        title: "Message",
+        email: "Email",
+        phone: "Phone",
+        handledAt: "Handled",
+      },
     },
     calendar: {
       title: "Calendar",

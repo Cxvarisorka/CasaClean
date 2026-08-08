@@ -50,9 +50,41 @@ export default {
   },
 
   profile: {
+    billing: {
+      title: "Dati di fatturazione",
+      subtitle: "Fattura come privato o come azienda. Con una partita IVA verificata, l'IVA non viene aggiunta ai tuoi addebiti.",
+      individual: "Privato",
+      individualHint: "I prezzi sono IVA esclusa; viene aggiunta al pagamento.",
+      business: "Azienda",
+      businessHint: "Nessuna IVA applicata una volta verificata la partita IVA.",
+      companyName: "Ragione sociale",
+      companyNamePlaceholder: "Acme S.r.l.",
+      vatNumber: "Partita IVA",
+      vatNumberHint: "Includi il prefisso nazionale, es. IT01234567890. La verifichiamo tramite il registro VIES dell'UE.",
+      pendingNote: "Stiamo verificando la tua partita IVA nel registro UE. Fino alla conferma, l'IVA viene comunque addebitata.",
+      checkNow: "Verifica ora",
+      unverifiedNote: "Il registro UE non ha riconosciuto questa partita IVA, quindi l'IVA viene ancora addebitata. Controllala e salva di nuovo.",
+      reverseChargeActive: "L'IVA ({rate}%) non viene applicata alle tue prenotazioni in regime di inversione contabile UE.",
+      save: "Salva dati di fatturazione",
+      saved: "Salvato",
+      saveFailed: "Non e stato possibile salvare i dati di fatturazione. Riprova.",
+      refreshFailed: "Non e stato possibile verificare la partita IVA adesso. Riprova.",
+      status: {
+        verified: "Partita IVA verificata",
+        pending: "Verifica in corso...",
+        unverified: "Non verificata",
+      },
+    },
     title: "Il mio profilo",
     subtitle: "Gestisci i dati e le preferenze del tuo account.",
     menu: "Profilo",
+    nav: {
+      account: "Account",
+      bookings: "Prenotazioni",
+      subscriptions: "Abbonamenti",
+      billing: "Fatturazione e pagamenti",
+      security: "Sicurezza",
+    },
     account: "Account",
     personalInfo: "Informazioni personali",
     emailHint: "L'email non può essere modificata qui.",
@@ -143,9 +175,7 @@ export default {
 
   nav: {
     services: "Servizi",
-    pricing: "Prezzi",
     about: "Chi siamo",
-    blog: "Blog",
     faq: "FAQ",
     contact: "Contatti",
     careers: "Lavora con noi",
@@ -170,7 +200,6 @@ export default {
     links: {
       "About us": "Chi siamo",
       Careers: "Lavora con noi",
-      Blog: "Blog",
       Contact: "Contatti",
       "Regular cleaning": "Pulizia ordinaria",
       "Deep cleaning": "Pulizia profonda",
@@ -178,7 +207,6 @@ export default {
       "Office & commercial cleaning": "Pulizia uffici e attività commerciali",
       "Holiday home & Airbnb cleaning": "Pulizia case vacanze e Airbnb",
       "Emergency cleaning": "Pulizie urgenti",
-      Pricing: "Prezzi",
       FAQ: "FAQ",
       "Book a cleaning": "Prenota una pulizia",
       "Privacy policy": "Informativa privacy",
@@ -589,6 +617,12 @@ export default {
       coverageSome: "Questo servizio è offerto nelle città elencate qui sotto.",
       coverageEmpty:
         "Nessuna città è ancora attiva per questo servizio — contattaci e verificheremo la tua zona.",
+      reviews: {
+        title: "Cosa dicono i clienti",
+        subtitle: "da {count} recensione/i verificata/e di questo servizio",
+        anonymous: "Cliente verificato",
+        showAll: "Mostra tutte le {count} recensioni",
+      },
       summaryTitle: "Quando vuoi tu",
       summaryBody:
         "Prenota {service} in circa un minuto — scegli città, data e orario e il gioco è fatto.",
@@ -636,22 +670,6 @@ export default {
       ctaTitle: "Non sai quale pulizia ti serve?",
       ctaSubtitle:
         "Raccontaci del tuo spazio e ti consiglieremo il servizio e la durata giusti.",
-    },
-    pricing: {
-      heroEyebrow: "Prezzi",
-      heroTitle: "Prezzi semplici che crescono con te",
-      heroSubtitle:
-        "Paga a visita o risparmia con un piano regolare. Niente contratti, niente costi di attivazione, nessuna sorpresa.",
-      disclaimer:
-        "I prezzi indicati sono di partenza e variano in base alle dimensioni dell'immobile. Vedrai un preventivo esatto prima di confermare qualsiasi prenotazione.",
-      addonsEyebrow: "Extra",
-      addonsTitle: "Personalizza ogni pulizia con gli extra",
-      addonsSubtitle: "Aggiungi esattamente ciò che serve al tuo spazio, quando serve.",
-      faqEyebrow: "FAQ sui prezzi",
-      faqTitle: "Buono a sapersi",
-      ctaTitle: "Inizia con una singola pulizia",
-      ctaSubtitle:
-        "Nessun piano richiesto. Prenota una visita, vedi la differenza, poi decidi.",
     },
     about: {
       heroEyebrow: "Chi siamo",
@@ -719,6 +737,16 @@ export default {
         partnership: "Uffici / pulizie aziendali",
         support: "Assistenza per clienti esistenti",
       },
+      errorBody:
+        "Non siamo riusciti a inviare il tuo messaggio. Riprova oppure scrivici direttamente via email.",
+      errors: {
+        name: "Inserisci il tuo nome completo",
+        email: "Inserisci un indirizzo email valido",
+        phone: "Inserisci un numero di telefono valido",
+        topic: "Seleziona un argomento",
+        messageShort: "Raccontaci qualcosa in più (almeno 10 caratteri)",
+        messageLong: "Resta entro i 1000 caratteri",
+      },
     },
     faq: {
       heroEyebrow: "Centro assistenza",
@@ -752,25 +780,6 @@ export default {
       sendCv: "Invia il tuo CV",
       learnAbout: "Scopri di più su di noi",
     },
-    blog: {
-      heroEyebrow: "Il blog di CasaClean",
-      heroTitle: "Guide pratiche per una casa e un ufficio più puliti",
-      heroSubtitle:
-        "Checklist, guide stanza per stanza e consigli onesti da addetti alle pulizie professionisti.",
-      searchPlaceholder: "Cerca articoli…",
-      noResultsTitle: "Nessun articolo trovato",
-      noResultsBody: "Prova una categoria o un termine di ricerca diverso.",
-      minRead: "min di lettura",
-      allArticles: "Tutti gli articoli",
-      relatedEyebrow: "Continua a leggere",
-      relatedTitle: "Articoli correlati",
-      notFoundTitle: "Articolo non trovato",
-      notFoundBody: "Questo articolo potrebbe essere stato spostato o rimosso.",
-      backToBlog: "Torna al blog",
-      ctaEyebrow: "Mettilo in pratica",
-      ctaTitle: "Smetti di leggere di case impeccabili. Prenotane una.",
-      ctaSubtitle: "Scopri lo standard CasaClean nel tuo spazio.",
-    },
     notFound: {
       code: "404",
       title: "Questa pagina è stata spazzata via",
@@ -780,59 +789,6 @@ export default {
       services: "Sfoglia i servizi",
       goBack: "Torna indietro",
     },
-  },
-
-  pricingPlans: {
-    payg: {
-      name: "Pulizia Singola",
-      description: "Perfetta per un riordino una tantum, un'occasione speciale o una prova.",
-      cadence: "Fatturata a visita",
-      cta: "Prenota una pulizia",
-      features: [
-        "Pulizia standard della casa",
-        "Prodotti professionali inclusi",
-        "Professionista selezionato e assicurato",
-        "Pagamento online sicuro",
-        "Garanzia Impeccabile",
-      ],
-    },
-    host: {
-      name: "Pulizia Regolare",
-      description: "Per case pulite ogni settimana o ogni due — il nostro piano più popolare.",
-      cadence: "Fatturato mensile · risparmia 20%",
-      badge: "Più popolare",
-      cta: "Inizia un piano regolare",
-      features: [
-        "Tutto quanto incluso in Pulizia Singola",
-        "Lo stesso addetto di fiducia ad ogni visita",
-        "Priorità e pianificazione in giornata",
-        "Salta o riprogramma quando vuoi",
-        "Sconto sull'extra lavanderia e stiratura",
-        "Linea di supporto dedicata",
-      ],
-    },
-    portfolio: {
-      name: "Aziende e Uffici",
-      description: "Pulizie su misura per uffici, studi, negozi e proprietari.",
-      cadence: "Su misura per i tuoi spazi",
-      unit: "Personalizzato",
-      cta: "Contatta le vendite",
-      features: [
-        "Tutto quanto incluso in Pulizia Regolare",
-        "Pianificazione fuori orario",
-        "Un'unica fattura mensile",
-        "Account manager dedicato",
-        "Più sedi, un solo referente",
-        "SLA e reportistica personalizzati",
-      ],
-    },
-  },
-
-  pricingAddons: {
-    deep: { label: "Pulizia profonda", note: "Reset intensivo dall'alto in basso" },
-    linen: { label: "Lavanderia e stiratura", note: "Lavato, stirato e piegato" },
-    restock: { label: "Interno frigo e forno", note: "Sgrassati e decalcificati, dentro e fuori" },
-    staging: { label: "Vetri interni", note: "Vetri, infissi e davanzali" },
   },
 
   values: {
@@ -930,6 +886,10 @@ export default {
       },
     },
     quote: {
+      subtotal: "Subtotale (IVA esclusa)",
+      vat: "IVA {rate}%",
+      vatReverseCharge: "IVA {rate}% — inversione contabile",
+      reverseChargeNote: "Nessuna IVA addebitata: la tua partita IVA e verificata, quindi l'IVA e assolta da te in regime di inversione contabile UE.",
       title: "Il tuo preventivo",
       subtitle: "Si aggiorna mentre componi la prenotazione.",
       empty: "Seleziona un servizio per vedere la stima.",
@@ -1088,6 +1048,22 @@ export default {
       imageProcessing: "Elaborazione…",
       listAdd: "Aggiungi voce",
       listRemove: "Rimuovi",
+      i18n: {
+        progress: "{done} lingue su {total} completate",
+        previous: "Lingua precedente",
+        next: "Lingua successiva",
+        baseHint:
+          "Scrivi prima i testi in {language}: sono quelli mostrati quando manca una traduzione.",
+        translationHint:
+          "Traduci in {language}. I campi lasciati vuoti mantengono il testo in {base}.",
+        copyBase: "Copia il testo in {base}",
+        clear: "Svuota questa lingua",
+        status: {
+          done: "Tradotta",
+          partial: "Tradotta in parte",
+          empty: "Non tradotta",
+        },
+      },
     },
     confirm: {
       title: "Sei sicuro?",
@@ -1138,6 +1114,7 @@ export default {
       editTitle: "Modifica prenotazione",
       deleteTitle: "Elimina prenotazione",
       detailsTitle: "Dettagli prenotazione",
+      invoice: "Scarica fattura",
       col: {
         customer: "Cliente",
         serviceCity: "Servizio / città",
@@ -1147,6 +1124,9 @@ export default {
         status: "Stato",
       },
       detail: {
+        taxTreatment: "Regime IVA",
+        reverseCharge: "Inversione contabile · P. IVA {vat}",
+        company: "Azienda",
         customer: "Cliente",
         email: "Email",
         phone: "Telefono",
@@ -1208,7 +1188,8 @@ export default {
         status: "Stato",
       },
       field: {
-        name: "Nome (inglese)",
+        content: "Testi del servizio (per lingua)",
+        name: "Nome",
         image: "Immagine del servizio",
         imageHint: "Mostrata sulla scheda del servizio. Ideale una foto panoramica (16:10).",
         subtitle: "Sottotitolo",
@@ -1256,6 +1237,7 @@ export default {
         status: "Stato",
       },
       field: {
+        content: "Testi del servizio extra (per lingua)",
         name: "Nome",
         price: "Sovrapprezzo (€)",
         description: "Descrizione",
@@ -1280,6 +1262,7 @@ export default {
         status: "Stato",
       },
       field: {
+        content: "Testi dell'attrezzo (per lingua)",
         name: "Nome",
         price: "Prezzo extra (€)",
         description: "Descrizione",
@@ -1305,9 +1288,9 @@ export default {
         status: "Stato",
       },
       field: {
-        name: "Nome (inglese)",
-        nameIt: "Nome (italiano)",
-        nameKa: "Nome (georgiano)",
+        content: "Nome della città (per lingua)",
+        name: "Nome",
+        nameHint: "Il nome della città come lo vedono i clienti.",
         workingDays: "Giorni lavorativi",
         workingDaysHint: "Separati da virgola, 1 = lunedì … 7 = domenica",
         opensAt: "Apre alle",
@@ -1369,8 +1352,14 @@ export default {
     quality: {
       title: "Qualità e recensioni",
       description:
-        "Punteggi e commenti dei clienti. Le recensioni possono essere lasciate solo dai clienti dopo una prenotazione completata.",
+        "Punteggi e commenti dei clienti. Le recensioni possono essere lasciate solo dai clienti dopo una prenotazione completata e non compaiono sul sito pubblico finché non le pubblichi.",
       search: "Cerca recensioni…",
+      publishAria: "Mostra questa recensione sul sito pubblico",
+      publish: {
+        label: "Mostra sul sito pubblico",
+        onHint: "Pubblicata il {date} — visibile ai visitatori.",
+        offHint: "In attesa — non ancora visibile ai visitatori.",
+      },
       emptyTitle: "Nessuna recensione",
       emptyDescription:
         "Le recensioni appaiono qui quando i clienti valutano le prenotazioni completate.",
@@ -1385,6 +1374,8 @@ export default {
         totalHint: "Da sempre",
         positive: "Positive (4–5★)",
         positiveHint: "{count} su {total}",
+        published: "Pubblicate",
+        publishedHint: "{count} in attesa di approvazione",
       },
       col: {
         customer: "Cliente",
@@ -1393,6 +1384,7 @@ export default {
         rating: "Valutazione",
         comment: "Commento",
         date: "Data",
+        published: "Pubblica",
       },
       detail: {
         title: "Dettaglio recensione",
@@ -1438,10 +1430,68 @@ export default {
         "user-request": "In pausa su richiesta del cliente",
       },
     },
+    invoices: {
+      title: "Fatture",
+      description:
+        "La fattura di ogni pagamento, inviata al cliente in PDF. Esportala o inviala di nuovo da qui.",
+      search: "Cerca fatture…",
+      emptyTitle: "Nessuna fattura",
+      emptyDescription:
+        "Una fattura viene emessa automaticamente dopo ogni pagamento riuscito.",
+      error: "Impossibile caricare le fatture. Riprova.",
+      allStatuses: "Tutti gli stati",
+      items: "Voci",
+      download: "Scarica PDF",
+      downloadPdf: "Scarica PDF",
+      resend: "Invia di nuovo via email",
+      sent: "Inviata",
+      notSent: "Non inviata",
+      sentTo: "Inviata a {email} il {date}",
+      paidByCard: "Pagata con carta",
+      paidOffline: "Pagata offline",
+      downloadFailed: "Non è stato possibile scaricare il PDF. Riprova.",
+      sendFailed: "Non è stato possibile inviare la fattura. Riprova.",
+      detailTitle: "Dettagli fattura",
+      reverseCharge: "Inversione contabile · P. IVA cliente {vat}",
+      col: {
+        number: "Fattura / prenotazione",
+        customer: "Cliente",
+        service: "Servizio / data",
+        issued: "Emessa",
+        total: "Totale",
+        delivery: "Invio",
+        status: "Stato",
+      },
+      detail: {
+        vatReverseCharge: "IVA — inversione contabile",
+        taxTreatment: "Regime IVA",
+        number: "Numero fattura",
+        issued: "Data di emissione",
+        booking: "Prenotazione",
+        customer: "Cliente",
+        email: "Email",
+        address: "Indirizzo",
+        service: "Servizio",
+        dateTime: "Data e ora",
+        hoursCleaners: "Ore / addetti",
+        payment: "Pagamento",
+        paymentRef: "Riferimento pagamento",
+        delivery: "Invio email",
+        subtotal: "Imponibile",
+        vat: "IVA {rate}%",
+        totalPaid: "Totale pagato",
+        totalRefunded: "Totale rimborsato",
+      },
+      status: {
+        issued: "Emessa",
+        refunded: "Rimborsata",
+      },
+    },
     nav: {
       dashboard: "Dashboard",
       bookings: "Prenotazioni",
       subscriptions: "Abbonamenti",
+      invoices: "Fatture",
       calendar: "Calendario",
       services: "Servizi",
       specialRequests: "Richieste speciali",
@@ -1450,7 +1500,61 @@ export default {
       coverage: "Mappa prenotazioni",
       workers: "Addetti",
       quality: "Qualità",
+      messages: "Messaggi",
       users: "Utenti",
+    },
+    messages: {
+      title: "Messaggi",
+      description:
+        "Messaggi inviati tramite il modulo di contatto del sito. Il team riceve un'email all'arrivo — segna un messaggio come gestito dopo aver risposto.",
+      search: "Cerca messaggi…",
+      replySubject: "Re: il tuo messaggio a CasaClean",
+      sentReplies: "Risposte inviate",
+      replyLabel: "La tua risposta",
+      replyHint:
+        "Inviata a {email} da CasaClean; il messaggio viene segnato come gestito.",
+      replyPlaceholder: "Scrivi la tua risposta…",
+      sendReply: "Invia risposta",
+      replyInMailClient: "Apri nel client di posta",
+      replyFailed:
+        "Non è stato possibile inviare la risposta. Non è stato registrato nulla — riprova.",
+      handledAria: "Segna questo messaggio come gestito",
+      handled: {
+        label: "Gestito",
+        onHint: "Risposto — non è più in attesa.",
+        offHint: "In attesa di risposta.",
+      },
+      status: {
+        new: "Nuovo",
+        handled: "Gestito",
+      },
+      emptyTitle: "Nessun messaggio",
+      emptyDescription:
+        "I messaggi inviati dalla pagina contatti compaiono qui.",
+      deleteTitle: "Elimina messaggio",
+      deleteConfirm:
+        "Eliminare questo messaggio di {name}? L'operazione non è reversibile.",
+      stat: {
+        new: "In attesa",
+        newHint: "Ancora senza risposta",
+        handled: "Gestiti",
+        handledHint: "Già risposti",
+        total: "Messaggi totali",
+        totalHint: "Da sempre",
+      },
+      col: {
+        from: "Da",
+        topic: "Argomento",
+        message: "Messaggio",
+        received: "Ricevuto",
+        handled: "Gestito",
+      },
+      detail: {
+        title: "Messaggio",
+        email: "Email",
+        phone: "Telefono",
+        handledAt: "Gestito",
+      },
     },
     calendar: {
       title: "Calendario",

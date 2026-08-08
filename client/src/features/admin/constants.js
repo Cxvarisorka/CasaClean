@@ -3,6 +3,7 @@ import {
   CalendarCheck,
   CalendarClock,
   CalendarDays,
+  FileText,
   Sparkles,
   ListPlus,
   Brush,
@@ -11,6 +12,7 @@ import {
   Users,
   HardHat,
   Star,
+  Inbox,
 } from "lucide-react";
 import { ROUTES } from "@/constants/routes";
 
@@ -27,6 +29,7 @@ export const ADMIN_NAV = [
   { to: ROUTES.admin.dashboard, label: "Dashboard", labelKey: "admin.nav.dashboard", icon: LayoutDashboard, end: true },
   { to: ROUTES.admin.bookings, label: "Bookings", labelKey: "admin.nav.bookings", icon: CalendarCheck },
   { to: ROUTES.admin.subscriptions, label: "Subscriptions", labelKey: "admin.nav.subscriptions", icon: CalendarClock },
+  { to: ROUTES.admin.invoices, label: "Invoices", labelKey: "admin.nav.invoices", icon: FileText },
   { to: ROUTES.admin.calendar, label: "Calendar", labelKey: "admin.nav.calendar", icon: CalendarDays },
   { to: ROUTES.admin.services, label: "Services", labelKey: "admin.nav.services", icon: Sparkles },
   { to: ROUTES.admin.specialRequests, label: "Special requests", labelKey: "admin.nav.specialRequests", icon: ListPlus },
@@ -35,6 +38,7 @@ export const ADMIN_NAV = [
   { to: ROUTES.admin.coverage, label: "Bookings map", labelKey: "admin.nav.coverage", icon: Map },
   { to: ROUTES.admin.workers, label: "Workers", labelKey: "admin.nav.workers", icon: HardHat },
   { to: ROUTES.admin.quality, label: "Quality", labelKey: "admin.nav.quality", icon: Star },
+  { to: ROUTES.admin.messages, label: "Messages", labelKey: "admin.nav.messages", icon: Inbox },
   { to: ROUTES.admin.users, label: "Users", labelKey: "admin.nav.users", icon: Users },
 ];
 
@@ -47,6 +51,14 @@ export const BOOKING_STATUS_META = {
   confirmed: { label: "Confirmed", labelKey: "admin.status.confirmed", variant: "brand" },
   completed: { label: "Completed", labelKey: "admin.status.completed", variant: "success" },
   cancelled: { label: "Cancelled", labelKey: "admin.status.cancelled", variant: "outline" },
+};
+
+// Contact-inbox triage badges. These names match the server enum exactly
+// (utils/contact.util.js CONTACT_STATUSES) so a toggle PATCHes a value the API
+// accepts.
+export const CONTACT_STATUS_META = {
+  new: { label: "New", labelKey: "admin.messages.status.new", variant: "accent" },
+  handled: { label: "Handled", labelKey: "admin.messages.status.handled", variant: "success" },
 };
 
 // Recurring subscription lifecycle badges. These names match the server enum

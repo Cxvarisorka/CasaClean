@@ -34,9 +34,13 @@ const EMPTY_DB = {
   users: [],
   // Cleaning staff, managed via the admin-only /worker endpoints.
   workers: [],
-  // Customer reviews, loaded from the admin-only GET /review feed. The panel
-  // only reads + moderates (deletes) these — they're authored by customers.
+  // Customer reviews, loaded from the admin-only GET /review feed. They're
+  // authored by customers, so the panel only reads and moderates them: publish
+  // / hide on the public site, or delete.
   reviews: [],
+  // Website contact-form submissions. Read-only apart from their triage status
+  // (new / handled).
+  contactMessages: [],
 };
 
 export function AdminDataProvider({ children }) {
@@ -48,7 +52,7 @@ export function AdminDataProvider({ children }) {
   // (e.g. bookings, which needs the admin role) doesn't blank the whole panel.
   const refresh = useCallback(async () => {
     setLoading(true);
-    const names = ["cities", "services", "specialRequests", "cleaningTools", "bookings", "users", "workers", "reviews"];
+    const names = ["cities", "services", "specialRequests", "cleaningTools", "bookings", "users", "workers", "reviews", "contactMessages"];
     const results = await Promise.allSettled(
       names.map((name) => RESOURCES[name].list())
     );
@@ -92,9 +96,19 @@ export function AdminDataProvider({ children }) {
             window.alert("This collection isn't backed by the API.");
           return false;
         }
+        // A rejected write is usually a per-field validation failure, and the
+        // bare envelope message ("Validation failed!") tells the admin nothing
+        // about WHICH field. The API returns the field errors alongside it —
+        // append them so the dialog is actionable.
         const message =
           err?.message || "The request failed. Please try again.";
-        if (typeof window !== "undefined") window.alert(message);
+        const details = err?.fields
+          ? Object.entries(err.fields)
+              .map(([field, msgs]) => `• ${field}: ${[].concat(msgs).join(" ")}`)
+              .join("\n")
+          : "";
+        if (typeof window !== "undefined")
+          window.alert(details ? `${message}\n\n${details}` : message);
         await refresh();
         return false;
       }
@@ -179,6 +193,9 @@ export function AdminDataProvider({ children }) {
       reviews: reviewCount,
       avgRating,
       ratingDistribution,
+      contactMessages: db.contactMessages.length,
+      // Untriaged messages — what the inbox badge counts.
+      newContactMessages: db.contactMessages.filter((m) => m.status !== "handled").length,
     };
   }, [db]);
 
