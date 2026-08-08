@@ -60,17 +60,25 @@ const sendErrorDev = (err, res) => {
         error: err,
         message: err.message,
         stack: err.stack,
-        errors: err.details || []
+        errors: err.details || [],
+        // Same key the production envelope uses, so the client reads field
+        // errors identically in both environments.
+        ...(err.details ? { fields: err.details } : {})
     });
 };
 
 const sendErrorProd = (err, res) => {
     // Trusted, expected errors -> send detail to the client.
     if (err.isOperational) {
+        // `details` on an operational AppError is only ever our own per-field
+        // validation messages (validate.middleware flattens Zod's fieldErrors
+        // into it), so it carries no internals. Sending it lets the UI say WHICH
+        // field was rejected instead of a bare "Validation failed!".
         return res.status(err.statusCode).json({
             success: false,
             status: err.status,
-            message: err.message
+            message: err.message,
+            ...(err.details ? { fields: err.details } : {})
         });
     }
 

@@ -22,11 +22,17 @@ const COLORS = {
     border: "#eceef2"
 };
 
+// Default footer line. Correct for the account emails this shell was written
+// for; templates addressed to somebody else (e.g. the team's contact-form
+// notification) pass their own `footerNote`.
+const DEFAULT_FOOTER_NOTE =
+    "You received this email because an account was created with this address on CasaClean.";
+
 /**
  * Generic branded shell shared by all emails: coloured header, white card body
  * and a muted footer. `bodyContent` is injected as the card's inner HTML.
  */
-const baseLayout = ({ title, bodyContent }) => `
+const baseLayout = ({ title, bodyContent, footerNote = DEFAULT_FOOTER_NOTE }) => `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -66,7 +72,7 @@ const baseLayout = ({ title, bodyContent }) => `
                     <tr>
                         <td style="padding:24px 40px 32px; border-top:1px solid ${COLORS.border}; text-align:center;">
                             <p style="margin:0 0 4px; font-size:12px; color:${COLORS.muted};">
-                                You received this email because an account was created with this address on CasaClean.
+                                ${footerNote}
                             </p>
                             <p style="margin:0; font-size:12px; color:${COLORS.muted};">
                                 &copy; ${new Date().getFullYear()} CasaClean. All rights reserved.
@@ -205,4 +211,148 @@ const passwordResetEmail = ({ fullname, url, expiresInMinutes }) => {
     return { subject, html: baseLayout({ title: subject, bodyContent }), text };
 };
 
-module.exports = { verificationEmail, passwordResetEmail };
+// Human-readable topic labels for the notification subject/body. Keys mirror
+// CONTACT_TOPICS (utils/contact.util.js); an unknown value falls back to itself.
+const TOPIC_LABELS = {
+    general: "General enquiry",
+    booking: "Booking a turnover",
+    pricing: "Pricing & plans",
+    partnership: "Property manager / partnership",
+    support: "Existing customer support"
+};
+
+/**
+ * Contact-form notification, sent to the team (CONTACT_NOTIFY_EMAIL) — NOT to
+ * the person who wrote it.
+ *
+ * Every value here is unauthenticated, customer-typed text, so all of it goes
+ * through escapeHtml before it touches the markup. The message body is rendered
+ * in a <pre>-like block so the sender's line breaks survive.
+ *
+ * @param {Object} opts
+ * @param {string} opts.name    - sender's name
+ * @param {string} opts.email   - sender's reply address
+ * @param {string} [opts.phone] - optional phone number
+ * @param {string} opts.topic   - one of CONTACT_TOPICS
+ * @param {string} opts.message - the message body
+ * @param {Date}   [opts.submittedAt] - arrival time (defaults to now)
+ * @returns {{ subject: string, html: string, text: string }}
+ */
+const contactMessageEmail = ({ name, email, phone, topic, message, submittedAt }) => {
+    const topicLabel = TOPIC_LABELS[topic] || topic;
+    const subject = `New contact message — ${topicLabel}`;
+    const received = (submittedAt instanceof Date ? submittedAt : new Date()).toISOString();
+
+    // Small label/value row, repeated for each detail.
+    const row = (label, value) => `
+        <tr>
+            <td style="padding:6px 12px 6px 0; font-size:13px; color:${COLORS.muted}; white-space:nowrap; vertical-align:top;">${label}</td>
+            <td style="padding:6px 0; font-size:14px; color:${COLORS.ink};">${value}</td>
+        </tr>`;
+
+    const safeEmail = escapeHtml(email);
+
+    const bodyContent = `
+        <h1 style="margin:0 0 12px; font-size:22px; color:${COLORS.ink};">
+            New contact message
+        </h1>
+        <p style="margin:0 0 20px; font-size:15px; line-height:1.6; color:${COLORS.muted};">
+            Someone just wrote to you through the website contact form.
+            Replying to this email goes straight back to them.
+        </p>
+
+        <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%; margin-bottom:20px;">
+            ${row("From", escapeHtml(name))}
+            ${row("Email", `<a href="mailto:${safeEmail}" style="color:${COLORS.brand};">${safeEmail}</a>`)}
+            ${phone ? row("Phone", escapeHtml(phone)) : ""}
+            ${row("Topic", escapeHtml(topicLabel))}
+            ${row("Received", escapeHtml(received))}
+        </table>
+
+        <div style="padding:16px 18px; background-color:${COLORS.canvas}; border:1px solid ${COLORS.border}; border-radius:10px;">
+            <p style="margin:0; font-size:14px; line-height:1.7; color:${COLORS.ink}; white-space:pre-wrap;">${escapeHtml(message)}</p>
+        </div>`;
+
+    const text =
+        `New contact message — ${topicLabel}\n\n` +
+        `From: ${name} <${email}>\n` +
+        (phone ? `Phone: ${phone}\n` : "") +
+        `Received: ${received}\n\n` +
+        `${message}\n`;
+
+    return {
+        subject,
+        html: baseLayout({
+            title: subject,
+            bodyContent,
+            footerNote: "You received this email because it is the CasaClean contact-form notification address."
+        }),
+        text
+    };
+};
+
+/**
+ * The team's answer to a contact-form message, sent to the customer from the
+ * admin panel.
+ *
+ * The original message is quoted underneath so the customer has the context —
+ * they wrote days ago and won't remember the wording. Both the answer and the
+ * quote are escaped: the answer is admin-typed but still ends up in HTML, and
+ * the quote is the customer's own unauthenticated text.
+ *
+ * @param {Object} opts
+ * @param {string} opts.customerName    - who we're writing to
+ * @param {string} opts.replyBody       - the answer the admin typed
+ * @param {string} opts.originalMessage - the message being answered
+ * @param {Date}   [opts.originalSentAt] - when they wrote to us
+ * @returns {{ subject: string, html: string, text: string }}
+ */
+const contactReplyEmail = ({ customerName, replyBody, originalMessage, originalSentAt }) => {
+    const subject = "Re: your message to CasaClean";
+    const sentOn = originalSentAt instanceof Date ? originalSentAt.toISOString().slice(0, 10) : null;
+
+    const bodyContent = `
+        <h1 style="margin:0 0 12px; font-size:22px; color:${COLORS.ink};">
+            Hello, ${escapeHtml(customerName)}
+        </h1>
+        <p style="margin:0 0 20px; font-size:15px; line-height:1.6; color:${COLORS.muted};">
+            Thanks for writing to <strong style="color:${COLORS.ink};">CasaClean</strong>.
+            Here's our answer — just reply to this email if anything is still unclear.
+        </p>
+
+        <div style="padding:16px 18px; background-color:${COLORS.canvas}; border:1px solid ${COLORS.border}; border-radius:10px;">
+            <p style="margin:0; font-size:15px; line-height:1.7; color:${COLORS.ink}; white-space:pre-wrap;">${escapeHtml(replyBody)}</p>
+        </div>
+
+        <hr style="border:none; border-top:1px solid ${COLORS.border}; margin:24px 0;" />
+
+        <p style="margin:0 0 8px; font-size:13px; color:${COLORS.muted};">
+            ${sentOn ? `Your message from ${escapeHtml(sentOn)}:` : "Your message:"}
+        </p>
+        <p style="margin:0; padding-left:14px; border-left:3px solid ${COLORS.border}; font-size:13px; line-height:1.6; color:${COLORS.muted}; white-space:pre-wrap;">${escapeHtml(originalMessage)}</p>`;
+
+    const text =
+        `Hello ${customerName},\n\n` +
+        `Thanks for writing to CasaClean. Here's our answer:\n\n` +
+        `${replyBody}\n\n` +
+        `---\n` +
+        `${sentOn ? `Your message from ${sentOn}:` : "Your message:"}\n` +
+        `${originalMessage}\n`;
+
+    return {
+        subject,
+        html: baseLayout({
+            title: subject,
+            bodyContent,
+            footerNote: "You received this email because you contacted CasaClean through our website."
+        }),
+        text
+    };
+};
+
+module.exports = {
+    verificationEmail,
+    passwordResetEmail,
+    contactMessageEmail,
+    contactReplyEmail
+};
