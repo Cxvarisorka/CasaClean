@@ -59,17 +59,14 @@ export function localBusinessSchema() {
   };
 }
 
+// No `potentialAction`/SearchAction: the site has no search endpoint to point
+// one at, and advertising a URL that doesn't handle `?q=` is invalid markup.
 export function websiteSchema() {
   return {
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: SITE.name,
     url: SITE.url,
-    potentialAction: {
-      "@type": "SearchAction",
-      target: `${SITE.url}/blog?q={search_term_string}`,
-      "query-input": "required name=search_term_string",
-    },
   };
 }
 
@@ -98,7 +95,12 @@ export function faqSchema(faqs = []) {
   };
 }
 
-export function serviceSchema(service) {
+/**
+ * `rating` is the aggregate over the service's PUBLISHED reviews. It's only
+ * emitted when there is at least one — search engines (rightly) treat an
+ * aggregateRating with no reviews behind it as invalid markup.
+ */
+export function serviceSchema(service, rating = null) {
   return {
     "@context": "https://schema.org",
     "@type": "Service",
@@ -111,22 +113,14 @@ export function serviceSchema(service) {
       price: service.startingAt,
       priceCurrency: "EUR",
     },
-  };
-}
-
-export function articleSchema(post) {
-  return {
-    "@context": "https://schema.org",
-    "@type": "BlogPosting",
-    headline: post.title,
-    description: post.excerpt,
-    datePublished: post.publishedAt,
-    author: { "@type": "Person", name: post.author.name },
-    publisher: {
-      "@type": "Organization",
-      name: SITE.name,
-      logo: { "@type": "ImageObject", url: `${SITE.url}/logo.png` },
-    },
-    mainEntityOfPage: `${SITE.url}/blog/${post.slug}`,
+    ...(rating?.count > 0 && {
+      aggregateRating: {
+        "@type": "AggregateRating",
+        ratingValue: rating.value,
+        reviewCount: rating.count,
+        bestRating: 5,
+        worstRating: 1,
+      },
+    }),
   };
 }

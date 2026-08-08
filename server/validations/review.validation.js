@@ -28,4 +28,11 @@ const editReviewSchema = z.object({
     review_text: reviewTextField.optional()
 }).strict({ message: "Unknown fields are not allowed!" });
 
-module.exports = { createReviewSchema, editReviewSchema };
+// Schema for the admin moderation toggle (PATCH /review/:id/publish). The flag
+// is explicit rather than a bare "toggle" so a stale admin table can't flip a
+// review that someone else already moderated.
+const moderateReviewSchema = z.object({
+    isPublished: z.boolean({ message: "isPublished must be a boolean!" })
+}).strict({ message: "Unknown fields are not allowed!" });
+
+module.exports = { createReviewSchema, editReviewSchema, moderateReviewSchema };

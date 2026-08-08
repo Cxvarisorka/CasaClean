@@ -38,14 +38,28 @@ const reviewSchema = new mongoose.Schema({
     required: [true, 'Review text cannot be empty'],
     trim: true,
     maxlength: [500, 'Review text cannot exceed 500 characters']
+  },
+  // Moderation gate. Customer-authored text is never shown on the public site
+  // until an admin approves it (PATCH /review/:id/publish), so an abusive or
+  // off-topic review can't go live on its own. Default false = pending review.
+  isPublished: {
+    type: Boolean,
+    default: false
+  },
+  // When it was last approved — surfaced in the admin feed so moderation order
+  // is visible. Cleared again whenever the review is unpublished.
+  publishedAt: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true,
   collection: 'reviews'
 });
 
-// Public per-service listing, newest first.
-reviewSchema.index({ service_id: 1, createdAt: -1 });
+// Public per-service listing, newest first. `isPublished` is part of the key
+// because the public query always filters on it (approved reviews only).
+reviewSchema.index({ service_id: 1, isPublished: 1, createdAt: -1 });
 // "My reviews" — resolve which of a user's bookings are already rated.
 reviewSchema.index({ user: 1 });
 

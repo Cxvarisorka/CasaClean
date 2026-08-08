@@ -9,11 +9,13 @@ import {
   Clock,
   MapPin,
   Home,
+  Globe,
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
+import { Switch } from "@/components/ui/Switch";
 import {
   PageHeader,
   StatCard,
@@ -33,7 +35,12 @@ import { cn } from "@/lib/cn";
  * — enforced server-side — only after a *completed* booking, and one review per
  * booking. This page is read-only apart from moderation: it surfaces the score +
  * comment, the author and exactly which booking was rated (open a row for full
- * booking detail), with aggregate quality metrics. An admin can delete a review.
+ * booking detail), with aggregate quality metrics.
+ *
+ * Moderation is the point of the page. A new review arrives PENDING and is
+ * invisible to the public site until an admin flips the "Public" switch (the
+ * only field the panel may write); editing the text later re-hides it. An admin
+ * can also delete a review outright.
  */
 
 const DISTRIBUTION_ROWS = [5, 4, 3, 2, 1];
@@ -64,7 +71,7 @@ function Stars({ value, className }) {
 }
 
 export default function QualityPage() {
-  const { items, remove } = useCollection("reviews");
+  const { items, update, remove } = useCollection("reviews");
   const { stats } = useAdminData();
   const { t, locale } = useTranslation();
   const [deleting, setDeleting] = useState(null);
@@ -82,6 +89,9 @@ export default function QualityPage() {
   const avg = stats.avgRating || 0;
   const positive =
     (stats.ratingDistribution?.[5] || 0) + (stats.ratingDistribution?.[4] || 0);
+  // Moderation queue: how many reviews are actually live vs. still waiting.
+  const published = items.filter((r) => r.is_published).length;
+  const pending = items.length - published;
   // Tallest bar drives the relative widths (min 1 so an empty feed doesn't /0).
   const maxBar = Math.max(
     1,
@@ -159,9 +169,34 @@ export default function QualityPage() {
         </span>
       ),
     },
+    {
+      key: "is_published",
+      header: t("admin.quality.col.published"),
+      align: "center",
+      render: (r) => (
+        // The one writable field: whether this review shows on the public site.
+        // stopPropagation so flipping it doesn't also open the detail modal.
+        <span
+          className="inline-flex"
+          onClick={(e) => e.stopPropagation()}
+          role="presentation"
+        >
+          <Switch
+            checked={Boolean(r.is_published)}
+            onChange={() => update(r._id, { is_published: !r.is_published })}
+            aria-label={t("admin.quality.publishAria")}
+          />
+        </span>
+      ),
+    },
   ];
 
-  const viewMeta = viewing && BOOKING_STATUS_META[viewing.booking_status];
+  // The modal holds only an id-bearing snapshot; read the live row back out of
+  // the collection so publishing from inside it re-renders the state.
+  const current = viewing
+    ? items.find((r) => r._id === viewing._id) || viewing
+    : null;
+  const viewMeta = current && BOOKING_STATUS_META[current.booking_status];
 
   return (
     <div className="space-y-8">
@@ -171,7 +206,7 @@ export default function QualityPage() {
         description={t("admin.quality.description")}
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           icon={Star}
           label={t("admin.quality.stat.avg")}
@@ -195,6 +230,13 @@ export default function QualityPage() {
             total: stats.reviews || 0,
           })}
           accent="success"
+        />
+        <StatCard
+          icon={Globe}
+          label={t("admin.quality.stat.published")}
+          value={published}
+          hint={t("admin.quality.stat.publishedHint", { count: pending })}
+          accent={pending > 0 ? "accent" : "success"}
         />
       </div>
 
@@ -276,23 +318,42 @@ export default function QualityPage() {
         title={t("admin.quality.detail.title")}
         size="lg"
       >
-        {viewing && (
+        {current && (
           <div className="space-y-6">
             {/* The review */}
             <div className="rounded-2xl border border-ink-100 bg-ink-50/50 p-5">
               <div className="flex items-center justify-between gap-3">
-                <Stars value={viewing.rating} />
+                <Stars value={current.rating} />
                 <span className="text-caption text-ink-400">
-                  {fmtDate(viewing.createdAt)}
+                  {fmtDate(current.createdAt)}
                 </span>
               </div>
               <p className="mt-3 text-body-sm text-ink-800">
-                {viewing.comment || "—"}
+                {current.comment || "—"}
               </p>
               <p className="mt-4 text-caption text-ink-500">
-                {viewing.customer_name}
-                {viewing.customer_email ? ` · ${viewing.customer_email}` : ""}
+                {current.customer_name}
+                {current.customer_email ? ` · ${current.customer_email}` : ""}
               </p>
+            </div>
+
+            {/* Moderation — read the comment above, then decide. */}
+            <div className="rounded-2xl border border-ink-100 p-5">
+              <Switch
+                containerClassName="w-full"
+                checked={Boolean(current.is_published)}
+                onChange={() =>
+                  update(current._id, { is_published: !current.is_published })
+                }
+                label={t("admin.quality.publish.label")}
+                description={
+                  current.is_published
+                    ? t("admin.quality.publish.onHint", {
+                        date: fmtDate(current.published_at),
+                      })
+                    : t("admin.quality.publish.offHint")
+                }
+              />
             </div>
 
             {/* The rated booking */}
@@ -303,7 +364,7 @@ export default function QualityPage() {
                 </h3>
                 <div className="flex items-center gap-2">
                   <span className="text-caption font-semibold text-ink-500">
-                    {viewing.booking_reference}
+                    {current.booking_reference}
                   </span>
                   {viewMeta && (
                     <Badge variant={viewMeta.variant} size="sm">
@@ -317,15 +378,15 @@ export default function QualityPage() {
                 <DetailRow
                   icon={Star}
                   label={t("admin.quality.col.service")}
-                  value={viewing.service_name}
+                  value={current.service_name}
                 />
                 <DetailRow
                   icon={CalendarDays}
                   label={t("admin.quality.detail.date")}
                   value={
-                    viewing.booking_date
-                      ? `${fmtDate(viewing.booking_date)}${
-                          viewing.booking_time ? ` · ${viewing.booking_time}` : ""
+                    current.booking_date
+                      ? `${fmtDate(current.booking_date)}${
+                          current.booking_time ? ` · ${current.booking_time}` : ""
                         }`
                       : "—"
                   }
@@ -334,7 +395,7 @@ export default function QualityPage() {
                   icon={MapPin}
                   label={t("admin.quality.detail.location")}
                   value={
-                    [viewing.booking_address, viewing.booking_city]
+                    [current.booking_address, current.booking_city]
                       .filter(Boolean)
                       .join(", ") || "—"
                   }
@@ -342,16 +403,16 @@ export default function QualityPage() {
                 <DetailRow
                   icon={Home}
                   label={t("admin.quality.detail.property")}
-                  value={viewing.booking_property_size || "—"}
+                  value={current.booking_property_size || "—"}
                 />
                 <DetailRow
                   icon={Clock}
                   label={t("admin.quality.detail.duration")}
                   value={
-                    viewing.booking_hours
+                    current.booking_hours
                       ? t("admin.quality.detail.durationValue", {
-                          hours: viewing.booking_hours,
-                          cleaners: viewing.booking_cleaners || 1,
+                          hours: current.booking_hours,
+                          cleaners: current.booking_cleaners || 1,
                         })
                       : "—"
                   }
@@ -360,8 +421,8 @@ export default function QualityPage() {
                   icon={MessageSquareQuote}
                   label={t("admin.quality.detail.total")}
                   value={
-                    viewing.booking_total != null
-                      ? eur(viewing.booking_total)
+                    current.booking_total != null
+                      ? eur(current.booking_total)
                       : "—"
                   }
                 />

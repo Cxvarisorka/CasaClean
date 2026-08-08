@@ -54,7 +54,8 @@ const createReview = catchAsync(async (req, res, next) => {
 
   res.status(201).json({
     status: "success",
-    message: "Review added successfully!",
+    // Created unpublished — an admin decides whether it appears publicly.
+    message: "Review added successfully! It will be shown publicly once approved.",
     data: { review },
   });
 });
@@ -85,40 +86,94 @@ const getMyReviews = catchAsync(async (req, res, next) => {
     data: { reviews },
   });
 });
-// GET /api/v1/review/:id
+// "Giorgi Kvaratskhelia" -> "Giorgi K." — enough to read as a real person
+// without publishing a customer's full name on a marketing page.
+const publicAuthorName = (fullname) => {
+  const parts = String(fullname || "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "";
+  if (parts.length === 1) return parts[0];
+  return `${parts[0]} ${parts[parts.length - 1][0].toUpperCase()}.`;
+};
+
+// The public projection. Anonymous visitors get the score, the comment, when it
+// was written and a shortened author name — never the author's id or email, and
+// never the booking the review belongs to.
+const toPublicReview = (review) => ({
+  _id: review._id,
+  rating: review.rating,
+  review_text: review.review_text,
+  author: publicAuthorName(review.user?.fullname),
+  createdAt: review.createdAt,
+});
+
+// GET /api/v1/review/service/:serviceId  (public)
+// The published reviews for one service, newest first, plus the aggregate the
+// service page shows above the list (average score over every published review,
+// not just the current page).
 const getServiceReviews = catchAsync(async (req, res, next) => {
   const { serviceId } = req.params;
 
   if (!mongoose.Types.ObjectId.isValid(serviceId)) {
     return next(new AppError("Invalid service ID!", 400));
   }
-// Clamp pagination so crafted query strings can't request huge pages or
-// negative skips.
-const page = Math.max(Number(req.query.page) || 1, 1);
-const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 50);
+  // Clamp pagination so crafted query strings can't request huge pages or
+  // negative skips.
+  const page = Math.max(Number(req.query.page) || 1, 1);
+  const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 50);
+  const skip = (page - 1) * limit;
 
-const skip = (page - 1) * limit;
+  // Moderation gate: only reviews an admin has approved are public. Documents
+  // written before this field existed have no `isPublished` at all, so they
+  // stay hidden too until they're published (or backfilled).
+  const filter = {
+    service_id: new mongoose.Types.ObjectId(serviceId),
+    isPublished: true,
+  };
 
-const reviews = await Review.find({
-  service_id: serviceId
-})
-  .populate({
-    path: "user",
-    select: "fullname",
-  })
-  .sort({ createdAt: -1 })
-  .skip(skip)
-  .limit(limit)
-  .lean();
+  const [reviews, summary] = await Promise.all([
+    Review.find(filter)
+      .populate({ path: "user", select: "fullname" })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    // Aggregate over the whole published set — the page header must say "4.8
+    // from 23 reviews" even when it only renders the first six.
+    Review.aggregate([
+      { $match: filter },
+      { $group: { _id: null, count: { $sum: 1 }, average: { $avg: "$rating" } } },
+    ]),
+  ]);
+
+  const stats = summary[0];
 
   res.status(200).json({
-  status: "success",
-  page,
-  limit,
-  results: reviews.length,
-  data: { reviews },
+    status: "success",
+    page,
+    limit,
+    results: reviews.length,
+    reviewCount: stats?.count ?? 0,
+    // One decimal is all the UI shows; rounding here keeps every client
+    // consistent instead of each one picking its own precision.
+    averageRating: stats ? Math.round(stats.average * 10) / 10 : 0,
+    data: { reviews: reviews.map(toPublicReview) },
+  });
 });
-});
+// What the admin panel needs resolved on a review: the author, the service and
+// the rated booking (so a row identifies exactly which job was rated). Shared by
+// the feed and the moderation response so both return the same shape — the panel
+// merges the moderation response into its table row.
+const ADMIN_REVIEW_POPULATE = [
+  { path: "user", select: "fullname email" },
+  { path: "service_id", select: "name" },
+  {
+    path: "booking",
+    select:
+      "bookingDate bookingTime streetName houseNumber propertySize doorbellName hours cleaners totalAmount status customerName customerEmail cityId",
+    populate: { path: "cityId", select: "name" },
+  },
+];
+
 // GET /api/v1/review  (admin only — the panel's Quality section)
 // Lists every review across all services with the author and service resolved,
 // so an admin can see the score + comment and who left it.
@@ -132,16 +187,7 @@ const getAllReviews = catchAsync(async (req, res, next) => {
 
   const [reviews, total] = await Promise.all([
     Review.find()
-      .populate({ path: "user", select: "fullname email" })
-      .populate({ path: "service_id", select: "name" })
-      // Pull the rated booking's details so the admin can see exactly which
-      // booking each review is for (date, address, status, total…).
-      .populate({
-        path: "booking",
-        select:
-          "bookingDate bookingTime streetName houseNumber propertySize doorbellName hours cleaners totalAmount status customerName customerEmail cityId",
-        populate: { path: "cityId", select: "name" },
-      })
+      .populate(ADMIN_REVIEW_POPULATE)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -196,6 +242,14 @@ const editReview = catchAsync(async (req, res, next) => {
   review.review_text = review_text.trim();
 }
 
+  // Editing the content sends the review back to moderation. Without this an
+  // author could get a polite review approved and then rewrite it into
+  // something abusive that is public the moment they hit save.
+  if (review.isModified("rating") || review.isModified("review_text")) {
+    review.isPublished = false;
+    review.publishedAt = null;
+  }
+
   await review.save();
 
   res.status(200).json({
@@ -204,6 +258,39 @@ const editReview = catchAsync(async (req, res, next) => {
     data: { review }
   });
 });
+// PATCH /api/v1/review/:id/publish  (admin only — the panel's Quality section)
+// Decides whether a customer's review is shown on the public site. Reviews are
+// created unpublished, so this is the single gate between customer-authored
+// text and the marketing pages.
+const setReviewVisibility = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  // Guaranteed to be a boolean by moderateReviewSchema on the route.
+  const { isPublished } = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return next(new AppError("Invalid review ID!", 400));
+  }
+
+  // Explicit field whitelist — never spread req.body over the document.
+  const review = await Review.findByIdAndUpdate(
+    id,
+    { isPublished, publishedAt: isPublished ? new Date() : null },
+    { new: true, runValidators: true }
+  ).populate(ADMIN_REVIEW_POPULATE);
+
+  if (!review) {
+    return next(new AppError("Review not found!", 404));
+  }
+
+  res.status(200).json({
+    status: "success",
+    message: isPublished
+      ? "Review is now visible on the public site."
+      : "Review is now hidden from the public site.",
+    data: { review },
+  });
+});
+
 // DELETE /api/v1/review/:id
 const deleteReview = catchAsync(async (req, res, next) => {
   const { id } = req.params;
@@ -238,6 +325,7 @@ module.exports = {
   getMyReviews,
   getAllReviews,
   editReview,
+  setReviewVisibility,
   deleteReview
 };
 

@@ -21,7 +21,12 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Icon } from "@/components/shared/Icon";
 import { SectionHeading } from "@/components/shared/SectionHeading";
 import { CtaSection } from "@/components/sections";
-import { ServiceCard, useService } from "@/features/services";
+import {
+  ServiceCard,
+  ServiceReviews,
+  useService,
+  useServiceReviews,
+} from "@/features/services";
 // Deep imports (as in ProfilePage): the booking feature's index pulls in the
 // whole Stripe-backed wizard, which this marketing page must not drag along.
 import { useCities } from "@/features/booking/hooks/useCities";
@@ -76,6 +81,10 @@ const ServiceDetailPage = () => {
   const { service, related, isLoading, isError, notFound } = useService(slug);
   const { data: cities = [] } = useCities();
   const { data: addons = [] } = useSpecialRequests();
+  // Only the aggregate is needed here, for the structured data. It shares a
+  // query key with the <ServiceReviews> section below, so this costs no extra
+  // request — the section renders the list from the same cached result.
+  const { reviewCount, averageRating } = useServiceReviews(service?.id);
 
   if (isLoading) return <DetailSkeleton />;
 
@@ -124,7 +133,7 @@ const ServiceDetailPage = () => {
         path={ROUTES.serviceDetail(service.slug)}
         image={service.image}
         schema={[
-          serviceSchema(service),
+          serviceSchema(service, { value: averageRating, count: reviewCount }),
           breadcrumbSchema([
             { name: t("nav.services"), path: ROUTES.services },
             { name: service.name, path: ROUTES.serviceDetail(service.slug) },
@@ -311,6 +320,10 @@ const ServiceDetailPage = () => {
                   </p>
                 )}
               </div>
+
+              {/* What customers said — published reviews of THIS service. The
+                  section removes itself when there are none to show. */}
+              <ServiceReviews serviceId={service.id} />
             </div>
 
             {/* Booking card */}
