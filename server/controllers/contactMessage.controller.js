@@ -196,6 +196,12 @@ const replyToContactMessage = catchAsync(async (req, res, next) => {
             replyTo: notifyAddress()
         });
     } catch (err) {
+        // The admin gets a generic message — SMTP errors leak host names, ports
+        // and credential hints — but the cause has to survive somewhere, or a
+        // deployment where outbound mail is blocked or throttled looks exactly
+        // like one where it works. Logged in the same shape as notifyTeam's
+        // failure so both mail paths are greppable together.
+        console.error(`Contact reply failed for message ${contactMessage._id}:`, err.message);
         return next(new AppError("We couldn't send the reply. Please try again later.", 502));
     }
 

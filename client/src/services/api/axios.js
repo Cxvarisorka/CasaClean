@@ -16,6 +16,17 @@ export const API_BASE_URL =
 
 const baseURL = API_BASE_URL;
 
+/**
+ * Budget for the few endpoints that await an external SMTP handshake inside the
+ * request (currently the admin contact reply). The mailer's own worst case is
+ * ~40s — 10s to connect, 10s for the greeting, 20s on the socket — so the
+ * default 15s aborts the request while the server is still sending. That abort
+ * yields no response, which normalizes to NETWORK_ERROR and reports a reachable
+ * server as unreachable, hiding the actual mail failure. Stay above the mailer
+ * so the server's own 502 (with its real reason) is what reaches the UI.
+ */
+export const MAIL_REQUEST_TIMEOUT = 45000;
+
 export const apiClient = attachInterceptors(
   axios.create({
     baseURL,

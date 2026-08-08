@@ -19,7 +19,22 @@ export function normalizeError(error) {
     };
   }
 
-  // Request made but no response (network/CORS/timeout).
+  // We gave up waiting, which is not the same thing as an unreachable server:
+  // the request may well have arrived and still be running. Saying "check your
+  // connection" here sends the user hunting for a fault on their end, and for a
+  // non-idempotent call ("send this email") it also implies nothing happened —
+  // which we do not know. Report the uncertainty instead of guessing.
+  if (error.code === "ECONNABORTED" || error.code === "ETIMEDOUT") {
+    return {
+      status: 0,
+      message:
+        "The server took too long to respond, so we stopped waiting. The request may still have gone through — check before retrying.",
+      code: "TIMEOUT",
+      fields: null,
+    };
+  }
+
+  // Request made but no response at all (network down, CORS, DNS).
   if (error.request) {
     return {
       status: 0,

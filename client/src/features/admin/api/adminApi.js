@@ -16,7 +16,7 @@
  *   /city  /service  /special-request  /booking
  */
 
-import { apiClient, request } from "@/services/api";
+import { apiClient, request, MAIL_REQUEST_TIMEOUT } from "@/services/api";
 
 // The server clamps every list endpoint to `limit=100`. The panel used to send
 // exactly that and render whatever came back, so the 101st booking/user/
@@ -725,12 +725,17 @@ export const contactMessageApi = {
    * The server awaits the actual send, so a rejection here means the mail did
    * NOT go out and nothing was recorded — surface it, never swallow it. On
    * success the message comes back already marked handled.
+   *
+   * Which is exactly why this one call needs MAIL_REQUEST_TIMEOUT: the default
+   * budget expires mid-handshake, and an aborted request tells us nothing about
+   * whether the mail left. Waiting for the server's own verdict is the point.
    */
   async reply(id, body) {
     const data = await request({
       method: "POST",
       url: `/contact/${id}/reply`,
       data: { body },
+      timeout: MAIL_REQUEST_TIMEOUT,
     });
     return contactMessageFromApi(data.contactMessage);
   },
