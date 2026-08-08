@@ -53,7 +53,7 @@ src/
 │
 ├── features/       # Self-contained domains (api · hooks · validation · store · components)
 │   ├── booking/    # Multi-step wizard (RHF form state + nav store + pricing engine)
-│   ├── blog/ · services/ · pricing/ · testimonials/ · contact/
+│   ├── services/ · testimonials/ · contact/ · admin/ · auth/
 │
 ├── components/
 │   ├── ui/         # Atomic primitives (Button, Input, Card, Modal, Tabs, …)
@@ -66,7 +66,7 @@ src/
 ├── seo/            # MetaTags, SchemaMarkup, structured-data builders
 ├── animations/     # Framer Motion variant system + motion tokens
 ├── constants/      # Routes, navigation, site metadata
-├── data/           # Local content store (services, blog, faq, testimonials…)
+├── data/           # Local content store (faq, testimonials, company, careers…)
 ├── utils/          # Pure helpers (formatCurrency, formatDate, seoHelpers…)
 └── styles/         # globals (theme tokens) · typography · utilities · animations
 ```
@@ -99,5 +99,5 @@ src/
 
 Every page ships a `<Seo>` block (title, description, canonical, Open Graph,
 Twitter cards) plus relevant JSON-LD: Organization & WebSite (global),
-LocalBusiness + FAQ (home/pricing/faq), Service (services), Article + Breadcrumb
-(blog posts). `robots.txt` and `sitemap.xml` are in `public/`.
+LocalBusiness + FAQ (home/faq), Service (services) and
+Breadcrumb (service detail). `robots.txt` and `sitemap.xml` are in `public/`.

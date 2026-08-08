@@ -14,7 +14,8 @@
     { "key": "specialRequestId", "value": "" },
     { "key": "bookingId", "value": "" },
     { "key": "subscriptionId", "value": "" },
-    { "key": "paymentMethodId", "value": "" }
+    { "key": "paymentMethodId", "value": "" },
+    { "key": "contactMessageId", "value": "" }
   ],
   "item": [
     {
@@ -1150,6 +1151,246 @@
                   "pm.test('Status is 200', () => pm.response.code === 200);",
                   "pm.test('subscription is cancelled', () => pm.expect(pm.response.json().data.subscription.status).to.eql('cancelled'));"
                 ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Contact",
+      "description": "The website contact form and the admin inbox behind it. POST /contact is the only unauthenticated write in the API, so it is guarded three ways: the X-Requested-With CSRF header, a 5-per-hour rate limit, and a hidden honeypot field. Sign in as an admin (Auth > Signin) before the admin requests.",
+      "item": [
+        {
+          "name": "Send Contact Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Requested-With", "value": "XMLHttpRequest" }
+            ],
+            "url": { "raw": "{{baseUrl}}/contact", "host": ["{{baseUrl}}"], "path": ["contact"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jane Cooper\",\n  \"email\": \"jane@example.com\",\n  \"phone\": \"+39 06 1234567\",\n  \"topic\": \"general\",\n  \"message\": \"Hello, I would like to ask about weekly cleaning for my flat.\"\n}"
+            },
+            "description": "Public - no login needed. The website contact form. Stores the message, then emails the team (CONTACT_NOTIFY_EMAIL) fire-and-forget. Expect 201; the new id is saved as contactMessageId. Rate limited to 5 per hour per IP."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.code === 201);",
+                  "const m = pm.response.json().data.contactMessage;",
+                  "pm.test('a message id comes back', () => pm.expect(m).to.have.property('_id'));",
+                  "if (m && m._id) { pm.collectionVariables.set('contactMessageId', m._id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Send Contact Message - honeypot filled (spam)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Requested-With", "value": "XMLHttpRequest" }
+            ],
+            "url": { "raw": "{{baseUrl}}/contact", "host": ["{{baseUrl}}"], "path": ["contact"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Spam Bot\",\n  \"email\": \"bot@example.com\",\n  \"topic\": \"general\",\n  \"message\": \"Buy cheap things at my totally legitimate website.\",\n  \"website\": \"http://spam.example\"\n}"
+            },
+            "description": "Anti-spam. The hidden 'website' field is empty on the real form; a bot fills it. Expect the SAME 201 as a real submission - but nothing is stored and no email is sent. Confirm with 'List Contact Messages' afterwards: Spam Bot must NOT be there."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201 (indistinguishable from success)', () => pm.response.code === 201);",
+                  "pm.test('the body looks exactly like a real acceptance', () => {",
+                  "  pm.expect(pm.response.json().data.contactMessage).to.have.property('_id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Send Contact Message - invalid",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Requested-With", "value": "XMLHttpRequest" }
+            ],
+            "url": { "raw": "{{baseUrl}}/contact", "host": ["{{baseUrl}}"], "path": ["contact"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jane Cooper\",\n  \"email\": \"not-an-email\",\n  \"topic\": \"refunds\",\n  \"message\": \"too short\"\n}"
+            },
+            "description": "Bad email, unknown topic and a message under 10 characters. Expect 400 with per-field errors."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Status is 400', () => pm.response.code === 400);"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Contact Messages (admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/contact?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["contact"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "status", "value": "new", "disabled": true }
+              ]
+            },
+            "description": "Admin only. The inbox, newest first. Optional ?status=new|handled (enable the query param). Expect 200 with contactMessages plus contactMessageCount."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.code === 200);",
+                  "const list = pm.response.json().data.contactMessages;",
+                  "pm.test('contactMessages is a list', () => pm.expect(list).to.be.an('array'));",
+                  "pm.test('the honeypot submission was dropped', () => {",
+                  "  pm.expect(list.filter((m) => m.email === 'bot@example.com')).to.have.lengthOf(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Contact Message (admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/contact/{{contactMessageId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["contact", "{{contactMessageId}}"]
+            },
+            "description": "Admin only. One message by id. Expect 200, or 404 for an id that does not exist."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.code === 200);",
+                  "pm.test('it is the message we sent', () => pm.expect(pm.response.json().data.contactMessage.email).to.eql('jane@example.com'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mark Contact Message Handled (admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Requested-With", "value": "XMLHttpRequest" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/contact/{{contactMessageId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["contact", "{{contactMessageId}}"]
+            },
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"handled\"\n}" },
+            "description": "Admin only. status is the ONLY writable field - the text belongs to the customer, so sending 'message' or any other key is a 400. Expect 200 with handledAt and handledBy set; send status 'new' to reopen and clear both."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.code === 200);",
+                  "const m = pm.response.json().data.contactMessage;",
+                  "pm.test('marked handled, stamped with who and when', () => {",
+                  "  pm.expect(m.status).to.eql('handled');",
+                  "  pm.expect(m.handledAt).to.not.eql(null);",
+                  "  pm.expect(m.handledBy).to.not.eql(null);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reply to Contact Message (admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Requested-With", "value": "XMLHttpRequest" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/contact/{{contactMessageId}}/reply",
+              "host": ["{{baseUrl}}"],
+              "path": ["contact", "{{contactMessageId}}", "reply"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"body\": \"Happy to help - a weekly clean of that size is 60 EUR.\"\n}"
+            },
+            "description": "Admin only. Emails the answer to the customer, records it on the message and marks it handled - one step. 'body' is the ONLY field you send; recipient, subject and the quoted original come from the stored message. The send is AWAITED, unlike the arrival notification: if the mail host is down you get 502 and nothing is recorded."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.code === 200);",
+                  "const m = pm.response.json().data.contactMessage;",
+                  "pm.test('the reply is on the thread', () => pm.expect(m.replies).to.have.lengthOf.at.least(1));",
+                  "pm.test('replying also marks it handled', () => pm.expect(m.status).to.eql('handled'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Contact Message (admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "X-Requested-With", "value": "XMLHttpRequest" }],
+            "url": {
+              "raw": "{{baseUrl}}/contact/{{contactMessageId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["contact", "{{contactMessageId}}"]
+            },
+            "description": "Admin only. Expect 200 the first time and 404 if you run it again."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Status is 200', () => pm.response.code === 200);"]
               }
             }
           ]

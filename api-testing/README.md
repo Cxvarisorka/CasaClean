@@ -8,6 +8,7 @@ This folder is the QA test plan for the CasaClean backend API. It explains, in s
 api-testing/
 ├── README.md            <- you are here (start here)
 ├── 00-setup.md          <- how to get ready before testing
+├── translations.md      <- multilingual copy: rules shared by the catalogue endpoints
 ├── auth/                <- login, signup, logout, email verify, Google
 │   └── auth-tests.md
 ├── city/                <- create / read / update / delete cities
@@ -16,8 +17,14 @@ api-testing/
 │   └── service-tests.md
 ├── special-request/     <- booking add-ons (fridge, oven, windows...)
 │   └── special-request-tests.md
-└── booking/             <- create / read / update / delete bookings
-    └── booking-tests.md
+├── booking/             <- create / read / update / delete bookings
+│   └── booking-tests.md
+├── invoice/             <- invoices issued after payment (list, PDF, resend)
+│   └── invoice-tests.md
+├── contact/             <- the website contact form + the admin inbox
+│   └── contact-tests.md
+└── tax/                 <- VAT: private customers vs verified businesses
+    └── tax-tests.md
 ```
 
 ## The base address
@@ -108,3 +115,15 @@ Good to know:
 5. Then [special-request/special-request-tests.md](special-request/special-request-tests.md).
 6. Then [booking/booking-tests.md](booking/booking-tests.md).
 7. Then [subscription/subscription-tests.md](subscription/subscription-tests.md).
+8. Then [invoice/invoice-tests.md](invoice/invoice-tests.md) — the invoice each
+   payment produces, and how to export or resend it.
+9. Then [tax/tax-tests.md](tax/tax-tests.md) — VAT: what a private customer pays
+   versus a business with a verified VAT number.
+10. Then [contact/contact-tests.md](contact/contact-tests.md) — the public
+    contact form (anyone can post; it's the only unauthenticated write in the
+    API) and the admin inbox that receives it.
+
+Alongside those, [translations.md](translations.md) covers the multilingual copy
+(`translations`) carried by services, cities, special requests and cleaning
+tools — one shared set of rules, plus the language tests to run against each of
+those four endpoints.
