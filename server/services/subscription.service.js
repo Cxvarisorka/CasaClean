@@ -9,6 +9,7 @@ const mongoose = require('mongoose');
 const stripe = require('../config/stripe.config');
 const Booking = require('../models/booking.model');
 const Subscription = require('../models/subscription.model');
+const User = require('../models/user.model');
 const sendEmail = require('../utils/email.util');
 const AppError = require('../utils/appError.util');
 const { toMinorUnits, fromMinorUnits } = require('../utils/money.util');
@@ -27,6 +28,10 @@ const {
   renderBookingConfirmationEmail,
   formatEuro
 } = require('./booking.service');
+const { issueAndDeliverInvoice } = require('./invoice.service');
+// Catalogue prices are VAT-exclusive; VAT is added on top unless the customer is
+// a verified business.
+const { priceForCustomer } = require('../utils/tax.util');
 
 const CURRENCY = 'eur';
 
@@ -157,18 +162,42 @@ const renderSubscriptionCancelledEmail = ({ subscription }) => {
   };
 };
 
-const sendCycleReceipt = ({ subscription, serviceName, serviceDate, amount }) => {
+/**
+ * Invoice and notify the customer for one charged cycle.
+ *
+ * Every cycle is a separate payment, so every cycle gets its own numbered
+ * invoice — same as a one-off booking. `issueAndDeliverInvoice` contains all of
+ * its own failures (falling back to the plain confirmation email), so this stays
+ * fire-and-forget: an unreachable SMTP host must never stall the charge worker
+ * or leave a captured payment half-processed.
+ *
+ * `booking` may be absent only if the cycle booking couldn't be located, in
+ * which case there is nothing to invoice and the plain receipt is sent instead.
+ */
+const sendCycleReceipt = ({ subscription, booking, serviceName, serviceDate, amount }) => {
+  const fallback = {
+    customerName: subscription.customerName,
+    customerEmail: subscription.customerEmail,
+    serviceName,
+    bookingDate: serviceDate,
+    bookingTime: subscription.bookingTime,
+    hours: subscription.hours,
+    cleaners: subscription.cleaners,
+    streetName: subscription.streetName,
+    houseNumber: subscription.houseNumber,
+    totalAmount: amount
+  };
+
+  if (booking?._id) {
+    issueAndDeliverInvoice(booking, fallback).catch((err) => {
+      console.error('Subscription invoice delivery error:', err.message);
+    });
+    return;
+  }
+
   try {
     const { subject, html, text } = renderBookingConfirmationEmail({
-      customerName: subscription.customerName,
-      serviceName,
-      bookingDate: serviceDate,
-      bookingTime: subscription.bookingTime,
-      hours: subscription.hours,
-      cleaners: subscription.cleaners,
-      streetName: subscription.streetName,
-      houseNumber: subscription.houseNumber,
-      totalAmount: amount,
+      ...fallback,
       recurring: true
     });
     sendBestEffortEmail({ email: subscription.customerEmail, subject, html, text });
@@ -265,7 +294,7 @@ const priceSubscriptionCycle = async (subscription) => {
   const specialRequests = await resolveSpecialRequests(subscription.specialRequests, service);
   const cleaningTools = await resolveCleaningTools(subscription.cleaningTools, service);
 
-  const totalAmount = computeBookingTotal({
+  const netTotal = computeBookingTotal({
     service,
     hours: subscription.hours,
     cleaners: subscription.cleaners,
@@ -273,7 +302,20 @@ const priceSubscriptionCycle = async (subscription) => {
     cleaningTools
   });
 
-  return { service, city, specialRequests, cleaningTools, totalAmount };
+  // The VAT treatment is re-resolved per cycle rather than frozen on the plan,
+  // for the same reason recurrence eligibility is re-checked above: a customer
+  // who registers a VAT number should stop paying VAT from the next charge, and
+  // one whose registration lapses must start paying it again. Reading the user
+  // fresh also means a status the webhook updated is picked up immediately.
+  const customer = subscription.user
+    ? await User.findById(subscription.user)
+        .select('customerType vatNumber vatStatus companyName')
+        .lean()
+    : null;
+
+  const { totalAmount, tax } = priceForCustomer(netTotal, customer);
+
+  return { service, city, specialRequests, cleaningTools, totalAmount, tax };
 };
 
 // Create a paid cycle booking directly. There is no PendingBooking for an
@@ -284,6 +326,7 @@ const createBookingFromSubscription = async ({
   paymentIntent,
   serviceDate,
   totalAmount,
+  tax,
   specialRequests,
   cleaningTools
 }) => {
@@ -307,6 +350,11 @@ const createBookingFromSubscription = async ({
       hours: subscription.hours,
       cleaners: subscription.cleaners,
       totalAmount,
+      // The treatment this cycle was priced under. Undefined on the webhook
+      // repair path (which only knows the captured amount) — the schema
+      // defaults then describe a standard-rate charge, which is what an amount
+      // recovered from Stripe with no other context has to be assumed to be.
+      tax,
       notes: subscription.notes ?? null,
       specialRequests: specialRequests?.map((item) => item._id) || subscription.specialRequests || [],
       cleaningTools: cleaningTools?.map((item) => item._id) || subscription.cleaningTools || [],
@@ -628,11 +676,12 @@ const chargeSubscriptionCycle = async (subscription) => {
       throw new Error(`Subscription PaymentIntent ${paymentIntent.id} returned ${paymentIntent.status}.`);
     }
 
-    await createBookingFromSubscription({
+    const cycleBooking = await createBookingFromSubscription({
       subscription,
       paymentIntent,
       serviceDate,
       totalAmount: priced.totalAmount,
+      tax: priced.tax,
       specialRequests: priced.specialRequests,
       cleaningTools: priced.cleaningTools
     });
@@ -647,6 +696,7 @@ const chargeSubscriptionCycle = async (subscription) => {
     if (advanced) {
       sendCycleReceipt({
         subscription: advanced,
+        booking: cycleBooking,
         serviceName: priced.service.name,
         serviceDate,
         amount: priced.totalAmount
@@ -733,6 +783,7 @@ const ensureSubscriptionCycleBooking = async (paymentIntent) => {
   if (advanced) {
     sendCycleReceipt({
       subscription: advanced,
+      booking,
       serviceName: 'Cleaning service',
       serviceDate,
       amount

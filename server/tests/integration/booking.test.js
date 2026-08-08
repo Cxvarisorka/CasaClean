@@ -375,6 +375,97 @@ describe("PATCH /api/v1/booking/:id (admin edit)", () => {
         expect(sendEmailMock).toHaveBeenCalledTimes(1); // refund email
     });
 
+    // The admin edit form seeds every field from the booking and re-sends them,
+    // so an edit to a PAST booking (marking it completed, adding notes,
+    // assigning staff after the fact) always carries its own past bookingDate.
+    // A blanket "no past dates" rule used to live in editBookingSchema and made
+    // every one of those edits fail with "Validation failed!".
+    test("editing a past booking with its own unchanged date is allowed", async () => {
+        const admin = await createAdmin();
+        const user = await createUser();
+        const service = await createService();
+        const city = await createCity();
+        const booking = await createPaidBooking(user, service, city, {
+            bookingDate: dateStr(-30),
+            status: "confirmed"
+        });
+
+        const res = await api.patch(`/api/v1/booking/${booking._id}`)
+            .set("Cookie", cookieFor(admin))
+            .send({
+                status: "completed",
+                bookingDate: dateStr(-30),
+                bookingTime: "10:00",
+                notes: "Keys returned to the concierge."
+            });
+
+        expect(res.status).toBe(200);
+        expect(res.body.data.booking.status).toBe("completed");
+        expect(res.body.data.booking.bookingDate).toBe(dateStr(-30));
+    });
+
+    test("a status-only edit of a past booking succeeds", async () => {
+        const admin = await createAdmin();
+        const user = await createUser();
+        const service = await createService();
+        const city = await createCity();
+        const booking = await createPaidBooking(user, service, city, {
+            bookingDate: dateStr(-3)
+        });
+
+        const res = await api.patch(`/api/v1/booking/${booking._id}`)
+            .set("Cookie", cookieFor(admin))
+            .send({ status: "completed" });
+
+        expect(res.status).toBe(200);
+    });
+
+    test("actually RESCHEDULING a booking into the past is still rejected", async () => {
+        const admin = await createAdmin();
+        const user = await createUser();
+        const service = await createService();
+        const city = await createCity();
+        const booking = await createPaidBooking(user, service, city);
+
+        const res = await api.patch(`/api/v1/booking/${booking._id}`)
+            .set("Cookie", cookieFor(admin))
+            .send({ bookingDate: dateStr(-1) });
+
+        expect(res.status).toBe(400);
+        expect(res.body.message).toMatch(/past/i);
+        const fresh = await Booking.findById(booking._id);
+        expect(fresh.bookingDate).toBe(booking.bookingDate);
+    });
+
+    test("a malformed date is still rejected by the schema", async () => {
+        const admin = await createAdmin();
+        const user = await createUser();
+        const service = await createService();
+        const city = await createCity();
+        const booking = await createPaidBooking(user, service, city);
+
+        const res = await api.patch(`/api/v1/booking/${booking._id}`)
+            .set("Cookie", cookieFor(admin))
+            .send({ bookingDate: "04/02/2026" });
+
+        expect(res.status).toBe(400);
+    });
+
+    test("a validation failure names the offending field", async () => {
+        const admin = await createAdmin();
+        const user = await createUser();
+        const service = await createService();
+        const city = await createCity();
+        const booking = await createPaidBooking(user, service, city);
+
+        const res = await api.patch(`/api/v1/booking/${booking._id}`)
+            .set("Cookie", cookieFor(admin))
+            .send({ hours: 99 });
+
+        expect(res.status).toBe(400);
+        expect(res.body.fields).toHaveProperty("hours");
+    });
+
     test("re-cancelling an already-cancelled booking never double-refunds", async () => {
         const admin = await createAdmin();
         const user = await createUser();

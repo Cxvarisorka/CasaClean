@@ -1,6 +1,6 @@
 // The scheduler uses the real Mongoose atomic claim query here; only Stripe
 // and mail are mocked by the shared integration harness.
-const { stripeMock, sendEmailMock } = require("../setup/testEnv");
+const { stripeMock, sendEmailMock, waitForEmails } = require("../setup/testEnv");
 const { createUser, createCity, createService, dateStr } = require("../setup/fixtures");
 const { createSubscription } = require("../setup/subscriptionFixtures");
 
@@ -97,6 +97,9 @@ describe("runSubscriptionCharges", () => {
             paymentIntentId: "pi_cycle_success",
             amount: 40
         });
+        // The cycle's invoice email is fire-and-forget (the charge worker must
+        // not block on SMTP), so wait for the dispatch before asserting on it.
+        await waitForEmails(1);
         expect(sendEmailMock).toHaveBeenCalledWith(expect.objectContaining({ email: user.email }));
     });
 

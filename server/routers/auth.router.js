@@ -4,18 +4,18 @@ const passport = require("passport");
 const crypto = require("crypto");
 
 // Controllers
-const { signup, signin, logout, getMe, getAllUsers, createUser, updateUser, deleteUser, googleCallback, verifyEmail, resendVerificationEmail, forgotPassword, resetPassword, updateMe, updateMyPassword, deleteMe } = require("../controllers/auth.controller");
+const { signup, signin, logout, getMe, getAllUsers, createUser, updateUser, deleteUser, googleCallback, verifyEmail, resendVerificationEmail, forgotPassword, resetPassword, updateMe, updateMyTaxProfile, refreshMyTaxStatus, updateMyPassword, deleteMe } = require("../controllers/auth.controller");
 
 // Middlewares
 const { protect, restrictTo } = require("../middlewares/protect.middleware");
 const validate = require("../middlewares/validate.middleware");
-const { signinLimiter, signupLimiter, emailLimiter } = require("../middlewares/rateLimit.middleware");
+const { signinLimiter, signupLimiter, emailLimiter, paymentLimiter } = require("../middlewares/rateLimit.middleware");
 
 // Utils
 const { isProduction } = require("../utils/env.util");
 
 // Validations
-const { signupSchema, signinSchema, resendEmailVerificationSchema, createUserSchema, updateUserSchema, forgotPasswordSchema, resetPasswordSchema, updateMeSchema, updateMyPasswordSchema, deleteMeSchema } = require("../validations/auth.validation");
+const { signupSchema, signinSchema, resendEmailVerificationSchema, createUserSchema, updateUserSchema, forgotPasswordSchema, resetPasswordSchema, updateMeSchema, updateMyTaxProfileSchema, refreshMyTaxStatusSchema, updateMyPasswordSchema, deleteMeSchema } = require("../validations/auth.validation");
 
 const authRouter = express.Router();
 
@@ -77,6 +77,10 @@ authRouter.get("/me", getMe);
 // it's rate limited like signin (it's an online password-guessing oracle
 // otherwise); account deletion confirms the password too and gets the same.
 authRouter.patch("/me", validate(updateMeSchema), updateMe);
+// VAT profile. Rate limited like the other Stripe-touching routes: each save can
+// register a tax id and kick off a VIES lookup, so it must not be free to spam.
+authRouter.patch("/me/tax-profile", paymentLimiter, validate(updateMyTaxProfileSchema), updateMyTaxProfile);
+authRouter.post("/me/tax-profile/refresh", paymentLimiter, validate(refreshMyTaxStatusSchema), refreshMyTaxStatus);
 authRouter.patch("/me/password", signinLimiter, validate(updateMyPasswordSchema), updateMyPassword);
 authRouter.delete("/me", signinLimiter, validate(deleteMeSchema), deleteMe);
 

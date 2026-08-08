@@ -20,6 +20,13 @@ const app = require("../../app");
 const stripeMock = require("../../config/stripe.config");
 const sendEmailMock = require("../../utils/email.util");
 
+// VAT is added ON TOP of catalogue prices (utils/tax.util.js), so a configured
+// rate changes every booking total. The developer's own .env must not decide
+// what the pricing suites expect — the baseline here is "no VAT configured",
+// and the suites that exercise VAT set their own rate in beforeAll. Cleared
+// AFTER app.js, whose dotenv load overrides the environment.
+delete process.env.INVOICE_VAT_RATE;
+
 let mongod;
 
 beforeAll(async () => {
@@ -56,4 +63,25 @@ const api = {
     delete: (url) => request(app).delete(url).set("X-Requested-With", "XMLHttpRequest")
 };
 
-module.exports = { app, api, request, stripeMock, sendEmailMock };
+/**
+ * Wait for fire-and-forget customer mail to actually be dispatched.
+ *
+ * Post-payment email is deliberately NOT awaited by the request/webhook that
+ * triggers it (a slow SMTP host must not stall a Stripe webhook), and since
+ * invoicing was added the dispatch sits behind a few awaited steps — reserve a
+ * number, snapshot the booking, render the PDF. So a test that asserts on
+ * sendEmailMock immediately after the HTTP call is racing it.
+ *
+ * Polls rather than sleeping a fixed interval: it returns as soon as the mail is
+ * out, and gives up quietly at the timeout so the assertion (not this helper)
+ * reports the failure.
+ */
+const waitForEmails = async (count = 1, timeoutMs = 3000) => {
+    const deadline = Date.now() + timeoutMs;
+    while (sendEmailMock.mock.calls.length < count && Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    return sendEmailMock.mock.calls;
+};
+
+module.exports = { app, api, request, stripeMock, sendEmailMock, waitForEmails };

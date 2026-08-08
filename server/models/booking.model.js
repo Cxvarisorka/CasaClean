@@ -90,10 +90,48 @@ const bookingSchema = new mongoose.Schema({
     required: [true, "Cleaners count is required!"],
     min: [1, "A booking must have at least 1 cleaner."]
   },
+  // What the customer actually owes, after the VAT treatment below has been
+  // applied to the gross catalogue price. For an individual this IS the
+  // catalogue price; for a reverse-charge business it's the net.
   totalAmount: {
     type: Number,
     required: [true, "Total amount is required!"],
     min: [0, "Total amount can't be negative."]
+  },
+  // --- VAT treatment (snapshot) -----------------------------------------------
+  // Resolved server-side from the customer's stored, Stripe-verified profile at
+  // pricing time (utils/tax.util.js) and frozen here, so the invoice states what
+  // was actually charged rather than re-deriving it from configuration that may
+  // have changed since. `netAmount + vatAmount === totalAmount` in both
+  // treatments. Absent on bookings made before VAT handling existed — readers
+  // fall back to splitting totalAmount at the configured rate.
+  tax: {
+    // 'standard'       — charged the catalogue price plus VAT on top.
+    // 'reverse-charge' — verified EU business; no VAT added to the charge, and
+    //                    it is accounted for by the customer.
+    treatment: {
+      type: String,
+      enum: ['standard', 'reverse-charge'],
+      default: 'standard'
+    },
+    customerType: {
+      type: String,
+      enum: ['individual', 'business'],
+      default: 'individual'
+    },
+    // The customer's VAT number as it read at booking time (reverse charge only)
+    // — an invoice must print the number the relief was granted against.
+    vatNumber: { type: String, default: '' },
+    // Registered company name at booking time; the invoice is addressed to this
+    // rather than the contact's personal name when it's set.
+    companyName: { type: String, default: '' },
+    // The rate catalogue prices are taxed at, as it stood when this booking was
+    // priced. Kept so a later rate change can't restate a completed transaction.
+    catalogueVatRate: { type: Number, default: 0, min: 0 },
+    // The rate actually charged: catalogueVatRate normally, 0 on reverse charge.
+    vatRate: { type: Number, default: 0, min: 0 },
+    netAmount: { type: Number, min: 0 },
+    vatAmount: { type: Number, min: 0, default: 0 }
   },
   notes: {
     type: String,

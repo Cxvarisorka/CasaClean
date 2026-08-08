@@ -8,6 +8,7 @@ import { useTranslation } from "@/i18n";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { stripePromise, isStripeConfigured } from "@/services/stripe";
 import { useServices } from "@/features/services";
+import { useAuth } from "@/features/admin";
 import { useSpecialRequests } from "../../hooks/useSpecialRequests";
 import { useCleaningTools } from "../../hooks/useCleaningTools";
 import { computeQuote } from "../../utils/pricing";
@@ -105,7 +106,10 @@ export function PaymentStep({ onConfirmed }) {
   const { data: addons = [] } = useSpecialRequests();
   const { data: tools = [] } = useCleaningTools();
   const { services } = useServices();
-  const quote = computeQuote(values, { addons, tools, services });
+  // Priced under the customer's VAT treatment so the amount on the pay button
+  // is the amount the PaymentIntent is created for.
+  const { tax } = useAuth();
+  const quote = computeQuote(values, { addons, tools, services, tax });
 
   const { data: savedCards = [] } = useQuery({
     queryKey: ["saved-cards"],

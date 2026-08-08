@@ -118,6 +118,50 @@ const userSchema = new mongoose.Schema({
     // A Stripe PaymentMethod id ("pm_..."); cleared if that card is removed.
     defaultPaymentMethodId: {
         type: String
+    },
+    // --- VAT / tax profile ------------------------------------------------------
+    // Catalogue prices are VAT-exclusive and VAT is added on top. A business
+    // whose VAT number Stripe has VERIFIED against VIES has none added (EU
+    // reverse charge) — see utils/tax.util.js, which reads these three fields
+    // and nothing else.
+    //
+    // All three are server-managed in the sense that matters: the customer may
+    // set customerType/vatNumber, but `vatStatus` is only ever written from
+    // Stripe's verification result, so claiming to be a business can never by
+    // itself remove the VAT from a charge.
+    customerType: {
+        type: String,
+        enum: ["individual", "business"],
+        default: "individual"
+    },
+    // Stored uppercase and space-free ("IT01234567890") — the format Stripe and
+    // VIES expect, and the format the invoice prints.
+    vatNumber: {
+        type: String,
+        trim: true,
+        uppercase: true,
+        default: ""
+    },
+    // Mirrors Stripe's tax-ID verification state. Only "verified" grants the
+    // reverse charge; "pending" (VIES has not answered yet) is charged VAT
+    // normally, which is the safe direction to be wrong in.
+    vatStatus: {
+        type: String,
+        enum: ["none", "pending", "verified", "unverified"],
+        default: "none"
+    },
+    // The Stripe Tax ID object ("txi_...") backing the number above, so the
+    // webhook can match Stripe's verification callback to this user and a
+    // replaced number can have its predecessor deleted.
+    stripeTaxIdId: {
+        type: String
+    },
+    // Registered company name, printed on the invoice instead of the personal
+    // name when the customer is a business.
+    companyName: {
+        type: String,
+        trim: true,
+        default: ""
     }
 }, {
     timestamps: true

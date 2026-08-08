@@ -14,11 +14,27 @@ import { SERVICES } from "@/data/services";
  * `formatServiceLabel` is an optional hook the UI passes to localize the labor
  * line item (`{ name, hours, cleaners } → string`). When omitted the original
  * English label is produced, so pure callers and unit tests are unaffected.
+ *
+ * VAT
+ * ---
+ * Catalogue prices are VAT-EXCLUSIVE, so the line items sum to a NET subtotal
+ * and VAT is added on top of it: €100 of cleaning at 22% is charged as €122. A
+ * business whose VAT number the API has verified pays the €100 instead (EU
+ * reverse charge). The quote has to show the same total the API will charge —
+ * otherwise the wizard quotes €100 and the card is debited €122.
+ *
+ * `tax` comes from `GET /auth/me` (see AuthContext): the server resolves the
+ * treatment, this only applies it. Omitted, it defaults to "no rate configured",
+ * where total === subtotal and every existing caller and test is untouched.
  */
+
+// Round through integer cents so the displayed total can't drift from the
+// amount the API computes (44.8 * 100 === 4479.999999999999).
+const round2 = (amount) => Math.round(Number(amount) * 100) / 100;
 
 export function computeQuote(
   values,
-  { addons = [], tools = [], services = SERVICES, formatServiceLabel } = {}
+  { addons = [], tools = [], services = SERVICES, formatServiceLabel, tax } = {}
 ) {
   const service = services.find(
     (s) => String(s.id) === String(values.serviceId)
@@ -51,7 +67,16 @@ export function computeQuote(
     0
   );
 
-  const subtotal = labor + addonsTotal + toolsTotal;
+  const subtotal = round2(labor + addonsTotal + toolsTotal);
+
+  // Apply the customer's VAT treatment. VAT is added on top of the net subtotal,
+  // except under the reverse charge, where the rate charged is 0 and the total
+  // is the subtotal itself.
+  const catalogueVatRate = Number(tax?.catalogueVatRate) || 0;
+  const reverseCharge = Boolean(tax?.reverseCharge) && catalogueVatRate > 0;
+  const vatRate = reverseCharge ? 0 : catalogueVatRate;
+  const vatAmount = vatRate > 0 ? round2((subtotal * vatRate) / 100) : 0;
+  const total = round2(subtotal + vatAmount);
 
   return {
     service,
@@ -61,8 +86,15 @@ export function computeQuote(
     labor,
     addons: addonsTotal,
     tools: toolsTotal,
+    // Net of VAT — the sum of the catalogue line items above.
     subtotal,
-    total: subtotal,
+    total,
+    // What the summary needs to break the total down: the rate applied, the
+    // amount it added, and whether this customer is relieved of it.
+    reverseCharge,
+    vatRate,
+    vatAmount,
+    catalogueVatRate,
     lineItems: [
       service && {
         label: formatServiceLabel

@@ -21,36 +21,15 @@ const User = require('../models/user.model');
 
 const catchAsync = require('../utils/catchAsync.util');
 const AppError = require('../utils/appError.util');
-const sendEmail = require('../utils/email.util');
 const { toMinorUnits } = require('../utils/money.util');
-const {
-  buildValidatedBookingDraft,
-  renderBookingConfirmationEmail
-} = require('../services/booking.service');
+const { buildValidatedBookingDraft } = require('../services/booking.service');
+const { ensureStripeCustomer } = require('../services/stripeCustomer.service');
+const { issueAndDeliverInvoice } = require('../services/invoice.service');
 const { createSubscriptionFromFirstBooking } = require('../services/subscription.service');
 
 const CURRENCY = 'eur';
 
 /* --------------------------------------------------------- helpers -------- */
-
-/**
- * Return the user's Stripe Customer id, creating (and persisting) one the first
- * time. Reads the user fresh from the DB so a customer id created earlier in the
- * same session isn't missed (req.user is a lean snapshot from login time).
- */
-const ensureStripeCustomer = async (user) => {
-  const fresh = await User.findById(user._id).select('stripeCustomerId email fullname');
-  if (fresh?.stripeCustomerId) return fresh.stripeCustomerId;
-
-  const customer = await stripe.customers.create({
-    email: fresh?.email || user.email,
-    name: fresh?.fullname || user.fullname,
-    metadata: { userId: String(user._id) }
-  });
-
-  await User.findByIdAndUpdate(user._id, { stripeCustomerId: customer.id });
-  return customer.id;
-};
 
 /**
  * Promote a successfully-paid PaymentIntent's PendingBooking draft into a real
@@ -139,6 +118,10 @@ const promotePendingBooking = async (paymentIntentId, paymentIntent = null) => {
       hours: d.hours,
       cleaners: d.cleaners,
       totalAmount: d.totalAmount,
+      // The VAT treatment the charge was actually priced under — copied, not
+      // re-resolved, so a profile change between paying and promotion can never
+      // restate a completed transaction.
+      tax: d.tax,
       notes: d.notes ?? null,
       specialRequests: d.specialRequests || [],
       cleaningTools: d.cleaningTools || [],
@@ -186,28 +169,26 @@ const promotePendingBooking = async (paymentIntentId, paymentIntent = null) => {
   // Draft fulfilled — remove it so it isn't reaped/processed again.
   await PendingBooking.deleteOne({ paymentIntentId }).catch(() => {});
 
-  // Confirmation email is best-effort — never fail a paid booking over email.
-  // Deliberately NOT awaited: this runs inside the Stripe webhook (and the
-  // finalize request), and a slow/unreachable SMTP host must not delay the
-  // response past Stripe's delivery timeout.
-  try {
-    const { subject, html, text } = renderBookingConfirmationEmail({
-      customerName: d.customerName,
-      serviceName: d.serviceName,
-      bookingDate: d.bookingDate,
-      bookingTime: d.bookingTime,
-      hours: d.hours,
-      cleaners: d.cleaners,
-      streetName: d.streetName,
-      houseNumber: d.houseNumber,
-      totalAmount: d.totalAmount
-    });
-    sendEmail({ email: d.customerEmail, subject, html, text }).catch((emailError) => {
-      console.error('Email send error:', emailError.message);
-    });
-  } catch (emailError) {
-    console.error('Email send error:', emailError.message);
-  }
+  // Issue the invoice and email it (confirmation + PDF attachment) — one email,
+  // not a confirmation followed by a near-identical receipt.
+  //
+  // Best-effort and deliberately NOT awaited: this runs inside the Stripe
+  // webhook (and the finalize request), and a slow/unreachable SMTP host must
+  // not delay the response past Stripe's delivery timeout. issueAndDeliverInvoice
+  // contains its own failures and falls back to the plain confirmation email, so
+  // the customer always hears from us.
+  issueAndDeliverInvoice(booking, {
+    customerName: d.customerName,
+    customerEmail: d.customerEmail,
+    serviceName: d.serviceName,
+    bookingDate: d.bookingDate,
+    bookingTime: d.bookingTime,
+    hours: d.hours,
+    cleaners: d.cleaners,
+    streetName: d.streetName,
+    houseNumber: d.houseNumber,
+    totalAmount: d.totalAmount
+  }).catch((err) => console.error('Invoice delivery error:', err.message));
 
   return booking;
 };

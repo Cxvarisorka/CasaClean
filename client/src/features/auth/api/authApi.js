@@ -72,6 +72,32 @@ export function updateProfile(patch) {
   );
 }
 
+/**
+ * Update the signed-in user's billing/VAT profile.
+ *
+ * Deliberately NO graceful fallback: this decides whether the customer is
+ * charged VAT, so simulating success would be misleading in exactly the way
+ * that costs money. `vatStatus` is not sendable — verification is Stripe's
+ * answer, and the server's strict schema rejects any attempt to set it.
+ */
+export function updateTaxProfile({ customerType, companyName, vatNumber }) {
+  return request({
+    method: "PATCH",
+    url: ENDPOINTS.auth.taxProfile,
+    data: { customerType, companyName, vatNumber },
+  });
+}
+
+/**
+ * Pull the VAT verification result from Stripe on demand.
+ *
+ * Verification is asynchronous and normally lands via webhook; this is the
+ * button for a customer staring at a "pending" badge.
+ */
+export function refreshTaxStatus() {
+  return request({ method: "POST", url: ENDPOINTS.auth.taxProfileRefresh });
+}
+
 /*
  * Password & account security operations.
  * Deliberately NO graceful fallback here — simulating success for a password

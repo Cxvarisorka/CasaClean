@@ -17,6 +17,15 @@ const AppError = require("../utils/appError.util");
 const catchAsync = require("../utils/catchAsync.util");
 const sendEmail = require("../utils/email.util");
 const { verificationEmail, passwordResetEmail } = require("../utils/emailTemplates.util");
+// VAT registration goes through Stripe's (free) tax-id verification — see
+// services/tax.service.js. Only a verified number removes VAT from a charge.
+const {
+    registerVatNumber,
+    clearVatNumber,
+    refreshVatStatus,
+    normaliseVatNumber
+} = require("../services/tax.service");
+const { resolveTaxTreatment } = require("../utils/tax.util");
 
 // Cost-12 hash of a random value, computed once at boot. signin compares
 // against it when the email doesn't exist so both branches do the same bcrypt
@@ -253,10 +262,30 @@ const logout = (req, res) => {
 
 // GET /api/v1/auth/me -> returns the currently authenticated user
 // (req.user is populated by the protect middleware)
+//
+// Also returns how this customer will be taxed on their next booking. It is
+// DERIVED here rather than reimplemented on the client so the rule and the rate
+// live in exactly one place: the booking wizard can then show a total that
+// matches what it is about to charge, instead of quoting the catalogue price to
+// an individual who will actually be billed that price plus VAT.
 const getMe = (req, res) => {
+    const treatment = resolveTaxTreatment(req.user);
+
     res.status(200).json({
         status: "success",
-        data: { user: req.user }
+        data: {
+            user: req.user,
+            tax: {
+                treatment: treatment.treatment,
+                reverseCharge: treatment.treatment === 'reverse-charge',
+                // The rate this customer is charged (0 under the reverse charge)
+                // — what the client adds on top of the catalogue subtotal.
+                vatRate: treatment.vatRate,
+                // The configured rate, regardless of treatment. Lets the client
+                // say "0% — reverse charge" instead of hiding the VAT line.
+                catalogueVatRate: treatment.catalogueVatRate
+            }
+        }
     });
 };
 
@@ -600,6 +629,84 @@ const updateMe = catchAsync(async (req, res, next) => {
     });
 });
 
+// PATCH /api/v1/auth/me/tax-profile -> a customer switches between a personal
+// and a business account, and registers the VAT number that goes with it.
+//
+// The customer controls `customerType`, `companyName` and `vatNumber`. They do
+// NOT control `vatStatus` — that is written only from Stripe's VIES
+// verification, which is what stops "I'm a business" from being a self-service
+// 22% discount. Until Stripe answers `verified`, the account is charged VAT
+// exactly like a consumer.
+const updateMyTaxProfile = catchAsync(async (req, res, next) => {
+    const { customerType, companyName, vatNumber } = req.body;
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+        return next(new AppError("The user for this session no longer exists!", 401));
+    }
+
+    if (companyName !== undefined) user.companyName = companyName;
+
+    // Switching back to a personal account drops the VAT registration entirely —
+    // leaving a verified number attached to an individual would be a standing
+    // invitation to flip the type back and skip the tax.
+    if (customerType === 'individual') {
+        Object.assign(user, await clearVatNumber(user));
+        user.customerType = 'individual';
+        user.companyName = '';
+    } else {
+        if (customerType === 'business') user.customerType = 'business';
+
+        if (vatNumber !== undefined) {
+            const cleared = String(vatNumber).trim() === '';
+            if (cleared) {
+                Object.assign(user, await clearVatNumber(user));
+            } else if (normaliseVatNumber(vatNumber) !== user.vatNumber) {
+                // Only re-register when the number actually changed — resubmitting
+                // the same one would otherwise reset a verified status to pending.
+                Object.assign(user, await registerVatNumber(user, vatNumber));
+            }
+        }
+
+        if (user.customerType === 'business' && !user.vatNumber) {
+            // Allowed: a business can exist before its number is entered. It is
+            // simply charged VAT until one is registered and verified.
+            user.vatStatus = 'none';
+        }
+    }
+
+    await user.save();
+
+    res.status(200).json({
+        status: "success",
+        message: user.vatStatus === 'pending'
+            ? "VAT number saved. We're verifying it — VAT is still charged until it's confirmed."
+            : "Tax profile updated successfully!",
+        data: { user }
+    });
+});
+
+// POST /api/v1/auth/me/tax-profile/refresh -> pull the VAT verification result
+// straight from Stripe.
+//
+// The `customer.tax_id.updated` webhook is the normal path. This exists for when
+// one is missed (delivery failure, or local dev with no tunnel) so a genuinely
+// verified business is never stuck paying VAT because an event went astray.
+const refreshMyTaxStatus = catchAsync(async (req, res, next) => {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+        return next(new AppError("The user for this session no longer exists!", 401));
+    }
+
+    const refreshed = await refreshVatStatus(user);
+
+    res.status(200).json({
+        status: "success",
+        message: "VAT status refreshed.",
+        data: { user: refreshed || user }
+    });
+});
+
 // PATCH /api/v1/auth/me/password -> change own password (requires the current
 // one). Revokes every other session and re-issues this one's cookie.
 const updateMyPassword = catchAsync(async (req, res, next) => {
@@ -696,6 +803,8 @@ module.exports = {
     forgotPassword,
     resetPassword,
     updateMe,
+    updateMyTaxProfile,
+    refreshMyTaxStatus,
     updateMyPassword,
     deleteMe
 };

@@ -3,6 +3,7 @@ import { AlertCircle } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { useTranslation } from "@/i18n";
 import { useServices } from "@/features/services";
+import { useAuth } from "@/features/admin";
 import { useBookingNav } from "../../store/BookingContext";
 import { useCities } from "../../hooks/useCities";
 import { useSpecialRequests } from "../../hooks/useSpecialRequests";
@@ -63,7 +64,10 @@ export function ReviewStep({ submitError }) {
       cleaners,
       unit: t(cleaners > 1 ? "booking.units.cleaners" : "booking.units.cleaner"),
     });
-  const quote = computeQuote(v, { addons, tools, services, formatServiceLabel });
+  // The quote must be priced under the customer's VAT treatment, or the review
+  // step would restate the catalogue price while the API charges the net.
+  const { tax } = useAuth();
+  const quote = computeQuote(v, { addons, tools, services, formatServiceLabel, tax });
 
   const city = cities.find((c) => String(c.id) === String(v.cityId))?.name;
   const addonLabels = (v.additionalServices || [])

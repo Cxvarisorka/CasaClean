@@ -1,7 +1,7 @@
 // Stripe webhook (/webhooks/stripe): signature verification runs the REAL
 // Stripe HMAC check — payloads are signed with generateTestHeaderString and the
 // same secret the app reads from STRIPE_WEBHOOK_SECRET.
-const { app, request, stripeMock, sendEmailMock } = require("../setup/testEnv");
+const { app, request, stripeMock, sendEmailMock, waitForEmails } = require("../setup/testEnv");
 const {
     createUser,
     createCity,
@@ -114,8 +114,10 @@ describe("payment_intent.succeeded (booking-creation backstop)", () => {
         expect(String(booking.user)).toBe(String(user._id));
         expect(booking.totalAmount).toBe(40);
 
-        // Draft consumed; confirmation email dispatched (fire-and-forget).
+        // Draft consumed; the invoice email is dispatched fire-and-forget after
+        // the webhook has already ACKed, so wait for it rather than race it.
         expect(await PendingBooking.countDocuments({ paymentIntentId: "pi_hook_1" })).toBe(0);
+        await waitForEmails(1);
         expect(sendEmailMock).toHaveBeenCalledTimes(1);
     });
 

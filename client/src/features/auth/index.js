@@ -1,6 +1,7 @@
 export { AuthShell } from "./components/AuthShell";
 export { GoogleButton } from "./components/GoogleButton";
 export { AccountSecurity } from "./components/AccountSecurity";
+export { BillingProfile } from "./components/BillingProfile";
 export {
   useSignIn,
   useSignUp,

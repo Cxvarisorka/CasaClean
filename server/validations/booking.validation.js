@@ -184,13 +184,17 @@ const editBookingSchema = z.object({
         .min(1, { message: "The property size must be greater then 0!" })
         .optional(),
 
+    // Format only — the "not in the past" rule deliberately does NOT live here.
+    // An edit re-sends the booking's own date, and most bookings an admin
+    // manages are already past (marking them completed, adding notes, assigning
+    // staff after the fact). Refusing a past date at the schema level rejected
+    // every such edit even though the date was untouched. editBooking compares
+    // the incoming date against the stored one and only rejects an actual
+    // RESCHEDULE into the past.
     bookingDate: z
         .string()
         .trim()
         .regex(DATE_REGEX, { message: "bookingDate must be in YYYY-MM-DD format!" })
-        .refine(isTodayOrFuture, {
-            message: "Booking date can't be in the past!"
-        })
         .optional(),
 
     bookingTime: z

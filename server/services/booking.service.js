@@ -18,6 +18,9 @@ const {
   MAX_INTERVAL_DAYS,
   isValidIntervalDays
 } = require('../utils/date.util');
+// Catalogue prices are VAT-exclusive; VAT is added on top for whoever owes it,
+// which depends on their (verified) tax status. See utils/tax.util.js.
+const { priceForCustomer } = require('../utils/tax.util');
 
 // Single source of truth for booking price. Cleaners multiply labour only.
 const computeBookingTotal = ({ service, hours, cleaners, specialRequests = [], cleaningTools = [] }) =>
@@ -319,14 +322,22 @@ const buildValidatedBookingDraft = async (payload, user) => {
   const resolvedCleaningTools = await resolveCleaningTools(cleaningTools, service);
 
   // Server-side price: pricePerHour * hours + sum(add-on prices) + sum(tool
-  // surcharges). Never trusted from the client.
-  const totalAmount = computeBookingTotal({
+  // surcharges). Never trusted from the client. This is the NET catalogue
+  // total — VAT-exclusive, exactly what the site advertises.
+  const netTotal = computeBookingTotal({
     service,
     hours,
     cleaners,
     specialRequests: resolvedSpecialRequests,
     cleaningTools: resolvedCleaningTools
   });
+
+  // Then the VAT treatment. Everyone pays the catalogue price plus VAT, except a
+  // business whose VAT number Stripe has verified — no VAT is added and they
+  // account for it themselves (EU reverse charge). Resolved from the STORED user
+  // document — a body claiming to be a business would otherwise be a
+  // self-service discount.
+  const { totalAmount, tax } = priceForCustomer(netTotal, user);
 
   return {
     user: user._id,
@@ -345,6 +356,7 @@ const buildValidatedBookingDraft = async (payload, user) => {
     hours,
     cleaners,
     totalAmount,
+    tax,
     notes: notes ?? null,
     specialRequests: resolvedSpecialRequests.map((sr) => sr._id),
     cleaningTools: resolvedCleaningTools.map((ct) => ct._id),

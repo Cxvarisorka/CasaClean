@@ -138,6 +138,40 @@ const updateMeSchema = z.object({
 
 }).strict({ message: "Unknown fields are not allowed!" });
 
+// A customer switching between a personal and a business account.
+//
+// Note what is NOT here: `vatStatus`. Verification is Stripe's answer, not the
+// customer's claim, so the field is unwritable through the API by construction —
+// .strict() rejects the request outright if it appears in the body.
+const updateMyTaxProfileSchema = z.object({
+    customerType: z
+        .enum(["individual", "business"], {
+            message: "Customer type must be either 'individual' or 'business'!"
+        })
+        .optional(),
+
+    companyName: z
+        .string()
+        .trim()
+        .max(120, { message: "Company name is too long!" })
+        .optional(),
+
+    // An empty string is meaningful: it clears the registration (and detaches the
+    // number from Stripe), so it must survive validation rather than be rejected
+    // as a too-short string.
+    vatNumber: z
+        .string()
+        .trim()
+        .max(20, { message: "VAT number is too long!" })
+        .optional()
+
+}).strict({ message: "Unknown fields are not allowed!" });
+
+// Pulling the verification result from Stripe takes no client input at all.
+const refreshMyTaxStatusSchema = z
+    .object({})
+    .strict({ message: "This action does not accept a request body." });
+
 // PATCH /auth/me/password — change own password (requires the current one).
 const updateMyPasswordSchema = z.object({
     currentPassword: z
@@ -174,6 +208,8 @@ module.exports = {
     forgotPasswordSchema,
     resetPasswordSchema,
     updateMeSchema,
+    updateMyTaxProfileSchema,
+    refreshMyTaxStatusSchema,
     updateMyPasswordSchema,
     deleteMeSchema
 };

@@ -25,6 +25,16 @@ const {
   renderRefundEmail
 } = require('../services/booking.service');
 
+// Invoices track the money, so a refund has to be reflected on them too.
+const { markInvoiceRefunded } = require('../services/invoice.service');
+// Catalogue prices are VAT-exclusive; VAT is added on top unless the customer is
+// a verified business.
+const { priceForCustomer, applyTaxTreatment } = require('../utils/tax.util');
+
+// Local-midnight date helpers — booking dates are YYYY-MM-DD strings, so a
+// plain string comparison against today is a correct date comparison.
+const { todayString } = require('../utils/date.util');
+
 // Refund policy: a customer self-cancellation gets an automatic full refund
 // only when made at least this many hours before the appointment starts.
 // Inside the window the booking is still cancelled, but the money is kept
@@ -197,7 +207,10 @@ const createBooking = catchAsync(async (req, res, next) => {
 
   if (onBehalf) {
     if (req.body.userId) {
-      const linked = await User.findById(req.body.userId).select('fullname email phone');
+      // The tax fields come along because the booking is priced against the
+      // LINKED customer's VAT status, not the admin's.
+      const linked = await User.findById(req.body.userId)
+        .select('fullname email phone customerType vatNumber vatStatus companyName');
       if (!linked) {
         return next(new AppError("The linked customer account does not exist!", 400));
       }
@@ -262,13 +275,19 @@ const createBooking = catchAsync(async (req, res, next) => {
 
   // Fix 1: compute the booking total on the server — never trust the client.
   // specialRequests/cleaningTools now contain full documents with a `price` field.
-  const computedTotal = computeBookingTotal({
+  const netTotal = computeBookingTotal({
     service,
     hours,
     cleaners,
     specialRequests: resolvedSpecialRequests,
     cleaningTools: resolvedCleaningTools
   });
+
+  // Apply the customer's VAT treatment to the net catalogue total. `profile` is
+  // the LINKED account for an on-behalf booking, the admin for a self-booking,
+  // and null for a walk-in — a walk-in has no verified VAT number, so it falls
+  // through to the standard treatment, which is the right default.
+  const { totalAmount: computedTotal, tax } = priceForCustomer(netTotal, profile);
 
   // Extract just the ids for storage (the Booking model stores ObjectId refs).
   const requestIds = resolvedSpecialRequests.map((sr) => sr._id);
@@ -306,6 +325,7 @@ const createBooking = catchAsync(async (req, res, next) => {
     hours,
     cleaners,
     totalAmount: computedTotal,
+    tax,
     status,
     paymentMethod: 'manual',
     paymentStatus: 'manual',
@@ -375,7 +395,9 @@ const editBooking = catchAsync(async (req, res, next) => {
   let city = null;
   if (srChanged || ctChanged || hoursChanged || cleanersChanged || timeChanged || dateChanged) {
     existing = await Booking.findById(id)
-      .select('serviceId cityId hours cleaners bookingDate bookingTime specialRequests cleaningTools')
+      // `tax` comes along so a reprice re-applies the treatment this booking was
+      // originally priced under (see the reprice block below).
+      .select('serviceId cityId hours cleaners bookingDate bookingTime specialRequests cleaningTools tax')
       .lean();
     if (!existing) {
       return next(new AppError("Booking not found!", 404));
@@ -386,6 +408,20 @@ const editBooking = catchAsync(async (req, res, next) => {
       String(existing.serviceId),
       String(existing.cityId)
     ));
+  }
+
+  // Only an actual RESCHEDULE into the past is rejected. The admin form
+  // re-sends the booking's own date on every edit, and past bookings are
+  // exactly the ones being marked completed / annotated / staffed after the
+  // fact — so a blanket "no past dates" rule (which used to live in
+  // editBookingSchema) made those edits impossible. An unchanged date always
+  // passes, whatever it is.
+  if (dateChanged && updates.bookingDate !== existing.bookingDate) {
+    if (updates.bookingDate < todayString()) {
+      return next(new AppError("Booking date can't be in the past!", 400, {
+        bookingDate: ["Booking date can't be in the past!"]
+      }));
+    }
   }
 
   // Re-validate the working-hours window when the date, time OR duration
@@ -456,13 +492,21 @@ const editBooking = catchAsync(async (req, res, next) => {
       finalCleaningTools = existingTools;
     }
 
-    updates.totalAmount = computeBookingTotal({
+    const repricedNet = computeBookingTotal({
       service,
       hours: finalHours,
       cleaners: finalCleaners,
       specialRequests: finalSpecialRequests,
       cleaningTools: finalCleaningTools
     });
+
+    // Re-apply the booking's OWN stored treatment rather than re-resolving it
+    // from the customer's current profile. An edit changes what is owed, not who
+    // the customer was when they booked — a business that has since let its VAT
+    // registration lapse must not have an existing booking silently re-taxed.
+    const repriced = applyTaxTreatment(repricedNet, existing.tax);
+    updates.totalAmount = repriced.totalAmount;
+    updates.tax = repriced.tax;
   }
 
   // An admin cancelling a booking must release the money too — a status flip to
@@ -501,6 +545,11 @@ const editBooking = catchAsync(async (req, res, next) => {
 
       if (refundUpdate) {
         Object.assign(updates, refundUpdate);
+
+        // Stamp the invoice so an exported PDF reflects the reversal.
+        await markInvoiceRefunded(id, refundUpdate.refundedAt).catch((err) =>
+          console.error('Invoice refund stamp error:', err.message)
+        );
 
         // Best-effort refund email.
         try {
@@ -613,6 +662,11 @@ const cancelMyBooking = catchAsync(async (req, res, next) => {
 
   // Best-effort refund email (only when an actual refund was issued).
   if (refundUpdate) {
+    // Stamp the invoice so an exported PDF reflects the reversal.
+    await markInvoiceRefunded(id, refundUpdate.refundedAt).catch((err) =>
+      console.error('Invoice refund stamp error:', err.message)
+    );
+
     try {
       const serviceDoc = await Booking.findById(booking._id).populate('serviceId', 'name').select('serviceId').lean();
       const { subject, html, text } = renderRefundEmail({
