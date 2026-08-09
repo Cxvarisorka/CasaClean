@@ -18,15 +18,15 @@ export const FAQ_CATEGORIES = [
       },
       {
         id: "q2",
-        question: "Which cities do you serve?",
+        question: "Which areas do you serve?",
         answer:
-          "We currently operate in 12 Italian cities including Rome, Milan, Florence, Naples and Venice — and we expand every quarter. Enter your address at booking to confirm coverage.",
+          "We cover several cities, for apartments, holiday homes, Airbnb properties, hotels, offices and commercial spaces. Pick your city in the first step of the booking wizard and enter your address to confirm coverage.",
       },
       {
         id: "q3",
         question: "Does my cleaner bring supplies and equipment?",
         answer:
-          "Yes — by default your cleaner arrives with professional products and equipment at no extra cost. Prefer your own eco-friendly or specific products? Just leave a note in your booking.",
+          "Cleaning tools and supplies aren't included in the price. You can add the ones you need while booking — each is listed with its price, so your total updates before you confirm. Prefer your own products? Leave the add-ons out and tell us in your booking notes.",
       },
     ],
   },
@@ -62,7 +62,7 @@ export const FAQ_CATEGORIES = [
         id: "q7",
         question: "What if I'm not happy with my clean?",
         answer:
-          "Every visit is covered by our Spotless Guarantee: tell us within 48 hours and we'll send a cleaner back to make it right for free — or refund the visit.",
+          "Every visit is covered by our Spotless Guarantee: get in touch within 48 hours and tell us what went wrong. We'll go through it with you and agree together on how to put it right.",
       },
       {
         id: "q8",

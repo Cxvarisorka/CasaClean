@@ -184,7 +184,7 @@ export default {
 
   footer: {
     blurb:
-      "Pulizie professionali per appartamenti, case vacanze, Airbnb, hotel, uffici e spazi commerciali a Roma. Personale qualificato, prezzi trasparenti e assistenza dedicata.",
+      "Pulizie professionali per appartamenti, case vacanze, Airbnb, hotel, uffici e spazi commerciali. Personale qualificato, prezzi trasparenti e assistenza dedicata.",
     newsletterTitle: "Ricevi consigli per la casa, ogni mese",
     subscribe: "Iscriviti",
     subscribed: "Iscrizione completata — controlla la tua casella.",
@@ -323,7 +323,7 @@ export default {
     eyebrow: "Perché CasaClean",
     title: "Perché scegliere CasaClean",
     subtitle:
-      "Pulizie di alta qualità, prezzi trasparenti, flessibilità negli interventi e un servizio clienti eccellente — per ogni casa e attività a Roma.",
+      "Pulizie di alta qualità, prezzi trasparenti, flessibilità negli interventi e un servizio clienti eccellente — per ogni casa e attività che serviamo.",
   },
 
   workflow: {
@@ -348,9 +348,9 @@ export default {
           "Il tuo addetto segue la nostra checklist di 50 punti, partendo dalle priorità indicate nella prenotazione.",
       },
       relax: {
-        title: "Valuta — è garantito",
+        title: "Valuta — e dicci se qualcosa non va",
         description:
-          "Valuta la pulizia al termine. Se qualcosa non va, ripuliamo entro 48 ore senza costi.",
+          "Valuta la pulizia al termine. Se qualcosa non va, contattaci: la vediamo insieme a te e troviamo una soluzione.",
       },
     },
   },
@@ -520,7 +520,7 @@ export default {
       name: "Pulizia per Case Vacanze, Airbnb e Hotel",
       tagline: "Pronti per gli ospiti, dopo ogni soggiorno",
       description:
-        "Cambi rapidi e affidabili per case vacanze, appartamenti Airbnb e hotel a Roma — puliti, riordinati e presentati secondo gli standard dell'ospitalità.",
+        "Cambi rapidi e affidabili per case vacanze, appartamenti Airbnb e hotel — puliti, riordinati e presentati secondo gli standard dell'ospitalità.",
       features: [
         "Cambi tra check-out e check-in",
         "Cambio di biancheria e asciugamani",
@@ -537,7 +537,7 @@ export default {
         "Disponibilità in tempi brevi",
         "Sempre personale qualificato",
         "Case, uffici e affitti",
-        "Prodotti professionali inclusi",
+        "Attrezzatura per la pulizia disponibile come extra",
       ],
     },
   },
@@ -557,12 +557,12 @@ export default {
       q2: {
         question: "In quali zone operate?",
         answer:
-          "Operiamo a Roma, per appartamenti, case vacanze, Airbnb, hotel, uffici e spazi commerciali. Inserisci il tuo indirizzo in fase di prenotazione per confermare la copertura.",
+          "Operiamo in diverse città, per appartamenti, case vacanze, Airbnb, hotel, uffici e spazi commerciali. Scegli la tua città nel primo passaggio della prenotazione e inserisci l'indirizzo per confermare la copertura.",
       },
       q3: {
         question: "L'addetto porta prodotti e attrezzatura?",
         answer:
-          "Sì — di norma il tuo addetto arriva con prodotti professionali e attrezzatura senza costi aggiuntivi. Preferisci i tuoi prodotti ecologici o specifici? Basta lasciare una nota nella prenotazione.",
+          "Prodotti e attrezzatura per la pulizia non sono inclusi nel prezzo. Puoi aggiungere quelli che ti servono durante la prenotazione — ognuno è indicato con il suo prezzo, così il totale si aggiorna prima di confermare. Preferisci i tuoi prodotti? Non aggiungere gli extra e segnalacelo nelle note della prenotazione.",
       },
       q4: {
         question: "Come funzionano i prezzi?",
@@ -582,7 +582,7 @@ export default {
       q7: {
         question: "E se non sono soddisfatto della pulizia?",
         answer:
-          "Ogni visita è coperta dalla nostra Garanzia Impeccabile: comunicacelo entro 48 ore e rimanderemo un addetto a sistemare tutto gratuitamente — oppure rimborsiamo la visita.",
+          "Ogni visita è coperta dalla nostra Garanzia Impeccabile: contattaci entro 48 ore e raccontaci cosa non ha funzionato. La esaminiamo insieme a te e troviamo insieme la soluzione giusta.",
       },
       q8: {
         question: "I vostri addetti sono selezionati e assicurati?",
@@ -661,11 +661,11 @@ export default {
       includedSubtitle: "Qualunque servizio prenoti, questi sono di serie.",
       included: [
         "Professionisti selezionati e verificati",
-        "Prodotti e attrezzatura professionali inclusi",
+        "Attrezzatura per la pulizia da aggiungere a ogni prenotazione",
         "La nostra checklist di qualità di 50 punti",
         "Assicurazione completa ad ogni visita",
         "Pagamento online sicuro e ricevute",
-        "Garanzia Impeccabile — o ripuliamo gratis",
+        "Qualcosa non va? Dicci tutto e troviamo insieme la soluzione",
       ],
       ctaTitle: "Non sai quale pulizia ti serve?",
       ctaSubtitle:
@@ -673,9 +673,9 @@ export default {
     },
     about: {
       heroEyebrow: "Chi siamo",
-      heroTitle: "Servizi professionali di pulizia a Roma",
+      heroTitle: "Servizi professionali di pulizia in Italia",
       heroSubtitle:
-        "Case, case vacanze e attività a Roma — pulite da personale qualificato, con prezzi trasparenti e un'assistenza su cui puoi contare.",
+        "Case, case vacanze e attività in tutte le città che serviamo — pulite da personale qualificato, con prezzi trasparenti e un'assistenza su cui puoi contare.",
       missionLabel: "La nostra missione",
       mission:
         "Garantire pulizie di alta qualità, prezzi trasparenti, flessibilità negli interventi e un servizio clienti eccellente.",
@@ -685,8 +685,8 @@ export default {
       introEyebrow: "Chi siamo",
       introTitle: "Pulizie su cui puoi contare",
       intro: [
-        "CasaClean offre servizi professionali di pulizia per appartamenti, case vacanze, Airbnb, hotel, uffici e spazi commerciali a Roma.",
-        "Ogni intervento viene eseguito da personale qualificato con prodotti professionali e grande attenzione ai dettagli.",
+        "CasaClean offre servizi professionali di pulizia per appartamenti, case vacanze, Airbnb, hotel, uffici e spazi commerciali nelle città in cui operiamo.",
+        "Ogni intervento viene eseguito da personale qualificato secondo standard professionali e con grande attenzione ai dettagli.",
         "Che si tratti di una pulizia occasionale, periodica, profonda o di un servizio di pulizia post trasloco, CasaClean garantisce sempre affidabilità e risultati di alta qualità.",
       ],
       servicesEyebrow: "Cosa facciamo",
@@ -795,7 +795,7 @@ export default {
     staff: {
       title: "Personale qualificato",
       description:
-        "Ogni intervento viene eseguito da personale qualificato con prodotti professionali e grande attenzione ai dettagli.",
+        "Ogni intervento viene eseguito da personale qualificato secondo standard professionali e con grande attenzione ai dettagli.",
     },
     pricing: {
       title: "Prezzi trasparenti",
@@ -895,7 +895,7 @@ export default {
       empty: "Seleziona un servizio per vedere la stima.",
       total: "Totale stimato",
       guarantee:
-        "Coperta dalla Garanzia Impeccabile. Cancellazione gratuita fino a 24h prima.",
+        "Qualcosa non va? Dicci tutto e troviamo insieme la soluzione. Cancellazione gratuita fino a 24h prima.",
     },
     confirmation: {
       title: "Prenotazione confermata!",

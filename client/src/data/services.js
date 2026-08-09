@@ -97,7 +97,7 @@ export const SERVICES = [
     image: IMAGES.linens,
     tagline: "Guest-ready between every stay",
     description:
-      "Fast, reliable turnovers for holiday homes, Airbnb properties and hotels in Rome — cleaned, reset and presented to hospitality standards.",
+      "Fast, reliable turnovers for holiday homes, Airbnb properties and hotels — cleaned, reset and presented to hospitality standards.",
     pricePerHour: 22,
     startingAt: 59,
     features: [
@@ -123,7 +123,7 @@ export const SERVICES = [
       "Short-notice availability",
       "Same qualified professionals",
       "Homes, offices & rentals",
-      "Professional products included",
+      "Cleaning tools available as add-ons",
     ],
     popular: false,
   },

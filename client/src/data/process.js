@@ -30,9 +30,9 @@ export const WORKFLOW_STEPS = [
   {
     id: "relax",
     icon: "BadgeCheck",
-    title: "Rate it — it's guaranteed",
+    title: "Rate it — and tell us if anything's off",
     description:
-      "Review your clean afterwards. If anything's not right, we'll re-clean within 48 hours at no charge.",
+      "Review your clean afterwards. If something isn't right, get in touch and we'll go through it with you and sort it out together.",
   },
 ];
 

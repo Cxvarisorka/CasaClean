@@ -8,9 +8,9 @@
 export const SITE = {
   name: "CasaClean",
   legalName: "Vacanze Romane SRLS",
-  tagline: "Professional cleaning services in Rome",
+  tagline: "Professional cleaning services in Italy",
   description:
-    "CasaClean offers professional cleaning services for apartments, holiday homes, Airbnb properties, hotels, offices and commercial spaces in Rome — regular, deep, move-in/move-out and emergency cleaning, booked online in about a minute.",
+    "CasaClean offers professional cleaning services for apartments, holiday homes, Airbnb properties, hotels, offices and commercial spaces — regular, deep, move-in/move-out and emergency cleaning, booked online in about a minute.",
   url: import.meta.env.VITE_SITE_URL || "https://casaclean.com",
   locale: "en_US",
   email: "hello@casaclean.com",
@@ -30,20 +30,20 @@ export const SITE = {
 /** Per-page SEO presets keyed by a stable id used in each page component. */
 export const PAGE_META = {
   home: {
-    title: "CasaClean — Professional Cleaning Services in Rome",
+    title: "CasaClean — Professional Cleaning Services in Italy",
     description: SITE.description,
     path: "/",
   },
   services: {
     title: "Services — Regular, Deep, Office & Holiday Home Cleaning",
     description:
-      "Every kind of clean under one roof: regular cleaning, deep cleaning, move-in/move-out, office & commercial, holiday home / Airbnb / hotel and emergency cleaning — by qualified staff in Rome.",
+      "Every kind of clean under one roof: regular cleaning, deep cleaning, move-in/move-out, office & commercial, holiday home / Airbnb / hotel and emergency cleaning — by qualified staff in every city we serve.",
     path: "/services",
   },
   about: {
-    title: "About CasaClean — Professional Cleaning in Rome",
+    title: "About CasaClean — Professional Cleaning in Italy",
     description:
-      "CasaClean provides high-quality cleaning for apartments, holiday homes, Airbnb properties, hotels, offices and commercial spaces in Rome. A brand managed by Vacanze Romane SRLS.",
+      "CasaClean provides high-quality cleaning for apartments, holiday homes, Airbnb properties, hotels, offices and commercial spaces. A brand managed by Vacanze Romane SRLS.",
     path: "/about",
   },
   contact: {

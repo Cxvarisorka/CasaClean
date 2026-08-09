@@ -191,7 +191,7 @@ export default {
 
   footer: {
     blurb:
-      "Professional cleaning for apartments, holiday homes, Airbnb properties, hotels, offices and commercial spaces in Rome. Qualified staff, transparent prices and dedicated support.",
+      "Professional cleaning for apartments, holiday homes, Airbnb properties, hotels, offices and commercial spaces. Qualified staff, transparent prices and dedicated support.",
     newsletterTitle: "Get home care tips, monthly",
     subscribe: "Subscribe",
     subscribed: "You're subscribed — watch your inbox.",
@@ -329,7 +329,7 @@ export default {
     eyebrow: "Why CasaClean",
     title: "Why choose CasaClean?",
     subtitle:
-      "High-quality cleaning, transparent pricing, flexible scheduling and outstanding customer support — for every home and business in Rome.",
+      "High-quality cleaning, transparent pricing, flexible scheduling and outstanding customer support — for every home and business we serve.",
   },
 
   workflow: {
@@ -354,9 +354,9 @@ export default {
           "Your cleaner works through our 50-point checklist, starting with the priorities you flagged in your booking.",
       },
       relax: {
-        title: "Rate it — it's guaranteed",
+        title: "Rate it — and tell us if anything's off",
         description:
-          "Review your clean afterwards. If anything's not right, we'll re-clean within 48 hours at no charge.",
+          "Review your clean afterwards. If something isn't right, get in touch and we'll go through it with you and sort it out together.",
       },
     },
   },
@@ -526,7 +526,7 @@ export default {
       name: "Holiday Home, Airbnb & Hotel Cleaning",
       tagline: "Guest-ready between every stay",
       description:
-        "Fast, reliable turnovers for holiday homes, Airbnb properties and hotels in Rome — cleaned, reset and presented to hospitality standards.",
+        "Fast, reliable turnovers for holiday homes, Airbnb properties and hotels — cleaned, reset and presented to hospitality standards.",
       features: [
         "Checkout-to-checkin turnovers",
         "Fresh linen & towel changes",
@@ -543,7 +543,7 @@ export default {
         "Short-notice availability",
         "Same qualified professionals",
         "Homes, offices & rentals",
-        "Professional products included",
+        "Cleaning tools available as add-ons",
       ],
     },
   },
@@ -564,12 +564,12 @@ export default {
       q2: {
         question: "Which areas do you serve?",
         answer:
-          "We operate in Rome, covering apartments, holiday homes, Airbnb properties, hotels, offices and commercial spaces. Enter your address at booking to confirm coverage.",
+          "We cover several cities, for apartments, holiday homes, Airbnb properties, hotels, offices and commercial spaces. Pick your city in the first step of the booking wizard and enter your address to confirm coverage.",
       },
       q3: {
         question: "Does my cleaner bring supplies and equipment?",
         answer:
-          "Yes — by default your cleaner arrives with professional products and equipment at no extra cost. Prefer your own eco-friendly or specific products? Just leave a note in your booking.",
+          "Cleaning tools and supplies aren't included in the price. You can add the ones you need while booking — each is listed with its price, so your total updates before you confirm. Prefer your own products? Leave the add-ons out and tell us in your booking notes.",
       },
       q4: {
         question: "How does pricing work?",
@@ -589,7 +589,7 @@ export default {
       q7: {
         question: "What if I'm not happy with my clean?",
         answer:
-          "Every visit is covered by our Spotless Guarantee: tell us within 48 hours and we'll send a cleaner back to make it right for free — or refund the visit.",
+          "Every visit is covered by our Spotless Guarantee: get in touch within 48 hours and tell us what went wrong. We'll go through it with you and agree together on how to put it right.",
       },
       q8: {
         question: "Are your cleaners vetted and insured?",
@@ -669,11 +669,11 @@ export default {
       includedSubtitle: "No matter which service you book, these come standard.",
       included: [
         "Vetted, background-checked professionals",
-        "Professional supplies & equipment included",
+        "Cleaning tools you can add to any booking",
         "Our 50-point quality checklist",
         "Full liability insurance on every visit",
         "Secure online payment & receipts",
-        "Spotless Guarantee — or we re-clean free",
+        "Not right? Tell us and we'll sort it out together",
       ],
       ctaTitle: "Not sure which clean you need?",
       ctaSubtitle:
@@ -681,9 +681,9 @@ export default {
     },
     about: {
       heroEyebrow: "About us",
-      heroTitle: "Professional cleaning services in Rome",
+      heroTitle: "Professional cleaning services in Italy",
       heroSubtitle:
-        "Homes, holiday properties and businesses across Rome — cleaned by qualified staff, with transparent pricing and support you can count on.",
+        "Homes, holiday properties and businesses in every city we serve — cleaned by qualified staff, with transparent pricing and support you can count on.",
       missionLabel: "Our mission",
       mission:
         "To provide high-quality cleaning services, transparent pricing, flexible scheduling and outstanding customer support.",
@@ -693,8 +693,8 @@ export default {
       introEyebrow: "About us",
       introTitle: "Cleaning you can rely on",
       intro: [
-        "CasaClean offers professional cleaning services for apartments, holiday homes, Airbnb properties, hotels, offices and commercial spaces in Rome.",
-        "Every cleaning service is carried out by qualified staff using professional cleaning products and paying close attention to every detail.",
+        "CasaClean offers professional cleaning services for apartments, holiday homes, Airbnb properties, hotels, offices and commercial spaces across the cities we serve.",
+        "Every cleaning service is carried out by qualified staff working to a professional standard and paying close attention to every detail.",
         "Whether you need a one-time cleaning, regular cleaning, deep cleaning or a move-in/move-out cleaning service, CasaClean always guarantees reliability and high-quality results.",
       ],
       servicesEyebrow: "What we do",
@@ -806,7 +806,7 @@ export default {
     staff: {
       title: "Qualified and experienced staff",
       description:
-        "Every cleaning is carried out by qualified staff using professional cleaning products and paying close attention to every detail.",
+        "Every cleaning is carried out by qualified staff working to a professional standard and paying close attention to every detail.",
     },
     pricing: {
       title: "Transparent pricing",
@@ -911,7 +911,7 @@ export default {
       empty: "Select a service to see your estimate.",
       total: "Estimated total",
       guarantee:
-        "Backed by the Spotless Guarantee. Free cancellation up to 24h before.",
+        "Something not right? Tell us and we'll sort it out together. Free cancellation up to 24h before.",
     },
     confirmation: {
       title: "Booking confirmed!",

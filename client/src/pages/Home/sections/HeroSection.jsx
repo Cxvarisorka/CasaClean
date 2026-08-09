@@ -141,7 +141,7 @@ export function HeroSection() {
                         Via Giovanni Giorgi 5
                       </p>
                       <p className="text-body-sm text-brand-100">
-                        Rome · 2 bed · 1 bath
+                        2 bed · 1 bath
                       </p>
                     </div>
                   </>
