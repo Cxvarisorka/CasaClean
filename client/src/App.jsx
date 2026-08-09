@@ -1,6 +1,7 @@
 import { AppProviders } from "@/app/providers";
 import { AppRouter } from "@/app/router";
 import { Seo, organizationSchema, websiteSchema } from "@/seo";
+import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 
 /*
@@ -20,6 +21,7 @@ const App = () => {
         schema={[organizationSchema(), websiteSchema()]}
       />
       <AppRouter />
+      <Analytics />
       <SpeedInsights />
     </AppProviders>
   );
