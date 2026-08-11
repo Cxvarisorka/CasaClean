@@ -82,6 +82,18 @@ export const PAGE_META = {
       "Schedule a professional cleaning in minutes. Tell us about your place, pick a time, see the exact price and confirm — it's that simple.",
     path: "/booking",
   },
+  privacy: {
+    title: "Privacy Policy — CasaClean",
+    description:
+      "What personal data CasaClean collects when you book a cleaning, why we collect it, who we share it with, how long we keep it and how to exercise your GDPR rights.",
+    path: "/privacy",
+  },
+  terms: {
+    title: "Terms of Service — CasaClean",
+    description:
+      "The terms governing bookings with CasaClean: how a booking is formed, prices and VAT, recurring plans, cancellations and refunds, your right of withdrawal, our guarantee and liability.",
+    path: "/terms",
+  },
   notFound: {
     title: "Page Not Found — CasaClean",
     description: "The page you're looking for doesn't exist or has moved.",

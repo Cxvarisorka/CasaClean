@@ -780,6 +780,13 @@ export default {
       sendCv: "Invia il tuo CV",
       learnAbout: "Scopri di più su di noi",
     },
+    legal: {
+      eyebrow: "Note legali",
+      updated: "Ultimo aggiornamento: {date}",
+      contents: "Indice",
+      fallbackNotice:
+        "Questo documento è pubblicato solo in italiano e in inglese. Stai leggendo la versione in {language}.",
+    },
     notFound: {
       code: "404",
       title: "Questa pagina è stata spazzata via",

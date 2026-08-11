@@ -19,6 +19,8 @@ const AboutPage = lazy(() => import("@/pages/About/AboutPage"));
 const ContactPage = lazy(() => import("@/pages/Contact/ContactPage"));
 const FaqPage = lazy(() => import("@/pages/FAQ/FaqPage"));
 const CareersPage = lazy(() => import("@/pages/Careers/CareersPage"));
+const PrivacyPage = lazy(() => import("@/pages/Legal/PrivacyPage"));
+const TermsPage = lazy(() => import("@/pages/Legal/TermsPage"));
 const BookingPage = lazy(() => import("@/pages/Booking/BookingPage"));
 const SignInPage = lazy(() => import("@/pages/Auth/SignInPage"));
 const SignUpPage = lazy(() => import("@/pages/Auth/SignUpPage"));
@@ -56,6 +58,8 @@ export const MAIN_ROUTES = [
   { path: ROUTES.contact, element: ContactPage },
   { path: ROUTES.faq, element: FaqPage },
   { path: ROUTES.careers, element: CareersPage },
+  { path: ROUTES.privacy, element: PrivacyPage },
+  { path: ROUTES.terms, element: TermsPage },
   // Account area — requires a registered, signed-in user.
   { path: ROUTES.profile, element: ProfilePage, protected: true },
 ];

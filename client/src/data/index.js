@@ -7,3 +7,4 @@ export * from "./process";
 export * from "./company";
 export * from "./careers";
 export * from "./cities";
+export * from "./legal";

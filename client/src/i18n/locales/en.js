@@ -790,6 +790,18 @@ export default {
       sendCv: "Send your CV",
       learnAbout: "Learn about us",
     },
+    // Chrome around the legal documents. The documents themselves are NOT
+    // translated here — they live in `data/legal`, published in English and
+    // Italian only, so these keys are deliberately absent from the other three
+    // locales: a Greek visitor gets an English page, not English text wearing
+    // Greek furniture. See `data/legal/index.js`.
+    legal: {
+      eyebrow: "Legal",
+      updated: "Last updated {date}",
+      contents: "Contents",
+      fallbackNotice:
+        "This document is published in English and Italian only. You are reading the {language} version.",
+    },
     notFound: {
       code: "404",
       title: "This page has been swept away",
