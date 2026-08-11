@@ -268,13 +268,27 @@ const logout = (req, res) => {
 // live in exactly one place: the booking wizard can then show a total that
 // matches what it is about to charge, instead of quoting the catalogue price to
 // an individual who will actually be billed that price plus VAT.
-const getMe = (req, res) => {
+//
+// It also reports whether the account has a local password (`hasPassword`).
+// The client needs it to decide between "set a password" and "change your
+// password", and to know whether deleting the account needs one — `provider`
+// can't answer that any more, because a Google account may have added one.
+// The hash itself is select:false and must never leave the server, so we ask
+// the database for the ANSWER rather than for the value.
+const getMe = catchAsync(async (req, res, next) => {
     const treatment = resolveTaxTreatment(req.user);
+
+    const hasPassword = Boolean(await User.exists({
+        _id: req.user._id,
+        password: { $exists: true, $ne: null }
+    }));
 
     res.status(200).json({
         status: "success",
         data: {
-            user: req.user,
+            // req.user is a lean object (see protect), so this is a plain copy
+            // with one derived field added — no Mongoose document is exposed.
+            user: { ...req.user, hasPassword },
             tax: {
                 treatment: treatment.treatment,
                 reverseCharge: treatment.treatment === 'reverse-charge',
@@ -287,7 +301,7 @@ const getMe = (req, res) => {
             }
         }
     });
-};
+});
 
 // GET /api/v1/auth/users -> list every account (admin only). The password hash
 // is select:false on the schema, so it's never returned. Newest first, so the
@@ -529,11 +543,14 @@ const forgotPassword = catchAsync(async (req, res, next) => {
         message: "If an account exists for that email, a password-reset link has been sent."
     };
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).select("+password");
 
-    // Google-only accounts have no local password to reset; unknown emails
-    // no-op. Both reply identically to prevent user enumeration.
-    if (!user || user.provider !== "local") {
+    // The gate is the stored password, not the provider: a Google account that
+    // added a local password (PATCH /me/password) owns a credential like any
+    // other and must be able to reset it. An account with no password has
+    // nothing to reset — it signs in with Google — and unknown emails no-op.
+    // All three reply identically to prevent user enumeration.
+    if (!user || !user.password) {
         return res.status(200).json(genericResponse);
     }
 
@@ -707,8 +724,18 @@ const refreshMyTaxStatus = catchAsync(async (req, res, next) => {
     });
 });
 
-// PATCH /api/v1/auth/me/password -> change own password (requires the current
-// one). Revokes every other session and re-issues this one's cookie.
+// PATCH /api/v1/auth/me/password -> change own password, or SET a first one.
+//
+// Two cases, told apart by the stored hash — never by the request:
+//   - the account HAS a password  -> the current one must be supplied and match
+//     (a hijacked session must not be able to lock the owner out).
+//   - the account has NONE (signed up through Google) -> it may add one, with
+//     no current password to prove, because there is nothing to prove. The
+//     session cookie is the authority, exactly as it already is for deleting a
+//     Google account (deleteMe). Afterwards the account can sign in either way,
+//     and every later change takes the branch above.
+//
+// Both paths revoke every other session and re-issue this one's cookie.
 const updateMyPassword = catchAsync(async (req, res, next) => {
     const { currentPassword, newPassword } = req.body;
 
@@ -717,12 +744,19 @@ const updateMyPassword = catchAsync(async (req, res, next) => {
         return next(new AppError("The user for this session no longer exists!", 401));
     }
 
-    if (!user.password) {
-        return next(new AppError("This account signs in with Google and has no password to change.", 400));
-    }
+    if (user.password) {
+        if (!currentPassword) {
+            return next(new AppError("Please provide your current password.", 400));
+        }
 
-    if (!(await user.comparePassword(currentPassword))) {
-        return next(new AppError("Your current password is incorrect!", 401));
+        if (!(await user.comparePassword(currentPassword))) {
+            return next(new AppError("Your current password is incorrect!", 401));
+        }
+    } else if (currentPassword) {
+        // Nothing to compare against: this account has never had a password.
+        // Reject rather than silently ignore, so a client that sent one isn't
+        // led to believe it was verified.
+        return next(new AppError("This account has no password yet — leave the current password empty to set one.", 400));
     }
 
     user.password = newPassword; // pre-save hook hashes it

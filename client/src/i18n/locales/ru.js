@@ -162,6 +162,11 @@ export default {
       title: "Безопасность",
       changePassword: "Сменить пароль",
       changeTitle: "Смена пароля",
+      setPassword: "Задать пароль",
+      setTitle: "Задайте пароль",
+      setHint:
+        "Вы зарегистрировались через Google. Задайте пароль — и сможете входить любым из двух способов.",
+      passwordSet: "Пароль задан. Теперь вы можете входить по email и паролю.",
       currentPassword: "Текущий пароль",
       newPassword: "Новый пароль",
       confirmPassword: "Подтвердите новый пароль",

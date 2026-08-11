@@ -159,6 +159,11 @@ export default {
       title: "უსაფრთხოება",
       changePassword: "პაროლის შეცვლა",
       changeTitle: "შეცვალე პაროლი",
+      setPassword: "პაროლის დაყენება",
+      setTitle: "დააყენე პაროლი",
+      setHint:
+        "შენ Google-ით დარეგისტრირდი. დაამატე პაროლი და შესვლა ორივე გზით შეგეძლება.",
+      passwordSet: "პაროლი დაყენდა. ახლა შეგიძლია ელფოსტითა და პაროლით შეხვიდე.",
       currentPassword: "მიმდინარე პაროლი",
       newPassword: "ახალი პაროლი",
       confirmPassword: "გაიმეორე ახალი პაროლი",

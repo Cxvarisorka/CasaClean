@@ -20,15 +20,24 @@ import { makeChangePasswordSchema } from "../validation/authSchema";
  * Profile widget for the account's security operations:
  *   - change password (requires the current one; the server signs every other
  *     device out and re-issues this session's cookie)
- *   - delete account (password-confirmed for local accounts; blocked by the
- *     server while upcoming bookings exist)
- * Google-only accounts have no local password, so the change-password action is
- * hidden and deletion needs no password confirmation.
+ *   - set a first password, for an account created through Google that has
+ *     none — after which it can sign in either way and every later change
+ *     goes through the normal current-password flow
+ *   - delete account (password-confirmed once the account has one; blocked by
+ *     the server while upcoming bookings exist)
+ *
+ * Which of the first two applies is `user.hasPassword`, resolved server-side in
+ * GET /auth/me. `provider` can't answer it: a Google account may have added a
+ * password, and the hash itself never leaves the server.
  */
 
-function ChangePasswordModal({ open, onClose }) {
+function ChangePasswordModal({ open, onClose, hasPassword }) {
   const { t } = useTranslation();
-  const schema = useMemo(() => makeChangePasswordSchema(t), [t]);
+  const { updateUser } = useAuth();
+  const schema = useMemo(
+    () => makeChangePasswordSchema(t, { requireCurrent: hasPassword }),
+    [t, hasPassword]
+  );
 
   const {
     register,
@@ -40,7 +49,12 @@ function ChangePasswordModal({ open, onClose }) {
     defaultValues: { currentPassword: "", newPassword: "", confirmPassword: "" },
   });
 
-  const mutation = useMutation({ mutationFn: changePassword });
+  const mutation = useMutation({
+    mutationFn: changePassword,
+    // The account now has a local password: the next visit to this card must
+    // offer "change", and deleting the account must ask for it.
+    onSuccess: () => updateUser({ hasPassword: true }),
+  });
 
   const close = () => {
     if (mutation.isPending) return;
@@ -50,15 +64,20 @@ function ChangePasswordModal({ open, onClose }) {
   };
 
   const onSubmit = ({ currentPassword, newPassword }) =>
-    mutation.mutateAsync({ currentPassword, newPassword });
+    mutation.mutateAsync(hasPassword ? { currentPassword, newPassword } : { newPassword });
 
   return (
-    <Modal open={open} onClose={close} title={t("profile.security.changeTitle")} size="md">
+    <Modal
+      open={open}
+      onClose={close}
+      title={t(hasPassword ? "profile.security.changeTitle" : "profile.security.setTitle")}
+      size="md"
+    >
       {mutation.isSuccess ? (
         <div className="space-y-5">
           <div className="flex items-start gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 p-3.5 text-body-sm text-emerald-700">
             <CheckCircle2 className="mt-0.5 size-4.5 shrink-0" />
-            {t("profile.security.changed")}
+            {t(hasPassword ? "profile.security.changed" : "profile.security.passwordSet")}
           </div>
           <div className="flex justify-end">
             <Button onClick={close}>{t("common.close")}</Button>
@@ -66,13 +85,21 @@ function ChangePasswordModal({ open, onClose }) {
         </div>
       ) : (
         <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
-          <Input
-            label={t("profile.security.currentPassword")}
-            type="password"
-            leftIcon={Lock}
-            error={errors.currentPassword?.message}
-            {...register("currentPassword")}
-          />
+          {hasPassword ? (
+            <Input
+              label={t("profile.security.currentPassword")}
+              type="password"
+              leftIcon={Lock}
+              error={errors.currentPassword?.message}
+              {...register("currentPassword")}
+            />
+          ) : (
+            // No current password exists to prove — explain why we're not
+            // asking for one, and what setting it buys.
+            <p className="rounded-xl border border-ink-100 bg-ink-50/60 p-3.5 text-body-sm text-ink-600 dark:border-white/10 dark:bg-white/5 dark:text-ink-300">
+              {t("profile.security.setHint")}
+            </p>
+          )}
           <Input
             label={t("profile.security.newPassword")}
             type="password"
@@ -100,7 +127,7 @@ function ChangePasswordModal({ open, onClose }) {
               {t("admin.form.cancel")}
             </Button>
             <Button type="submit" loading={mutation.isPending}>
-              {t("profile.security.changePassword")}
+              {t(hasPassword ? "profile.security.changePassword" : "profile.security.setPassword")}
             </Button>
           </div>
         </form>
@@ -187,25 +214,26 @@ export function AccountSecurity() {
   const [changing, setChanging] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  // Google-only accounts carry no local password.
-  const hasPassword = user?.provider !== "google";
+  // Resolved server-side (GET /auth/me) from the stored hash. The `provider`
+  // fallback only covers a user object from before that field existed — a
+  // Google account that has since added a password reads as hasPassword there
+  // too, because the server, not this line, decides what the request needs.
+  const hasPassword = user?.hasPassword ?? user?.provider !== "google";
 
   return (
     <Card className="p-6">
       <h2 className="text-heading-sm text-ink-900">{t("profile.security.title")}</h2>
 
       <div className="mt-5 space-y-3">
-        {hasPassword && (
-          <Button
-            variant="outline"
-            size="sm"
-            fullWidth
-            leftIcon={KeyRound}
-            onClick={() => setChanging(true)}
-          >
-            {t("profile.security.changePassword")}
-          </Button>
-        )}
+        <Button
+          variant="outline"
+          size="sm"
+          fullWidth
+          leftIcon={KeyRound}
+          onClick={() => setChanging(true)}
+        >
+          {t(hasPassword ? "profile.security.changePassword" : "profile.security.setPassword")}
+        </Button>
         <Button
           variant="ghost"
           size="sm"
@@ -218,7 +246,11 @@ export function AccountSecurity() {
         </Button>
       </div>
 
-      <ChangePasswordModal open={changing} onClose={() => setChanging(false)} />
+      <ChangePasswordModal
+        open={changing}
+        onClose={() => setChanging(false)}
+        hasPassword={hasPassword}
+      />
       <DeleteAccountModal
         open={deleting}
         onClose={() => setDeleting(false)}

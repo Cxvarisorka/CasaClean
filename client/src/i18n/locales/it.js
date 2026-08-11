@@ -160,6 +160,11 @@ export default {
       title: "Sicurezza",
       changePassword: "Cambia password",
       changeTitle: "Cambia la tua password",
+      setPassword: "Imposta una password",
+      setTitle: "Imposta una password",
+      setHint:
+        "Ti sei registrato con Google. Aggiungi una password e potrai accedere in entrambi i modi.",
+      passwordSet: "Password impostata. Ora puoi accedere con email e password.",
       currentPassword: "Password attuale",
       newPassword: "Nuova password",
       confirmPassword: "Conferma la nuova password",

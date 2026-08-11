@@ -172,13 +172,20 @@ const refreshMyTaxStatusSchema = z
     .object({})
     .strict({ message: "This action does not accept a request body." });
 
-// PATCH /auth/me/password — change own password (requires the current one).
+// PATCH /auth/me/password — change own password, or SET a first one.
+//
+// `currentPassword` is optional here only so a Google account that has never had
+// a local password can add one. It is not optional in effect: the controller
+// reads the account's stored hash and demands a matching current password
+// whenever one exists, so an omitted field can never bypass the check on an
+// account that has a password to protect.
 const updateMyPasswordSchema = z.object({
     currentPassword: z
         .string()
         .trim()
         .min(1, { message: "Current password is required!" })
-        .max(50, { message: "Password is too long!" }),
+        .max(50, { message: "Password is too long!" })
+        .optional(),
 
     newPassword: z
         .string()

@@ -85,4 +85,25 @@ describe("makeChangePasswordSchema", () => {
       confirmPassword: "Password2",
     }).success).toBe(false);
   });
+
+  // A Google account setting its FIRST password has no current one to give,
+  // but the new one is held to exactly the same strength rules.
+  test("with requireCurrent:false, drops the current password only", () => {
+    const setSchema = makeChangePasswordSchema(t, { requireCurrent: false });
+
+    expect(setSchema.safeParse({
+      newPassword: "Password1",
+      confirmPassword: "Password1",
+    }).success).toBe(true);
+
+    expect(setSchema.safeParse({
+      newPassword: "weakpass",
+      confirmPassword: "weakpass",
+    }).success).toBe(false);
+
+    expect(setSchema.safeParse({
+      newPassword: "Password1",
+      confirmPassword: "Password2",
+    }).success).toBe(false);
+  });
 });

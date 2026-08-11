@@ -127,14 +127,19 @@ export function resetPassword({ token, password }) {
 }
 
 /**
- * Change the signed-in user's password (requires the current one). The server
+ * Change the signed-in user's password — or set a first one.
+ *
+ * `currentPassword` is omitted only for an account that has none yet (created
+ * through Google). The server decides which case applies from the stored hash,
+ * so leaving it out can never skip the check on an account that has a password;
+ * sending it for an account that has none is rejected. Either way the server
  * revokes every other session and re-issues this one's cookie.
  */
 export function changePassword({ currentPassword, newPassword }) {
   return request({
     method: "PATCH",
     url: ENDPOINTS.auth.changePassword,
-    data: { currentPassword, newPassword },
+    data: currentPassword ? { currentPassword, newPassword } : { newPassword },
   });
 }
 

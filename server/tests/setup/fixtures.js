@@ -29,6 +29,22 @@ const createUser = (overrides = {}) => {
 
 const createAdmin = (overrides = {}) => createUser({ role: "admin", ...overrides });
 
+/**
+ * A Google (OAuth) account: verified by Google, with NO local password and no
+ * phone — exactly what config/passport.config.js creates on first sign-in.
+ */
+const createGoogleUser = (overrides = {}) => {
+    const n = next();
+    return User.create({
+        fullname: `Google User ${n}`,
+        email: `google${n}@test.casaclean.local`,
+        googleId: `google-oauth-id-${n}`,
+        provider: "google",
+        isVerified: true,
+        ...overrides
+    });
+};
+
 /** The auth cookie the protect middleware expects, signed like signToken(). */
 const cookieFor = (user) => {
     const token = jwt.sign(
@@ -158,6 +174,7 @@ const createPaidBooking = (user, service, city, overrides = {}) => {
 module.exports = {
     createUser,
     createAdmin,
+    createGoogleUser,
     cookieFor,
     createCity,
     createService,

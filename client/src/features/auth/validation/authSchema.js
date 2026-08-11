@@ -56,10 +56,20 @@ export const makeResetPasswordSchema = (t) =>
       message: t("auth.errors.passwordMatch"),
     });
 
-export const makeChangePasswordSchema = (t) =>
+/*
+ * Change (or set) the password of the signed-in account.
+ *
+ * `requireCurrent` is false only for an account that has no password yet — one
+ * created through Google that is adding a first local password. The server
+ * decides that from the stored hash; this flag just keeps the form from asking
+ * for a value that cannot exist.
+ */
+export const makeChangePasswordSchema = (t, { requireCurrent = true } = {}) =>
   z
     .object({
-      currentPassword: z.string().min(1, t("auth.errors.passwordMin")),
+      currentPassword: requireCurrent
+        ? z.string().min(1, t("auth.errors.passwordMin"))
+        : z.string().optional(),
       newPassword: z
         .string()
         .min(8, t("auth.errors.passwordMin"))

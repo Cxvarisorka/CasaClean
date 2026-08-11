@@ -5,6 +5,7 @@ const crypto = require("crypto");
 const { api, sendEmailMock } = require("../setup/testEnv");
 const {
     createUser,
+    createGoogleUser,
     cookieFor,
     createService,
     createCity,
@@ -334,6 +335,130 @@ describe("profile self-service", () => {
         const signin = await api.post("/api/v1/auth/signin")
             .send({ email: user.email, password: "new-password-456" });
         expect(signin.status).toBe(200);
+    });
+});
+
+// A Google account starts with no local password. It must be able to add one
+// (and only then does the current-password rule apply to it).
+describe("adding a password to a Google account", () => {
+    test("GET /me reports whether the account has a local password", async () => {
+        const google = await createGoogleUser();
+        const local = await createUser();
+
+        const asGoogle = await api.get("/api/v1/auth/me").set("Cookie", cookieFor(google));
+        expect(asGoogle.status).toBe(200);
+        expect(asGoogle.body.data.user.hasPassword).toBe(false);
+        // The answer travels, never the hash.
+        expect(asGoogle.body.data.user.password).toBeUndefined();
+
+        const asLocal = await api.get("/api/v1/auth/me").set("Cookie", cookieFor(local));
+        expect(asLocal.body.data.user.hasPassword).toBe(true);
+    });
+
+    test("PATCH /me/password sets a first password and enables email sign-in", async () => {
+        const google = await createGoogleUser();
+        const otherSession = cookieFor(google);
+
+        const res = await api.patch("/api/v1/auth/me/password")
+            .set("Cookie", cookieFor(google))
+            .send({ newPassword: "brand-new-password-1" });
+        expect(res.status).toBe(200);
+
+        // Same posture as a change: every other session dies.
+        const stale = await api.get("/api/v1/auth/me").set("Cookie", otherSession);
+        expect(stale.status).toBe(401);
+
+        const signin = await api.post("/api/v1/auth/signin")
+            .send({ email: google.email, password: "brand-new-password-1" });
+        expect(signin.status).toBe(200);
+
+        // The Google link survives — the account now has both ways in.
+        const stored = await User.findById(google._id).select("+password");
+        expect(stored.provider).toBe("google");
+        expect(stored.googleId).toBe(google.googleId);
+        expect(stored.password).not.toBe("brand-new-password-1"); // hashed
+    });
+
+    test("rejects a current password on an account that has none", async () => {
+        const google = await createGoogleUser();
+        const res = await api.patch("/api/v1/auth/me/password")
+            .set("Cookie", cookieFor(google))
+            .send({ currentPassword: "anything", newPassword: "brand-new-password-1" });
+        expect(res.status).toBe(400);
+
+        const stored = await User.findById(google._id).select("+password");
+        expect(stored.password).toBeUndefined();
+    });
+
+    test("once set, the password can only be changed with the current one", async () => {
+        const google = await createGoogleUser();
+        const first = await api.patch("/api/v1/auth/me/password")
+            .set("Cookie", cookieFor(google))
+            .send({ newPassword: "brand-new-password-1" });
+        expect(first.status).toBe(200);
+
+        // The session cookie was re-issued by the change; re-read the bumped
+        // tokenVersion so the follow-up requests carry a live token.
+        const live = await User.findById(google._id).select("+tokenVersion");
+
+        const omitted = await api.patch("/api/v1/auth/me/password")
+            .set("Cookie", cookieFor(live))
+            .send({ newPassword: "second-password-22" });
+        expect(omitted.status).toBe(400);
+
+        const wrong = await api.patch("/api/v1/auth/me/password")
+            .set("Cookie", cookieFor(live))
+            .send({ currentPassword: "not-it", newPassword: "second-password-22" });
+        expect(wrong.status).toBe(401);
+
+        const ok = await api.patch("/api/v1/auth/me/password")
+            .set("Cookie", cookieFor(live))
+            .send({ currentPassword: "brand-new-password-1", newPassword: "second-password-22" });
+        expect(ok.status).toBe(200);
+    });
+
+    test("DELETE /me starts requiring the password once one is set", async () => {
+        const google = await createGoogleUser();
+        await api.patch("/api/v1/auth/me/password")
+            .set("Cookie", cookieFor(google))
+            .send({ newPassword: "brand-new-password-1" });
+
+        const live = await User.findById(google._id).select("+tokenVersion");
+
+        const unconfirmed = await api.delete("/api/v1/auth/me")
+            .set("Cookie", cookieFor(live))
+            .send({});
+        expect(unconfirmed.status).toBe(401);
+        expect(await User.findById(google._id)).not.toBeNull();
+
+        const confirmed = await api.delete("/api/v1/auth/me")
+            .set("Cookie", cookieFor(live))
+            .send({ password: "brand-new-password-1" });
+        expect(confirmed.status).toBe(200);
+    });
+
+    test("forgot-password follows the password, not the provider", async () => {
+        const google = await createGoogleUser();
+
+        // No local password yet -> nothing to reset, and no email sent.
+        sendEmailMock.mockClear();
+        const before = await api.post("/api/v1/auth/forgot-password")
+            .send({ email: google.email });
+        expect(before.status).toBe(200);
+        expect(sendEmailMock).not.toHaveBeenCalled();
+
+        await api.patch("/api/v1/auth/me/password")
+            .set("Cookie", cookieFor(google))
+            .send({ newPassword: "brand-new-password-1" });
+
+        // With a password, the account can reset it like any other.
+        sendEmailMock.mockClear();
+        const after = await api.post("/api/v1/auth/forgot-password")
+            .send({ email: google.email });
+        expect(after.status).toBe(200);
+        expect(sendEmailMock).toHaveBeenCalledTimes(1);
+        // Identical response either way (anti-enumeration).
+        expect(after.body.message).toBe(before.body.message);
     });
 });
 
