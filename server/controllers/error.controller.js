@@ -39,6 +39,14 @@ const STRIPE_ERROR_TYPES = new Set([
 const isStripeError = (err) =>
     typeof err?.type === "string" && err.type.startsWith("Stripe");
 const handleStripeError = (err) => {
+    console.error("Stripe error", {
+        type: err.type,
+        code: err.code,
+        param: err.param,
+        requestId: err.requestId,
+        message: err.message
+    });
+
     switch (err.type) {
         case "StripeCardError":
             // e.g. card declined / insufficient funds — safe to show the reason.

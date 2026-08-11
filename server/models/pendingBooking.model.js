@@ -93,7 +93,15 @@ const pendingBookingSchema = new mongoose.Schema({
 
 // TTL: auto-delete abandoned drafts one hour after creation. A successful
 // payment promotes (and deletes) the draft well before then.
-pendingBookingSchema.index({ createdAt: 1 }, { expireAfterSeconds: 3600 });
+//
+// Exported because the webhook needs it to tell an ORPHANED payment (draft
+// reaped before the money landed — refundable) apart from one whose draft simply
+// hasn't been written yet (a create-intent request still in flight — emphatically
+// not refundable). See handleStripeWebhook.
+const DRAFT_TTL_SECONDS = 3600;
+
+pendingBookingSchema.index({ createdAt: 1 }, { expireAfterSeconds: DRAFT_TTL_SECONDS });
 
 const PendingBooking = mongoose.model('PendingBooking', pendingBookingSchema);
 module.exports = PendingBooking;
+module.exports.DRAFT_TTL_SECONDS = DRAFT_TTL_SECONDS;

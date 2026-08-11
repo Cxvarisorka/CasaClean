@@ -64,13 +64,16 @@ describe("POST /api/v1/payment/booking/intent", () => {
         expect(res.body.data.clientSecret).toBe("pi_test_1_secret");
 
         // Stripe was asked to charge exactly the server-computed total in cents.
+        // The new-card intent is created UNCONFIRMED, so it carries no
+        // idempotency key — a duplicate costs an unused intent, never a charge.
         expect(stripeMock.paymentIntents.create).toHaveBeenCalledWith(
             expect.objectContaining({
                 amount: toMinorUnits(100),
                 currency: "eur",
                 customer: "cus_test_1",
                 receipt_email: user.email
-            })
+            }),
+            undefined
         );
 
         // The draft is persisted, keyed to the intent, with the same total.
@@ -124,7 +127,8 @@ describe("POST /api/v1/payment/booking/intent", () => {
         expect(res.status).toBe(201);
         expect(stripeMock.customers.create).not.toHaveBeenCalled();
         expect(stripeMock.paymentIntents.create).toHaveBeenCalledWith(
-            expect.objectContaining({ customer: "cus_existing" })
+            expect.objectContaining({ customer: "cus_existing" }),
+            undefined
         );
     });
 
@@ -167,7 +171,8 @@ describe("POST /api/v1/payment/booking/intent", () => {
 
         expect(res.status).toBe(201);
         expect(stripeMock.paymentIntents.create).toHaveBeenCalledWith(
-            expect.objectContaining({ setup_future_usage: "off_session" })
+            expect.objectContaining({ setup_future_usage: "off_session" }),
+            undefined
         );
         const pending = await PendingBooking.findOne({ paymentIntentId: "pi_test_1" });
         expect(pending.savePaymentMethod).toBe(true);
@@ -185,8 +190,10 @@ describe("POST /api/v1/payment/booking/intent", () => {
             .send({ ...validBookingBody(service, city), savedPaymentMethodId: "pm_1" });
 
         expect(res.status).toBe(201);
+        // This one DOES capture on create, so it must carry an idempotency key.
         expect(stripeMock.paymentIntents.create).toHaveBeenCalledWith(
-            expect.objectContaining({ payment_method: "pm_1", confirm: true })
+            expect.objectContaining({ payment_method: "pm_1", confirm: true }),
+            expect.objectContaining({ idempotencyKey: expect.stringMatching(/^booking:[a-f0-9]{64}:a0$/) })
         );
     });
 
@@ -202,6 +209,138 @@ describe("POST /api/v1/payment/booking/intent", () => {
 
         expect(res.status).toBe(403);
         expect(stripeMock.paymentIntents.create).not.toHaveBeenCalled();
+    });
+});
+
+// The saved-card path captures the money inside paymentIntents.create, so a
+// resubmitted request is the one way this API can charge somebody twice.
+describe("POST /api/v1/payment/booking/intent — duplicate saved-card submissions", () => {
+    const saveCardBody = (service, city) => ({
+        ...validBookingBody(service, city),
+        savedPaymentMethodId: "pm_1"
+    });
+
+    beforeEach(() => {
+        stripeMock.paymentMethods.retrieve.mockResolvedValue({ id: "pm_1", customer: "cus_mine" });
+    });
+
+    test("charges once when the same booking is submitted twice", async () => {
+        const user = await createUser({ stripeCustomerId: "cus_mine" });
+        const service = await createService();
+        const city = await createCity();
+        mockIntentCreate({ status: "succeeded" });
+        stripeMock.paymentIntents.retrieve.mockResolvedValue({
+            id: "pi_test_1",
+            client_secret: "pi_test_1_secret",
+            status: "succeeded",
+            customer: "cus_mine"
+        });
+
+        const body = saveCardBody(service, city);
+        const first = await api.post("/api/v1/payment/booking/intent")
+            .set("Cookie", cookieFor(user)).send(body);
+        const second = await api.post("/api/v1/payment/booking/intent")
+            .set("Cookie", cookieFor(user)).send(body);
+
+        expect(first.status).toBe(201);
+        expect(second.status).toBe(201);
+        // The second request reused the first intent instead of creating another.
+        expect(stripeMock.paymentIntents.create).toHaveBeenCalledTimes(1);
+        expect(second.body.data.paymentIntentId).toBe(first.body.data.paymentIntentId);
+        // ...and that means exactly one booking, not two.
+        expect(await Booking.countDocuments({ user: user._id })).toBe(1);
+    });
+
+    test("a different card is a genuinely new payment, not a duplicate", async () => {
+        const user = await createUser({ stripeCustomerId: "cus_mine" });
+        const service = await createService();
+        const city = await createCity();
+        mockIntentCreate({ status: "succeeded" });
+
+        const body = saveCardBody(service, city);
+        await api.post("/api/v1/payment/booking/intent")
+            .set("Cookie", cookieFor(user)).send(body);
+
+        stripeMock.paymentMethods.retrieve.mockResolvedValue({ id: "pm_2", customer: "cus_mine" });
+        stripeMock.paymentIntents.create.mockImplementation(async (params) => ({
+            id: "pi_test_2",
+            client_secret: "pi_test_2_secret",
+            status: "succeeded",
+            amount: params.amount,
+            customer: params.customer
+        }));
+
+        const res = await api.post("/api/v1/payment/booking/intent")
+            .set("Cookie", cookieFor(user))
+            .send({ ...body, savedPaymentMethodId: "pm_2" });
+
+        expect(res.status).toBe(201);
+        expect(stripeMock.paymentIntents.create).toHaveBeenCalledTimes(2);
+        expect(res.body.data.paymentIntentId).toBe("pi_test_2");
+    });
+
+    test("re-persists a draft the first request charged for but never stored", async () => {
+        // Crash window: the intent was created (and captured) but the process
+        // died before writing the PendingBooking. The retry must not answer
+        // "success" for money that can never become a booking.
+        const user = await createUser({ stripeCustomerId: "cus_mine" });
+        const service = await createService();
+        const city = await createCity();
+        mockIntentCreate({ status: "succeeded" });
+        stripeMock.paymentIntents.retrieve.mockResolvedValue({
+            id: "pi_test_1",
+            client_secret: "pi_test_1_secret",
+            status: "succeeded",
+            customer: "cus_mine"
+        });
+
+        const body = saveCardBody(service, city);
+        await api.post("/api/v1/payment/booking/intent")
+            .set("Cookie", cookieFor(user)).send(body);
+
+        // Simulate the lost draft and its un-promoted booking.
+        await PendingBooking.deleteMany({});
+        await Booking.deleteMany({});
+
+        const res = await api.post("/api/v1/payment/booking/intent")
+            .set("Cookie", cookieFor(user)).send(body);
+
+        expect(res.status).toBe(201);
+        // Still exactly one charge...
+        expect(stripeMock.paymentIntents.create).toHaveBeenCalledTimes(1);
+        // ...and the booking that charge paid for now exists.
+        expect(await Booking.countDocuments({ paymentIntentId: "pi_test_1" })).toBe(1);
+    });
+
+    test("a retry after a decline gets a fresh idempotency key, not the replayed decline", async () => {
+        const user = await createUser({ stripeCustomerId: "cus_mine" });
+        const service = await createService();
+        const city = await createCity();
+
+        const declined = Object.assign(new Error("Your card has insufficient funds."), {
+            type: "StripeCardError"
+        });
+        stripeMock.paymentIntents.create.mockRejectedValueOnce(declined);
+
+        const body = saveCardBody(service, city);
+        const first = await api.post("/api/v1/payment/booking/intent")
+            .set("Cookie", cookieFor(user)).send(body);
+        expect(first.status).toBe(402);
+
+        // The customer tops up and presses pay again on the SAME card. Stripe
+        // replays the stored response for a reused key, so this second attempt
+        // must not reuse a0 — otherwise the decline is permanent.
+        mockIntentCreate({ status: "succeeded" });
+        const second = await api.post("/api/v1/payment/booking/intent")
+            .set("Cookie", cookieFor(user)).send(body);
+
+        expect(second.status).toBe(201);
+        expect(stripeMock.paymentIntents.create).toHaveBeenLastCalledWith(
+            expect.anything(),
+            expect.objectContaining({
+                idempotencyKey: expect.stringMatching(/^booking:[a-f0-9]{64}:a1$/)
+            })
+        );
     });
 });
 
@@ -392,9 +531,11 @@ describe("saved-card management", () => {
             .set("Cookie", cookieFor(user));
         expect(res.status).toBe(201);
         expect(res.body.data.clientSecret).toBe("seti_secret_1");
-        expect(stripeMock.setupIntents.create).toHaveBeenCalledWith(
-            expect.objectContaining({ customer: "cus_1", usage: "off_session" })
-        );
+        expect(stripeMock.setupIntents.create).toHaveBeenCalledWith({
+            customer: "cus_1",
+            usage: "off_session",
+            payment_method_types: ["card"]
+        });
     });
 
     test("PATCH /methods/:id/default is ownership-checked", async () => {

@@ -174,7 +174,8 @@ describe('what each VAT state is charged', () => {
 
     // 120.00 EUR in minor units, not 146.40. The relief happens at the charge.
     expect(stripeMock.paymentIntents.create).toHaveBeenCalledWith(
-      expect.objectContaining({ amount: 12000, currency: 'eur' })
+      expect.objectContaining({ amount: 12000, currency: 'eur' }),
+      undefined
     );
   });
 });

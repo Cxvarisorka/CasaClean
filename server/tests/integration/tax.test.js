@@ -275,7 +275,8 @@ describe('pricing by customer type', () => {
 
     // Stripe is asked for the VAT-inclusive amount, in minor units.
     expect(stripeMock.paymentIntents.create).toHaveBeenCalledWith(
-      expect.objectContaining({ amount: 7320, currency: 'eur' })
+      expect.objectContaining({ amount: 7320, currency: 'eur' }),
+      undefined
     );
   });
 
@@ -299,7 +300,8 @@ describe('pricing by customer type', () => {
     // Stripe is asked for €60 in minor units — the relief happens at the charge,
     // not just on the paperwork.
     expect(stripeMock.paymentIntents.create).toHaveBeenCalledWith(
-      expect.objectContaining({ amount: 6000, currency: 'eur' })
+      expect.objectContaining({ amount: 6000, currency: 'eur' }),
+      undefined
     );
   });
 

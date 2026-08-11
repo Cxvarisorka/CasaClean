@@ -18,9 +18,12 @@ const {
     dateStr
 } = require("../setup/fixtures");
 
+const { createSubscription } = require("../setup/subscriptionFixtures");
+
 const Booking = require("../../models/booking.model");
 const PendingBooking = require("../../models/pendingBooking.model");
 const StripeEvent = require("../../models/stripeEvent.model");
+const Subscription = require("../../models/subscription.model");
 
 let eventSeq = 0;
 
@@ -170,6 +173,84 @@ describe("payment_intent.succeeded (booking-creation backstop)", () => {
     });
 });
 
+// A charge that can never become a booking must not be quietly kept. The
+// finalize endpoint already refunds this when the customer is still on the page;
+// these cover the case where they closed the tab and only the webhook is left.
+describe("payment_intent.succeeded — orphaned payments", () => {
+    const HOUR = 60 * 60;
+    const secondsAgo = (s) => Math.floor(Date.now() / 1000) - s;
+
+    test("refunds a charge whose draft expired before it landed", async () => {
+        stripeMock.refunds.create.mockResolvedValue({ id: "re_orphan_hook" });
+
+        const res = await deliver("payment_intent.succeeded", {
+            id: "pi_orphan",
+            status: "succeeded",
+            // Older than the draft TTL, so the missing draft was definitively
+            // reaped — nothing can still be in flight writing it.
+            created: secondsAgo(2 * HOUR),
+            metadata: { type: "booking", userId: "u1" }
+        });
+
+        expect(res.status).toBe(200);
+        expect(stripeMock.refunds.create).toHaveBeenCalledWith(
+            { payment_intent: "pi_orphan" },
+            { idempotencyKey: "refund:intent:pi_orphan" }
+        );
+        expect(await Booking.countDocuments()).toBe(0);
+    });
+
+    test("does NOT refund a young intent whose draft may still be in flight", async () => {
+        // A saved-card charge captures inside paymentIntents.create, so Stripe can
+        // deliver this before createBookingIntent has written its draft. Refunding
+        // here would cancel a good payment seconds before its booking appears.
+        const res = await deliver("payment_intent.succeeded", {
+            id: "pi_young",
+            status: "succeeded",
+            created: secondsAgo(5),
+            metadata: { type: "booking", userId: "u1" }
+        });
+
+        expect(res.status).toBe(200);
+        expect(stripeMock.refunds.create).not.toHaveBeenCalled();
+    });
+
+    test("a redelivered orphan reuses the same refund key (never two refunds)", async () => {
+        stripeMock.refunds.create.mockResolvedValue({ id: "re_orphan_hook" });
+        const object = {
+            id: "pi_orphan_2",
+            status: "succeeded",
+            created: secondsAgo(2 * HOUR),
+            metadata: { type: "booking", userId: "u1" }
+        };
+
+        await deliver("payment_intent.succeeded", object);
+        await deliver("payment_intent.succeeded", object); // new event id, same intent
+
+        // Called twice, but under one key — Stripe replays the original refund
+        // rather than issuing a second.
+        expect(stripeMock.refunds.create).toHaveBeenCalledTimes(2);
+        for (const call of stripeMock.refunds.create.mock.calls) {
+            expect(call[1]).toEqual({ idempotencyKey: "refund:intent:pi_orphan_2" });
+        }
+    });
+
+    test("promotes normally when the draft is present, however old the intent", async () => {
+        await seedPendingBooking("pi_old_but_valid");
+
+        const res = await deliver("payment_intent.succeeded", {
+            id: "pi_old_but_valid",
+            status: "succeeded",
+            created: secondsAgo(3 * HOUR),
+            metadata: { type: "booking", userId: "u1" }
+        });
+
+        expect(res.status).toBe(200);
+        expect(await Booking.countDocuments({ paymentIntentId: "pi_old_but_valid" })).toBe(1);
+        expect(stripeMock.refunds.create).not.toHaveBeenCalled();
+    });
+});
+
 describe("payment_intent.payment_failed", () => {
     test("emails the customer a heads-up and creates no booking", async () => {
         const { user } = await seedPendingBooking("pi_fail_1");
@@ -234,6 +315,69 @@ describe("charge.refunded", () => {
         expect(res.status).toBe(200);
         const fresh = await Booking.findById(booking._id);
         expect(fresh.paymentStatus).toBe("paid");
+    });
+});
+
+describe("charge.dispute.created", () => {
+    test("flags the booking as disputed without claiming it was refunded", async () => {
+        const user = await createUser();
+        const service = await createService();
+        const city = await createCity();
+        const booking = await createPaidBooking(user, service, city, {
+            paymentIntentId: "pi_disputed"
+        });
+
+        const res = await deliver("charge.dispute.created", {
+            id: "dp_1",
+            charge: "ch_1",
+            payment_intent: "pi_disputed",
+            amount: 4000,
+            reason: "fraudulent"
+        });
+
+        expect(res.status).toBe(200);
+        const fresh = await Booking.findById(booking._id);
+        expect(fresh.stripeStatus).toBe("disputed");
+        // A dispute can still be WON — the money has not been returned, so the
+        // booking must not be relabelled as refunded.
+        expect(fresh.paymentStatus).toBe("paid");
+    });
+
+    test("pauses the recurring plan the disputed charge belonged to", async () => {
+        const user = await createUser();
+        const service = await createService();
+        const city = await createCity();
+        const subscription = await createSubscription(user, service, city);
+        await createPaidBooking(user, service, city, {
+            paymentIntentId: "pi_disputed_sub",
+            subscriptionId: subscription._id
+        });
+
+        const res = await deliver("charge.dispute.created", {
+            id: "dp_2",
+            charge: "ch_2",
+            payment_intent: "pi_disputed_sub",
+            amount: 4000,
+            reason: "product_not_received"
+        });
+
+        expect(res.status).toBe(200);
+        const fresh = await Subscription.findById(subscription._id);
+        expect(fresh.status).toBe("paused");
+        expect(fresh.lastError).toMatch(/disputed/i);
+        // Charging the same card again would earn a second chargeback.
+        expect(fresh.processingAt).toBeNull();
+    });
+
+    test("ACKs a dispute for a charge we have no booking for", async () => {
+        const res = await deliver("charge.dispute.created", {
+            id: "dp_3",
+            charge: "ch_3",
+            payment_intent: "pi_unknown",
+            amount: 1000,
+            reason: "general"
+        });
+        expect(res.status).toBe(200);
     });
 });
 

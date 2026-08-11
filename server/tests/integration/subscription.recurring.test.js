@@ -73,7 +73,9 @@ describe("recurring first-cycle payment", () => {
                     recurring: "true",
                     intervalDays: "3"
                 })
-            })
+            }),
+            // New-card intent: created unconfirmed, so no idempotency key.
+            undefined
         );
 
         const pending = await PendingBooking.findOne({ paymentIntentId: "pi_recurring_first" });

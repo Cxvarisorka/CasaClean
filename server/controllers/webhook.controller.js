@@ -9,13 +9,15 @@
 // can safely run twice), so duplicate deliveries and retries are harmless. We
 // additionally record processed event ids to skip re-work on duplicates.
 
+const Sentry = require('@sentry/node');
+
 const stripe = require('../config/stripe.config');
 const StripeEvent = require('../models/stripeEvent.model');
 const Booking = require('../models/booking.model');
 const PendingBooking = require('../models/pendingBooking.model');
 const Subscription = require('../models/subscription.model');
 const sendEmail = require('../utils/email.util');
-const { promotePendingBooking } = require('./payment.controller');
+const { promotePendingBooking, refundOrphanedPayment } = require('./payment.controller');
 const { markInvoiceRefunded } = require('../services/invoice.service');
 const {
   applyVerificationResult,
@@ -26,6 +28,68 @@ const {
   renderSubscriptionPausedEmail,
   sendBestEffortEmail
 } = require('../services/subscription.service');
+
+const { DRAFT_TTL_SECONDS } = PendingBooking;
+
+const stripeId = (value) => (typeof value === 'string' ? value : value?.id);
+
+/**
+ * Decide what to do with a succeeded booking payment that produced no booking.
+ *
+ * `promotePendingBooking` returns null in two very different situations, and
+ * telling them apart is the whole job here — one deserves an automatic refund,
+ * the other must never get one:
+ *
+ *   1. The draft TTL-expired before the payment landed. The booking can never be
+ *      created, so keeping the money would be keeping it against nothing. The
+ *      finalize endpoint already refunds this when the customer is still on the
+ *      page; without the same treatment here, a customer who closed the tab is
+ *      simply charged for a booking that does not exist.
+ *
+ *   2. The draft has not been WRITTEN yet — a saved-card charge captures inside
+ *      stripe.paymentIntents.create, and Stripe can deliver this event before
+ *      createBookingIntent has persisted its PendingBooking. Refunding here would
+ *      cancel a perfectly good payment moments before its booking appears.
+ *
+ * The intent's own age separates them: past the draft TTL nothing can still be
+ * in flight, so a missing draft is definitively a reaped one. Anything younger is
+ * either case 2 or something genuinely unexpected — neither is ours to refund, so
+ * it goes to Sentry for a human instead.
+ */
+const handleOrphanedBookingPayment = async (paymentIntent) => {
+  // Only ever touch payments this application created. An intent belonging to
+  // another integration on the same Stripe account is not ours to refund.
+  if (paymentIntent?.metadata?.type !== 'booking') return;
+
+  const createdAt = Number(paymentIntent.created) * 1000;
+  const ageSeconds = Number.isFinite(createdAt)
+    ? (Date.now() - createdAt) / 1000
+    : 0;
+
+  if (ageSeconds > DRAFT_TTL_SECONDS) {
+    const refunded = await refundOrphanedPayment(paymentIntent.id);
+    if (refunded) {
+      console.error(
+        `Refunded orphaned payment ${paymentIntent.id}: the booking draft expired before the charge landed.`
+      );
+    }
+    return;
+  }
+
+  // Too young to judge. Do not refund; make it visible instead.
+  Sentry.captureMessage(
+    `Succeeded booking payment ${paymentIntent.id} has no draft and no booking.`,
+    {
+      level: 'warning',
+      extra: {
+        stage: 'handleOrphanedBookingPayment',
+        paymentIntentId: paymentIntent.id,
+        ageSeconds,
+        userId: paymentIntent.metadata?.userId
+      }
+    }
+  );
+};
 
 const handleStripeWebhook = async (req, res) => {
   const signature = req.headers['stripe-signature'];
@@ -62,7 +126,10 @@ const handleStripeWebhook = async (req, res) => {
           await ensureSubscriptionCycleBooking(pi);
           break;
         }
-        await promotePendingBooking(pi.id, pi);
+        const booking = await promotePendingBooking(pi.id, pi);
+        // Nothing to promote: either an expired draft (refundable) or a draft
+        // still being written (emphatically not). See the helper.
+        if (!booking) await handleOrphanedBookingPayment(pi);
         break;
       }
 
@@ -155,6 +222,71 @@ const handleStripeWebhook = async (req, res) => {
             }
           }
         }
+        break;
+      }
+
+      case 'charge.dispute.created': {
+        // A chargeback. The money is held by Stripe from this moment, and the
+        // customer has told their bank they did not authorise (or did not
+        // receive) this cleaning — so the one thing we must not do is carry on
+        // billing the same card. Deliberately narrower than charge.refunded:
+        // paymentStatus stays 'paid' because a dispute can still be WON, and a
+        // won dispute must not leave the booking mislabelled as refunded.
+        const dispute = event.data.object;
+        const paymentIntentId = stripeId(dispute.payment_intent);
+        if (!paymentIntentId) break;
+
+        const booking = await Booking.findOneAndUpdate(
+          { paymentIntentId },
+          { $set: { stripeStatus: 'disputed' } },
+          { new: true }
+        );
+
+        // Pause any plan this charge belonged to. Paused rather than cancelled:
+        // if the dispute is resolved in our favour the customer can resume,
+        // whereas charging again mid-dispute earns a second chargeback and
+        // counts against the account's dispute rate.
+        if (booking?.subscriptionId) {
+          const paused = await Subscription.findOneAndUpdate(
+            { _id: booking.subscriptionId, status: 'active' },
+            {
+              $set: {
+                status: 'paused',
+                pausedReason: 'payment-failed',
+                pausedAt: new Date(),
+                processingAt: null,
+                lastError: 'A charge for this plan was disputed, so upcoming visits are on hold.'
+              }
+            },
+            { new: true }
+          );
+
+          if (paused) {
+            sendBestEffortEmail({
+              email: paused.customerEmail,
+              ...renderSubscriptionPausedEmail({
+                subscription: paused,
+                reason: 'payment-failed',
+                errorMessage: paused.lastError
+              })
+            });
+          }
+        }
+
+        // A dispute has a response deadline and needs evidence a human has to
+        // gather — it can never be handled by code alone, so it must page us.
+        Sentry.captureMessage(`Stripe dispute opened on charge ${dispute.charge || dispute.id}.`, {
+          level: 'error',
+          extra: {
+            stage: 'charge.dispute.created',
+            disputeId: dispute.id,
+            paymentIntentId,
+            amount: dispute.amount,
+            reason: dispute.reason,
+            dueBy: dispute.evidence_details?.due_by,
+            bookingId: booking ? String(booking._id) : null
+          }
+        });
         break;
       }
 
