@@ -9,7 +9,9 @@ import { useCities } from "../../hooks/useCities";
 import { useSpecialRequests } from "../../hooks/useSpecialRequests";
 import { useCleaningTools } from "../../hooks/useCleaningTools";
 import { computeQuote } from "../../utils/pricing";
+import { formatDuration } from "../../utils/duration";
 import { formatLocalDateString, intervalLabel } from "../../utils/recurrence";
+import { useTimeIssue } from "../../hooks/useTimeIssue";
 
 /*
  * ReviewStep
@@ -60,7 +62,7 @@ export function ReviewStep({ submitError }) {
   const formatServiceLabel = ({ name, hours, cleaners }) =>
     t("booking.units.serviceLine", {
       name,
-      hours,
+      duration: formatDuration(t, hours),
       cleaners,
       unit: t(cleaners > 1 ? "booking.units.cleaners" : "booking.units.cleaner"),
     });
@@ -69,7 +71,8 @@ export function ReviewStep({ submitError }) {
   const { tax } = useAuth();
   const quote = computeQuote(v, { addons, tools, services, formatServiceLabel, tax });
 
-  const city = cities.find((c) => String(c.id) === String(v.cityId))?.name;
+  const cityRecord = cities.find((c) => String(c.id) === String(v.cityId));
+  const city = cityRecord?.name;
   const addonLabels = (v.additionalServices || [])
     .map((id) => addons.find((a) => a.value === id)?.label)
     .filter(Boolean)
@@ -83,6 +86,17 @@ export function ReviewStep({ submitError }) {
   const cleanersUnit = t(
     v.cleaners > 1 ? "booking.units.cleaners" : "booking.units.cleaner"
   );
+
+  // The schedule step's guard can be walked around: change the duration on an
+  // earlier step, then jump forward through the progress bar. This is the last
+  // screen before the card is charged, so restate the problem here rather than
+  // letting the API be the one to explain it.
+  const { message: timeIssueMessage } = useTimeIssue({
+    city: cityRecord,
+    hours: v.hours,
+    date: v.date,
+    time: v.time,
+  });
 
   return (
     <div className="space-y-4">
@@ -108,8 +122,8 @@ export function ReviewStep({ submitError }) {
       <Group title={t("booking.review.cleaning")} stepIndex={1}>
         <Row
           label={t("booking.review.duration")}
-          value={t("booking.units.duration", {
-            hours: v.hours,
+          value={t("booking.units.durationLine", {
+            duration: formatDuration(t, v.hours),
             cleaners: v.cleaners,
             unit: cleanersUnit,
           })}
@@ -139,6 +153,12 @@ export function ReviewStep({ submitError }) {
           }
         />
         <Row label={t("booking.review.time")} value={v.time} />
+        {timeIssueMessage && (
+          <p className="flex items-start gap-2 pt-2 text-body-sm text-red-700">
+            <AlertCircle className="mt-0.5 size-4.5 shrink-0" />
+            {timeIssueMessage}
+          </p>
+        )}
         {intervalDays > 0 && (
           <Row
             label={t("booking.schedule.repeat.label")}

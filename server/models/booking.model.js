@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 
+const { isValidDurationHours } = require('../utils/duration.util');
+
 // Booking
 // -------
 // A single cleaning reservation made by a signed-in user. Field names use
@@ -80,10 +82,16 @@ const bookingSchema = new mongoose.Schema({
     type: String,
     required: [true, "Booking time is required!"]
   },
+  // Whole or half hours — 1.5 is a valid 90-minute booking. The step rule lives
+  // in utils/duration.util.js so the Zod layer and this one can't drift.
   hours: {
     type: Number,
     required: [true, "Working hours is required!"],
-    min: [1, "A booking must be at least 1 hour."]
+    min: [1, "A booking must be at least 1 hour."],
+    validate: {
+      validator: isValidDurationHours,
+      message: "A booking's duration must be a whole or half hour (e.g. 1, 1.5, 2)."
+    }
   },
   cleaners: {
     type: Number,

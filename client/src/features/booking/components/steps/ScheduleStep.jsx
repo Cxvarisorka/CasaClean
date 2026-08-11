@@ -4,22 +4,28 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { useTranslation } from "@/i18n";
 import { useServices } from "@/features/services";
-import { OptionGroup } from "../fields/OptionGroup";
 import { recurrenceChoices } from "../../constants";
+import { formatDuration } from "../../utils/duration";
 import { intervalLabel, todayDateString } from "../../utils/recurrence";
-import { bookableTimeSlots } from "../../utils/timeSlots";
+import { startWindow } from "../../utils/timeWindow";
+import { useStepGuard } from "../../store/BookingContext";
+import { useTimeIssue } from "../../hooks/useTimeIssue";
 import { useCities } from "../../hooks/useCities";
 
 /*
  * ScheduleStep
  * ------------
- * Step 3 — date and time. The date uses a native date input (min = today so
- * past dates can't be chosen); the time is a slot picker for a guided feel.
+ * Step 3 — date and start time. Both are native inputs: the date has min=today
+ * so a past day can't be chosen, and the time is TYPED to the minute, because
+ * a crew arriving at 12:20 is an ordinary request and a grid of whole hours
+ * silently refuses it.
  *
- * Slots are derived from the CHOSEN CITY's working hours and the chosen
- * duration, not from a fixed list. The server rejects any start outside those
- * hours — and any booking that would run past closing — so a static list
- * guarantees dead options that only fail at the payment step.
+ * Typing means validating rather than enumerating. The CHOSEN CITY's working
+ * hours and the chosen duration define a window (utils/timeWindow.js) — the
+ * step shows it as the allowed range, marks the input's own min/max, and blocks
+ * Continue through a step guard while the entered time falls outside it. All
+ * three rules mirror `assertBookingWindow` server-side, so the wizard reports
+ * the problem here instead of at the payment step.
  *
  * The frequency picker follows the same rule against the CHOSEN SERVICE: it is
  * hidden entirely for a service that can't repeat, and offers only the cadences
@@ -32,6 +38,8 @@ export function ScheduleStep() {
     control,
     register,
     setValue,
+    setError,
+    setFocus,
     formState: { errors },
   } = useFormContext();
 
@@ -57,19 +65,36 @@ export function ScheduleStep() {
   // [] when the chosen service is one-off only; otherwise its allowed cadences.
   const cadences = useMemo(() => recurrenceChoices(service), [service]);
 
-  const slots = useMemo(
-    () => bookableTimeSlots({ city, hours, date }),
-    [city, hours, date]
-  );
+  const durationLabel = formatDuration(t, hours);
 
-  // A slot that was valid can stop being valid: the user lengthens the booking,
-  // switches city, or picks today after the slot has passed. Clear it so a stale
-  // value can't be carried into checkout and rejected server-side.
-  useEffect(() => {
-    if (time && !slots.includes(time)) {
-      setValue("time", "", { shouldValidate: true });
-    }
-  }, [slots, time, setValue]);
+  // The range this booking may start in. null = the duration doesn't fit the
+  // city's day at all (or no city yet), which is a different message.
+  const startRange = useMemo(() => startWindow({ city, hours }), [city, hours]);
+
+  // Re-derived whenever the inputs change, so a time that stops fitting — the
+  // customer lengthens the booking, switches city, or picks today — reports
+  // itself immediately. The value is deliberately NOT cleared: silently emptying
+  // a field the customer typed reads as a bug, and the message says exactly what
+  // to change.
+  const { message: timeIssueMessage, describe } = useTimeIssue({
+    city,
+    hours,
+    date,
+    time,
+  });
+
+  // Block Continue while the entered time can't be booked. Re-checked at the
+  // press rather than reused from the render above, because one of the rules is
+  // "not already past" — true when the customer typed it, false ten minutes
+  // later. Setting the form error too puts the field in the same state as any
+  // other failure, so it's styled and announced like one.
+  useStepGuard("schedule", () => {
+    const { issue, message } = describe();
+    if (!issue) return true;
+    setError("time", { type: "manual", message: message ?? "" });
+    setFocus("time");
+    return false;
+  });
 
   // A cadence stops being valid when the customer goes back and switches to a
   // service that doesn't repeat, or that pins a different set of cadences. Fall
@@ -98,42 +123,36 @@ export function ScheduleStep() {
         {...register("date")}
       />
 
-      <Controller
-        control={control}
-        name="time"
-        render={({ field }) => (
-          <>
-            {slots.length > 0 ? (
-              <OptionGroup
-                label={t("booking.schedule.time")}
-                options={slots.map((slot) => ({ value: slot, label: slot }))}
-                value={field.value}
-                onChange={field.onChange}
-                columns={4}
-                error={errors.time?.message}
-              />
-            ) : (
-              <div>
-                <p className="mb-3 text-body-sm font-semibold text-ink-800">
-                  {t("booking.schedule.time")}
-                </p>
-                <p className="rounded-xl border border-dashed border-ink-200 px-4 py-3 text-body-sm text-ink-500">
-                  {!city
-                    ? t("booking.schedule.noCity")
-                    : t("booking.schedule.noSlots")}
-                </p>
-                {errors.time && (
-                  <p className="mt-1.5 text-body-sm text-red-600">
-                    {errors.time.message}
-                  </p>
-                )}
-              </div>
-            )}
-          </>
-        )}
+      <Input
+        label={t("booking.schedule.time")}
+        type="time"
+        // Any minute is bookable, so the picker must not round to the hour.
+        step={60}
+        // Advisory only — the browser's own bounds help the spinner land in
+        // range, but the guard above is what actually decides.
+        min={startRange?.earliest}
+        max={startRange?.latest}
+        required
+        hint={
+          startRange
+            ? t("booking.schedule.timeHint", {
+                earliest: startRange.earliest,
+                latest: startRange.latest,
+                duration: durationLabel,
+              })
+            : city
+            ? t("booking.schedule.noRoomHint", {
+                city: city.name,
+                start: city.workingHourStarts,
+                end: city.workingHourEnds,
+              })
+            : t("booking.schedule.noCity")
+        }
+        error={errors.time?.message || timeIssueMessage || undefined}
+        {...register("time")}
       />
 
-      {city && slots.length > 0 && (
+      {city && (
         <p className="text-caption text-ink-400">
           {t("booking.schedule.cityHours", {
             city: city.name,

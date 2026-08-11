@@ -49,7 +49,7 @@ const stepVariants = {
 
 function WizardBody({ onConfirmed }) {
   const { t } = useTranslation();
-  const { step, direction, isFirst, next, prev, steps } = useBookingNav();
+  const { step, direction, isFirst, next, prev, steps, runStepGuard } = useBookingNav();
   const { trigger } = useFormContext();
 
   const activeStep = steps[step];
@@ -57,10 +57,15 @@ function WizardBody({ onConfirmed }) {
   const StepComponent = STEP_COMPONENTS[step];
 
   // Before leaving a step, validate only that step's fields (the payment/review
-  // steps declare none, so they advance freely once earlier steps have passed).
+  // steps declare none, so they advance freely once earlier steps have passed),
+  // then let the step itself veto — a cross-field rule that needs fetched data,
+  // like the start time against the city's working hours, lives in a guard
+  // rather than the flat schema. See useStepGuard.
   const handleNext = async () => {
     const valid = await trigger(activeStep.fields, { shouldFocus: true });
-    if (valid) next();
+    if (!valid) return;
+    if (!runStepGuard(activeStep.id)) return;
+    next();
   };
 
   return (

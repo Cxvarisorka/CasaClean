@@ -16,6 +16,8 @@ const fs = require('fs');
 const PDFDocument = require('pdfkit');
 
 const { formatEuro, formatDateLong } = require('./invoice.util');
+// Durations are whole or half hours; formatDuration keeps 1.5 out of the PDF.
+const { formatDuration } = require('./duration.util');
 
 /* ------------------------------------------------------------------ design */
 
@@ -275,7 +277,7 @@ const drawSummaryCards = (doc, p, invoice, top) => {
     .join(' · ');
   const crew =
     service.hours || service.cleaners
-      ? `${service.hours ?? '—'} h · ${service.cleaners ?? '—'} cleaner${service.cleaners === 1 ? '' : 's'}`
+      ? `${service.hours ? formatDuration(service.hours) : '—'} · ${service.cleaners ?? '—'} cleaner${service.cleaners === 1 ? '' : 's'}`
       : '';
 
   const cards = [

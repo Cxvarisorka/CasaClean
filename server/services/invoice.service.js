@@ -37,6 +37,8 @@ const {
   formatDateLong
 } = require('../utils/invoice.util');
 const { renderInvoicePdf, invoiceFileName } = require('../utils/invoicePdf.util');
+// Durations are whole or half hours; formatDuration keeps 1.5 out of the document.
+const { formatDuration } = require('../utils/duration.util');
 const { renderBookingConfirmationEmail } = require('./booking.service');
 
 // Escape user-provided values before interpolating them into the HTML email so
@@ -155,7 +157,7 @@ const buildLineItems = (booking, figures = invoiceTaxFigures(booking)) => {
   return [
     {
       description: booking.serviceId?.name || 'Cleaning service',
-      detail: `${booking.hours} h × ${cleaners} cleaner${cleaners === 1 ? '' : 's'}`,
+      detail: `${formatDuration(booking.hours)} × ${cleaners} cleaner${cleaners === 1 ? '' : 's'}`,
       // Priced per cleaner-hour, which is exactly how the booking total is
       // computed (see computeBookingTotal in booking.service.js).
       quantity: units,
@@ -321,7 +323,7 @@ const renderInvoiceEmail = (invoice) => {
     ['Service', service.name || 'Cleaning service'],
     ['Date', service.date ? formatDateLong(service.date) : '—'],
     ['Time', service.time || '—'],
-    ['Duration', `${service.hours ?? '—'} h · ${service.cleaners ?? '—'} cleaner(s)`],
+    ['Duration', `${service.hours ? formatDuration(service.hours) : '—'} · ${service.cleaners ?? '—'} cleaner(s)`],
     ['Address', address || '—'],
     ...(recurring ? [['Plan', 'Recurring service']] : [])
   ];

@@ -51,11 +51,30 @@ describe("bookingSchema", () => {
     expect(recurring.data.intervalDays).toBe(7);
   });
 
-  test("bounds hours to 1–8 and cleaners to 1–3", () => {
+  test("bounds hours to 1–6 and cleaners to 1–3", () => {
     expect(bookingSchema.safeParse({ ...validValues, hours: 0 }).success).toBe(false);
-    expect(bookingSchema.safeParse({ ...validValues, hours: 9 }).success).toBe(false);
+    expect(bookingSchema.safeParse({ ...validValues, hours: 6.5 }).success).toBe(false);
     expect(bookingSchema.safeParse({ ...validValues, cleaners: 0 }).success).toBe(false);
     expect(bookingSchema.safeParse({ ...validValues, cleaners: 4 }).success).toBe(false);
+  });
+
+  test("accepts a half-hour duration but nothing finer", () => {
+    const half = bookingSchema.safeParse({ ...validValues, hours: "1.5" });
+    expect(half.success).toBe(true);
+    expect(half.data.hours).toBe(1.5);
+
+    // 15 minutes can't be priced to the cent from a per-hour rate, and the
+    // server's utils/duration.util.js refuses it too.
+    expect(bookingSchema.safeParse({ ...validValues, hours: 1.25 }).success).toBe(false);
+  });
+
+  test("requires a start time in HH:MM, since the customer types it", () => {
+    expect(bookingSchema.safeParse({ ...validValues, time: "12:20" }).success).toBe(true);
+    expect(bookingSchema.safeParse({ ...validValues, time: "" }).success).toBe(false);
+    expect(bookingSchema.safeParse({ ...validValues, time: "9:00" }).success).toBe(false);
+    expect(bookingSchema.safeParse({ ...validValues, time: "24:10" }).success).toBe(false);
+    // Whether that minute fits the city's working hours is ScheduleStep's rule
+    // (utils/timeWindow.js), not this schema's.
   });
 
   test("rejects a past date but allows today", () => {

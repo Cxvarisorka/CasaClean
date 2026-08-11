@@ -26,6 +26,7 @@ import {
   BOOKING_STATUS_META,
 } from "@/features/admin";
 import { useTranslation } from "@/i18n";
+import { formatDuration } from "@/features/booking";
 import { cn } from "@/lib/cn";
 
 /*
@@ -411,7 +412,7 @@ export default function QualityPage() {
                   value={
                     current.booking_hours
                       ? t("admin.quality.detail.durationValue", {
-                          hours: current.booking_hours,
+                          duration: formatDuration(t, current.booking_hours),
                           cleaners: current.booking_cleaners || 1,
                         })
                       : "—"

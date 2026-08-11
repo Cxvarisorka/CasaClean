@@ -1,6 +1,11 @@
 import { z } from "zod";
 import { todayDateString } from "../utils/recurrence";
-import { MAX_INTERVAL_DAYS } from "../constants";
+import {
+  DURATION_STEP_HOURS,
+  MAX_DURATION_HOURS,
+  MAX_INTERVAL_DAYS,
+  MIN_DURATION_HOURS,
+} from "../constants";
 
 /*
  * Booking validation
@@ -25,10 +30,16 @@ export const bookingSchema = z.object({
 
   // Step 2 — preferences
   serviceId: z.string().min(1, "Choose a service"),
-  // Bounds mirror HOURS_RANGE / CLEANERS_RANGE in ../constants.js and the
-  // server's createBookingSchema. Keep all three in step — `hours` previously
+  // Bounds mirror the duration constants / CLEANERS_RANGE in ../constants.js and
+  // the server's createBookingSchema. Keep all three in step — `hours` previously
   // allowed 8 here while the UI only offered 6 and the server had no cap.
-  hours: z.coerce.number().int().min(1, "Select hours").max(6),
+  // Half hours are bookable (1.5 = a 90-minute visit); finer steps are not, here
+  // or in the server's utils/duration.util.js.
+  hours: z.coerce
+    .number()
+    .min(MIN_DURATION_HOURS, "Select a duration")
+    .max(MAX_DURATION_HOURS, "Choose a shorter booking")
+    .multipleOf(DURATION_STEP_HOURS, "Choose a whole or half hour"),
   cleaners: z.coerce.number().int().min(1, "Select cleaners").max(3),
   additionalServices: z.array(z.string()).default([]),
   cleaningTools: z.array(z.string()).default([]),
@@ -38,7 +49,14 @@ export const bookingSchema = z.object({
     .string()
     .min(1, "Pick a date")
     .refine((v) => v >= todayISO(), "Choose a future date"),
-  time: z.string().min(1, "Pick a time slot"),
+  // The customer types the arrival time, to the minute, so the FORMAT is checked
+  // here. Whether that minute fits the chosen city's working hours needs the city
+  // and the duration, which a flat field schema can't see — ScheduleStep applies
+  // that rule (utils/timeWindow.js) and the server enforces it.
+  time: z
+    .string()
+    .min(1, "Pick a start time")
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Enter a time as HH:MM"),
   // 0 is the one-time sentinel; anything above it is a repeat cadence in days.
   // The upper bound mirrors the server's; whether the chosen service allows that
   // exact cadence is a per-service rule ScheduleStep applies (recurrenceChoices)

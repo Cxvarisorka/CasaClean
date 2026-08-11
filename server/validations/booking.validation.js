@@ -2,6 +2,12 @@
 const { z } = require("zod");
 const mongoose = require("mongoose");
 
+const {
+    DURATION_STEP_HOURS,
+    MIN_DURATION_HOURS,
+    MAX_DURATION_HOURS
+} = require("../utils/duration.util");
+
 const objectId = z
     .string()
     .trim()
@@ -92,15 +98,16 @@ const createBookingSchema = z.object({
         .trim()
         .min(1, { message: "Doorbell name can't be empty!" }),
 
-    // An explicit ceiling as well as a floor. assertBookingWindow already caps
+    // Whole or half hours (see utils/duration.util.js) — a booking can be 1.5 h.
+    // An explicit ceiling as well as a floor: assertBookingWindow already caps
     // the duration against the city's closing time, but that is a per-city rule;
     // without a hard bound here an absurd value reaches the pricing maths and
     // the Stripe amount before anything rejects it.
     hours: z
         .number()
-        .int({ message: "Hours must be a whole number!" })
-        .min(1, { message: "A booking must be at least 1 hour!" })
-        .max(12, { message: "A booking cannot exceed 12 hours!" }),
+        .min(MIN_DURATION_HOURS, { message: "A booking must be at least 1 hour!" })
+        .max(MAX_DURATION_HOURS, { message: "A booking cannot exceed 12 hours!" })
+        .multipleOf(DURATION_STEP_HOURS, { message: "Hours must be in half-hour steps (e.g. 1, 1.5, 2)!" }),
 
     cleaners: z
         .number()
@@ -211,9 +218,9 @@ const editBookingSchema = z.object({
 
     hours: z
         .number()
-        .int({ message: "Hours must be a whole number!" })
-        .min(1, { message: "A booking must be at least 1 hour!" })
-        .max(12, { message: "A booking cannot exceed 12 hours!" })
+        .min(MIN_DURATION_HOURS, { message: "A booking must be at least 1 hour!" })
+        .max(MAX_DURATION_HOURS, { message: "A booking cannot exceed 12 hours!" })
+        .multipleOf(DURATION_STEP_HOURS, { message: "Hours must be in half-hour steps (e.g. 1, 1.5, 2)!" })
         .optional(),
 
     cleaners: z

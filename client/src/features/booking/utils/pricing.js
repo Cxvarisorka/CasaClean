@@ -1,4 +1,5 @@
 import { SERVICES } from "@/data/services";
+import { formatDurationPlain } from "./duration";
 
 /*
  * Booking price engine
@@ -99,7 +100,7 @@ export function computeQuote(
       service && {
         label: formatServiceLabel
           ? formatServiceLabel({ name: service.name, hours, cleaners })
-          : `${service.name} · ${hours}h × ${cleaners} ${cleaners > 1 ? "cleaners" : "cleaner"}`,
+          : `${service.name} · ${formatDurationPlain(hours)} × ${cleaners} ${cleaners > 1 ? "cleaners" : "cleaner"}`,
         amount: labor,
       },
       ...selectedAddons.map((a) => ({

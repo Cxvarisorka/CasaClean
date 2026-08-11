@@ -55,17 +55,41 @@ export const BOOKING_STEPS = [
   },
 ];
 
-// Time slots are NOT a constant: they depend on the chosen city's working hours
-// and the booking duration, both of which the server enforces. See
-// utils/timeSlots.js — a fixed list here shipped options (e.g. 17:00) that
-// checkout always rejected.
+// Start times are NOT a constant, and no longer a list at all: the customer
+// types the time they want the crew to arrive (12:20 is a real arrival time),
+// and utils/timeWindow.js validates it against the chosen city's working hours
+// and the booking's duration — exactly the rules the server enforces.
 
 // Add-ons and cleaning tools come from the live catalogue via
 // useSpecialRequests / useCleaningTools; there is no static fallback list.
 
-// Selectable durations. Must stay within the server's accepted range and match
-// the `hours` bound in validation/bookingSchema.js.
-export const HOURS_RANGE = [1, 2, 3, 4, 5, 6];
+// Selectable durations, in hours. A booking is bought by the half hour, so 1.5
+// is a valid 90-minute visit; the step and bounds mirror the server's
+// utils/duration.util.js and the `hours` rule in validation/bookingSchema.js.
+// The 6h ceiling is this wizard's, and stricter than the server's 12h — an
+// admin can book a longer job by hand.
+export const DURATION_STEP_HOURS = 0.5;
+export const MIN_DURATION_HOURS = 1;
+export const MAX_DURATION_HOURS = 6;
+
+/**
+ * Every bookable duration, from the minimum to the maximum in half-hour steps:
+ * [1, 1.5, 2, … 6]. Built rather than listed so the three constants above stay
+ * the only thing to change.
+ */
+export function durationChoices(
+  min = MIN_DURATION_HOURS,
+  max = MAX_DURATION_HOURS,
+  step = DURATION_STEP_HOURS
+) {
+  const choices = [];
+  for (let hours = min; hours <= max + 1e-9; hours += step) {
+    // Steps are halves, which are exact in binary floating point; the rounding
+    // is here so a future step like 0.25 can't accumulate drift either.
+    choices.push(Math.round(hours * 100) / 100);
+  }
+  return choices;
+}
 
 // Selectable cleaner counts, mirrored by the `cleaners` bound in
 // validation/bookingSchema.js and by the max on the PreferencesStep input.

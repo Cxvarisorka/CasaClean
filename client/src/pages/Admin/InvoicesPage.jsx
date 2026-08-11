@@ -20,6 +20,7 @@ import {
   formatTimestampDate,
 } from "@/features/booking/utils/recurrence";
 import { useTranslation } from "@/i18n";
+import { formatDuration } from "@/features/booking";
 
 /*
  * Invoices
@@ -394,7 +395,7 @@ export default function InvoicesPage() {
             />
             <DetailRow
               label={t("admin.invoices.detail.hoursCleaners")}
-              value={`${viewing.hours ?? "—"} h · ${viewing.cleaners ?? "—"}`}
+              value={`${formatDuration(t, viewing.hours) || "—"} · ${viewing.cleaners ?? "—"}`}
             />
             <DetailRow
               label={t("admin.invoices.detail.payment")}

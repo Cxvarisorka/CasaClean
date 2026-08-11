@@ -2,23 +2,27 @@ import { useEffect, useMemo } from "react";
 import { Controller, useFormContext, useWatch } from "react-hook-form";
 import { Icon } from "@/components/shared/Icon";
 import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import { useTranslation } from "@/i18n";
 import { useServices } from "@/features/services";
 import { useBookingNav } from "../../store/BookingContext";
-import { OptionGroup } from "../fields/OptionGroup";
 import { ToggleCard } from "../fields/ToggleCard";
 import { useSpecialRequests } from "../../hooks/useSpecialRequests";
 import { useCleaningTools } from "../../hooks/useCleaningTools";
-import { HOURS_RANGE } from "../../constants";
+import { durationChoices } from "../../constants";
+import { formatDuration } from "../../utils/duration";
 
 /*
  * PreferencesStep
  * ---------------
- * Step 2 — sizing (hours × cleaners) and the optional add-ons/tools the chosen
- * service unlocks. The service itself is picked in step 1, alongside the city
- * that constrains it; here it's only echoed, with a link back to change it.
- * Single-selects use a Controller with OptionGroup; multi-selects manage arrays
- * via Controller + ToggleCard.
+ * Step 2 — sizing (duration × cleaners) and the optional add-ons/tools the
+ * chosen service unlocks. The service itself is picked in step 1, alongside the
+ * city that constrains it; here it's only echoed, with a link back to change it.
+ * Multi-selects manage arrays via Controller + ToggleCard.
+ *
+ * Duration is bought by the half hour, so it is a native select rather than a
+ * button grid: eleven tiles is a list, and "1 h 30 min" doesn't fit one. The
+ * value stays a NUMBER of hours (1.5), which is what the API takes.
  */
 
 function toggleInArray(arr = [], value) {
@@ -37,6 +41,16 @@ export function PreferencesStep() {
   const { services } = useServices();
   const { data: addons = [] } = useSpecialRequests();
   const { data: cleaningTools = [] } = useCleaningTools();
+
+  // 1 h to 6 h in half-hour steps, labelled "1 h 30 min" rather than "1.5".
+  const durationOptions = useMemo(
+    () =>
+      durationChoices().map((hours) => ({
+        value: hours,
+        label: formatDuration(t, hours),
+      })),
+    [t]
+  );
 
   // Step 1 guarantees the chosen service is offered in the chosen city, so all
   // this step needs is to resolve it — for display and to filter the extras.
@@ -125,15 +139,14 @@ export function PreferencesStep() {
           control={control}
           name="hours"
           render={({ field }) => (
-            <OptionGroup
+            <Select
               label={t("booking.preferences.hours")}
-              options={HOURS_RANGE.map((h) => ({
-                value: h,
-                label: t("booking.units.hour", { count: h }),
-              }))}
-              value={field.value}
-              onChange={(v) => field.onChange(Number(v))}
-              columns={3}
+              options={durationOptions}
+              value={field.value ?? ""}
+              onBlur={field.onBlur}
+              onChange={(e) => field.onChange(Number(e.target.value))}
+              hint={t("booking.preferences.hoursHint")}
+              required
               error={errors.hours?.message}
             />
           )}

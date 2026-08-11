@@ -12,6 +12,7 @@ import {
   useCollection,
 } from "@/features/admin";
 import { useTranslation } from "@/i18n";
+import { formatDuration } from "@/features/booking";
 import { cn } from "@/lib/cn";
 
 /*
@@ -374,7 +375,7 @@ export default function CalendarPage() {
             />
             <DetailRow
               label={t("admin.bookings.detail.hoursCleaners")}
-              value={`${viewing.hours || "—"} h · ${viewing.cleaners || "—"}`}
+              value={`${formatDuration(t, viewing.hours) || "—"} · ${viewing.cleaners || "—"}`}
             />
             <DetailRow
               label={t("admin.bookings.detail.workers")}

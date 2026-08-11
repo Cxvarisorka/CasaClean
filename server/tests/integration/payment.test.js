@@ -87,6 +87,30 @@ describe("POST /api/v1/payment/booking/intent", () => {
         expect(freshUser.stripeCustomerId).toBe("cus_test_1");
     });
 
+    test("charges a half-hour booking to the cent", async () => {
+        const user = await createUser();
+        const service = await createService({ pricePerHour: 25 });
+        const city = await createCity({ workingHourStarts: "09:00", workingHourEnds: "17:30" });
+        mockCustomerCreate();
+        mockIntentCreate();
+
+        const res = await api.post("/api/v1/payment/booking/intent")
+            .set("Cookie", cookieFor(user))
+            .send(validBookingBody(service, city, { bookingTime: "12:20", hours: 1.5 }));
+
+        // 25 €/h × 1.5 h = 37.50, and Stripe is charged in integer cents.
+        expect(res.status).toBe(201);
+        expect(res.body.data.amount).toBe(37.5);
+        expect(stripeMock.paymentIntents.create).toHaveBeenCalledWith(
+            expect.objectContaining({ amount: 3750 }),
+            undefined
+        );
+
+        const pending = await PendingBooking.findOne({ paymentIntentId: "pi_test_1" });
+        expect(pending.draft.hours).toBe(1.5);
+        expect(pending.draft.bookingTime).toBe("12:20");
+    });
+
     test("reuses an existing Stripe customer", async () => {
         const user = await createUser({ stripeCustomerId: "cus_existing" });
         const service = await createService();

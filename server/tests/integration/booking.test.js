@@ -201,6 +201,47 @@ describe("POST /api/v1/booking (admin manual bookings)", () => {
             expect(res.body.message).toMatch(/run past the city's closing time/i);
         });
 
+        test("prices and stores a half-hour booking", async () => {
+            const admin = await createAdmin();
+            const service = await createService({ pricePerHour: 20 });
+            const city = await createCity({ workingHourStarts: "09:00", workingHourEnds: "17:30" });
+
+            // 16:00 + 1 h 30 min ends exactly at closing, and 20 €/h × 1.5 = 30.
+            const res = await api.post("/api/v1/booking")
+                .set("Cookie", cookieFor(admin))
+                .send(validBookingBody(service, city, { bookingTime: "16:00", hours: 1.5 }));
+
+            expect(res.status).toBe(201);
+            expect(res.body.data.booking.hours).toBe(1.5);
+            expect(res.body.data.booking.totalAmount).toBe(30);
+        });
+
+        test("accepts an arbitrary start minute, not just whole hours", async () => {
+            const admin = await createAdmin();
+            const service = await createService();
+            const city = await createCity({ workingHourStarts: "09:00", workingHourEnds: "17:30" });
+
+            const res = await api.post("/api/v1/booking")
+                .set("Cookie", cookieFor(admin))
+                .send(validBookingBody(service, city, { bookingTime: "12:20", hours: 2 }));
+
+            expect(res.status).toBe(201);
+            expect(res.body.data.booking.bookingTime).toBe("12:20");
+        });
+
+        test("rejects a duration finer than a half hour", async () => {
+            const admin = await createAdmin();
+            const service = await createService();
+            const city = await createCity();
+
+            const res = await api.post("/api/v1/booking")
+                .set("Cookie", cookieFor(admin))
+                .send(validBookingBody(service, city, { hours: 1.25 }));
+
+            expect(res.status).toBe(400);
+            expect(res.body.fields).toHaveProperty("hours");
+        });
+
         test("rejects a past date at the validation layer", async () => {
             const admin = await createAdmin();
             const service = await createService();

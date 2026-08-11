@@ -5,6 +5,7 @@ import { useTranslation } from "@/i18n";
 import { useServices } from "@/features/services";
 import { useAuth } from "@/features/admin";
 import { computeQuote } from "../utils/pricing";
+import { formatDuration } from "../utils/duration";
 import { useSpecialRequests } from "../hooks/useSpecialRequests";
 import { useCleaningTools } from "../hooks/useCleaningTools";
 
@@ -28,7 +29,7 @@ export function BookingSummary() {
   const formatServiceLabel = ({ name, hours, cleaners }) =>
     t("booking.units.serviceLine", {
       name,
-      hours,
+      duration: formatDuration(t, hours),
       cleaners,
       unit: t(cleaners > 1 ? "booking.units.cleaners" : "booking.units.cleaner"),
     });

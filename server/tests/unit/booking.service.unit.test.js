@@ -59,6 +59,23 @@ describe("assertBookingWindow", () => {
         expect(() => assertBookingWindow(city, futureDate(), "15:30", 2)).not.toThrow();
     });
 
+    test("measures a half-hour booking to the minute", () => {
+        // 16:00 + 1.5h ends exactly at the 17:30 close; a minute later doesn't.
+        expect(() => assertBookingWindow(city, futureDate(), "16:00", 1.5)).not.toThrow();
+        expect(() => assertBookingWindow(city, futureDate(), "16:01", 1.5))
+            .toThrow(/run past the city's closing time/);
+    });
+
+    test("accepts any minute as a start time, not just whole hours", () => {
+        expect(() => assertBookingWindow(city, futureDate(), "12:20", 2)).not.toThrow();
+        expect(() => assertBookingWindow(city, futureDate(), "15:35", 1)).not.toThrow();
+    });
+
+    test("words the duration in the too-late message, never as a decimal", () => {
+        expect(() => assertBookingWindow(city, futureDate(), "17:00", 1.5))
+            .toThrow(/1 h 30 min booking starting at 17:00/);
+    });
+
     test("rejects a same-day booking whose start time has already passed", () => {
         const now = new Date();
         const today = [

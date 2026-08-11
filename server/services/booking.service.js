@@ -18,6 +18,8 @@ const {
   MAX_INTERVAL_DAYS,
   isValidIntervalDays
 } = require('../utils/date.util');
+// Durations are whole or half hours; formatDuration keeps 1.5 out of customer text.
+const { formatDuration } = require('../utils/duration.util');
 // Catalogue prices are VAT-exclusive; VAT is added on top for whoever owes it,
 // which depends on their (verified) tax status. See utils/tax.util.js.
 const { priceForCustomer } = require('../utils/tax.util');
@@ -139,7 +141,7 @@ const toMinutes = (hhmm) => {
  * @param {Object} city         city doc with workingHourStarts/workingHourEnds
  * @param {string} bookingDate  "YYYY-MM-DD"
  * @param {string} bookingTime  "HH:MM"
- * @param {number} hours        duration in whole hours
+ * @param {number} hours        duration in hours (whole or half)
  */
 const assertBookingWindow = (city, bookingDate, bookingTime, hours) => {
   const start = toMinutes(bookingTime);
@@ -152,7 +154,7 @@ const assertBookingWindow = (city, bookingDate, bookingTime, hours) => {
 
   if (start + Number(hours) * 60 > closes) {
     throw new AppError(
-      `A ${hours}-hour booking starting at ${bookingTime} would run past the city's closing time (${city.workingHourEnds}).`,
+      `A ${formatDuration(hours)} booking starting at ${bookingTime} would run past the city's closing time (${city.workingHourEnds}).`,
       400
     );
   }
@@ -400,7 +402,7 @@ const renderBookingConfirmationEmail = ({
     ["Service", serviceName || "Cleaning service"],
     ["Date", bookingDate],
     ["Time", bookingTime],
-    ["Duration", `${hours} h · ${cleaners} cleaner(s)`],
+    ["Duration", `${formatDuration(hours)} · ${cleaners} cleaner(s)`],
     ["Address", address || "—"],
     ...(recurring ? [["Plan", "Recurring service"]] : []),
     ["Payment", `${total} — paid`],
@@ -478,7 +480,7 @@ const renderBookingConfirmationEmail = ({
     `Service:  ${serviceName || "Cleaning service"}\n` +
     `Date:     ${bookingDate}\n` +
     `Time:     ${bookingTime}\n` +
-    `Duration: ${hours} h (${cleaners} cleaner(s))\n` +
+    `Duration: ${formatDuration(hours)} (${cleaners} cleaner(s))\n` +
     `Address:  ${address || "—"}\n` +
     `${recurring ? "Plan:     Recurring service\n" : ""}` +
     `Paid:     ${total}\n\n` +

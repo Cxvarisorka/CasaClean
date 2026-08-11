@@ -16,6 +16,11 @@ import {
 } from "@/features/admin";
 import { invoiceApi } from "@/features/admin/api/adminApi";
 import { useTranslation } from "@/i18n";
+import {
+  durationChoices,
+  formatDuration,
+  MIN_DURATION_HOURS,
+} from "@/features/booking";
 
 /*
  * Bookings management
@@ -144,6 +149,17 @@ export default function BookingsPage() {
     [workers]
   );
 
+  // Durations are bought by the half hour. The wizard stops at 6 h; an admin
+  // entering a job by hand may go to the API's 12 h ceiling.
+  const durationOptions = useMemo(
+    () =>
+      durationChoices(MIN_DURATION_HOURS, 12).map((hours) => ({
+        value: hours,
+        label: formatDuration(t, hours),
+      })),
+    [t]
+  );
+
   // Edit only exposes the fields the backend's editBooking endpoint accepts;
   // service/city and the customer identity are fixed once a booking is created.
   const editFields = useMemo(
@@ -155,14 +171,14 @@ export default function BookingsPage() {
       { name: "street_name", label: t("admin.bookings.field.street") },
       { name: "house_number", label: t("admin.bookings.field.houseNo") },
       { name: "property_size", label: t("admin.bookings.detail.propertySize") },
-      { name: "hours", label: t("admin.bookings.field.hours"), type: "number" },
+      { name: "hours", label: t("admin.bookings.field.hours"), type: "select", options: durationOptions, required: true },
       { name: "cleaners", label: t("admin.bookings.field.cleaners"), type: "number" },
       // total is server-computed (price × hours + add-ons); shown read-only in
       // the detail view, not editable here.
       { name: "workers", label: t("admin.bookings.field.workers"), type: "multiselect", options: workerOptions, hint: t("admin.bookings.field.workersHint") },
       { name: "notes", label: t("admin.bookings.field.notes"), type: "textarea", full: true },
     ],
-    [t, statusOptions, workerOptions]
+    [t, statusOptions, workerOptions, durationOptions]
   );
 
   // Create collects the full booking the model needs. service_id/city_id are
@@ -184,13 +200,13 @@ export default function BookingsPage() {
       { name: "house_number", label: t("admin.bookings.field.houseNo"), required: true },
       { name: "property_size", label: t("admin.bookings.detail.propertySize"), required: true },
       { name: "doorbell_name", label: t("admin.bookings.field.doorbell"), required: true },
-      { name: "hours", label: t("admin.bookings.field.hours"), type: "number", required: true },
+      { name: "hours", label: t("admin.bookings.field.hours"), type: "select", options: durationOptions, required: true },
       { name: "cleaners", label: t("admin.bookings.field.cleaners"), type: "number", required: true },
       { name: "workers", label: t("admin.bookings.field.workers"), type: "multiselect", options: workerOptions, hint: t("admin.bookings.field.workersHint") },
       // total is computed server-side from the service price, hours and add-ons.
       { name: "notes", label: t("admin.bookings.field.notes"), type: "textarea", full: true },
     ],
-    [t, serviceOptions, cityOptions, userOptions, workerOptions]
+    [t, serviceOptions, cityOptions, userOptions, workerOptions, durationOptions]
   );
 
   const data = useMemo(() => {
@@ -438,7 +454,7 @@ export default function BookingsPage() {
               value={[viewing.street_name, viewing.house_number].filter(Boolean).join(" ")}
             />
             <DetailRow label={t("admin.bookings.detail.dateTime")} value={`${viewing.booking_date} · ${viewing.booking_time}`} />
-            <DetailRow label={t("admin.bookings.detail.hoursCleaners")} value={`${viewing.hours || "—"} h · ${viewing.cleaners || "—"}`} />
+            <DetailRow label={t("admin.bookings.detail.hoursCleaners")} value={`${formatDuration(t, viewing.hours) || "—"} · ${viewing.cleaners || "—"}`} />
             <DetailRow label={t("admin.bookings.detail.propertySize")} value={viewing.property_size ? `${viewing.property_size} m²` : "—"} />
             <DetailRow
               label={t("admin.bookings.detail.workers")}
