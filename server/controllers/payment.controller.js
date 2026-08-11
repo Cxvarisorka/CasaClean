@@ -21,7 +21,7 @@ const User = require('../models/user.model');
 
 const catchAsync = require('../utils/catchAsync.util');
 const AppError = require('../utils/appError.util');
-const { toMinorUnits } = require('../utils/money.util');
+const { toMinorUnits, fromMinorUnits } = require('../utils/money.util');
 const { buildValidatedBookingDraft } = require('../services/booking.service');
 const { ensureStripeCustomer } = require('../services/stripeCustomer.service');
 const { issueAndDeliverInvoice } = require('../services/invoice.service');
@@ -203,15 +203,25 @@ const promotePendingBooking = async (paymentIntentId, paymentIntent = null) => {
 };
 
 /**
- * Issue a full refund for a paid card booking and return the fields to persist.
- * No-op (returns null) for manual/offline bookings, unpaid bookings, or those
- * already refunded. Throws on a Stripe failure so the caller can abort the
- * cancellation rather than mark a booking cancelled without releasing the money.
+ * Refund a paid card booking and return the fields to persist.
  *
- * @param {Object} booking  a booking doc/object with payment fields
- * @returns {Promise<Object|null>} { paymentStatus, refundId, refundedAt, stripeStatus } | null
+ * Refunds the whole charge by default. Pass `amount` (in euros) to return only
+ * part of it — that is how a late self-cancellation gives back everything except
+ * the retained one-hour fee (utils/cancellation.util.js). An `amount` that
+ * covers the full charge is treated as a full refund, so callers never have to
+ * special-case the boundary.
+ *
+ * No-op (returns null) for manual/offline bookings, unpaid bookings, those
+ * already refunded, and a partial amount that rounds to nothing. Throws on a
+ * Stripe failure so the caller can abort the cancellation rather than mark a
+ * booking cancelled without releasing the money.
+ *
+ * @param {Object} booking          a booking doc/object with payment fields
+ * @param {Object} [options]
+ * @param {number} [options.amount] euros to return; omit for the full charge
+ * @returns {Promise<Object|null>} { paymentStatus, refundId, refundAmount, refundedAt, stripeStatus? } | null
  */
-const refundBookingPayment = async (booking) => {
+const refundBookingPayment = async (booking, { amount } = {}) => {
   if (
     booking.paymentMethod !== 'card' ||
     booking.paymentStatus !== 'paid' ||
@@ -220,20 +230,41 @@ const refundBookingPayment = async (booking) => {
     return null;
   }
 
+  // Stripe works in integer cents; our totals are decimal euros.
+  const chargedCents = toMinorUnits(booking.totalAmount);
+  const requestedCents = amount === undefined ? chargedCents : toMinorUnits(amount);
+
+  // Nothing to give back (the fee swallowed the whole charge) — the caller keeps
+  // the booking's payment fields as they are.
+  if (!(requestedCents > 0)) return null;
+
+  const partial = requestedCents < chargedCents;
+
   // Idempotency key scoped to the booking, mirroring the subscription charge
   // worker. Callers already claim the cancellation atomically, but two requests
   // that slip through (or a retried request) must never produce two refunds —
-  // Stripe replays the original refund for a repeated key instead.
+  // Stripe replays the original refund for a repeated key instead. The amount is
+  // part of a partial key so two genuinely different partial refunds aren't
+  // collapsed onto one, while a retry of the same one still is.
   const refund = await stripe.refunds.create(
-    { payment_intent: booking.paymentIntentId },
-    { idempotencyKey: `refund:booking:${booking._id}` }
+    partial
+      ? { payment_intent: booking.paymentIntentId, amount: requestedCents }
+      : { payment_intent: booking.paymentIntentId },
+    {
+      idempotencyKey: partial
+        ? `refund:booking:${booking._id}:${requestedCents}`
+        : `refund:booking:${booking._id}`
+    }
   );
 
   return {
-    paymentStatus: 'refunded',
+    paymentStatus: partial ? 'partially-refunded' : 'refunded',
     refundId: refund.id,
+    refundAmount: fromMinorUnits(requestedCents),
     refundedAt: new Date(),
-    stripeStatus: 'refunded'
+    // stripeStatus mirrors the raw charge state, and Stripe leaves a partially
+    // refunded charge as 'succeeded' — only a full reversal changes it.
+    ...(partial ? {} : { stripeStatus: 'refunded' })
   };
 };
 

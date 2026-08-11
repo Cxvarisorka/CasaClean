@@ -21,7 +21,8 @@ const {
   createService,
   createSpecialRequest,
   createPaidBooking,
-  validBookingBody
+  validBookingBody,
+  dateTimeIn
 } = require('../setup/fixtures');
 
 const Booking = require('../../models/booking.model');
@@ -307,6 +308,49 @@ describe('invoice delivery after payment', () => {
     // Re-applying is a no-op, so a duplicate Stripe delivery can't restamp it.
     const second = await markInvoiceRefunded(booking._id, new Date(Date.now() + 60_000));
     expect(second).toBeNull();
+  });
+
+  it('leaves the invoice issued when a late cancellation kept the one-hour fee', async () => {
+    const [user, city, service] = await Promise.all([
+      createUser(),
+      createCity(),
+      createService()
+    ]);
+    // 2h ahead: inside the window, so €20 of the €40 charge comes back and €20
+    // is kept. The invoice documents money that WAS charged and kept, so
+    // stamping it 'refunded' would misstate it.
+    const booking = await createPaidBooking(user, service, city, {
+      bookingDate: dateTimeIn(2).bookingDate,
+      bookingTime: dateTimeIn(2).bookingTime
+    });
+    const invoice = await issueInvoiceForBooking(booking._id);
+    stripeMock.refunds.create.mockResolvedValue({ id: 're_invoice_partial' });
+
+    const res = await api
+      .patch(`/api/v1/booking/${booking._id}/cancel`)
+      .set('Cookie', cookieFor(user));
+    expect(res.status).toBe(200);
+    expect((await Booking.findById(booking._id)).paymentStatus).toBe('partially-refunded');
+
+    expect((await Invoice.findById(invoice._id).lean()).status).toBe('issued');
+  });
+
+  it('can still issue an invoice for a partially refunded booking', async () => {
+    const [user, city, service] = await Promise.all([
+      createUser(),
+      createCity(),
+      createService()
+    ]);
+    const booking = await createPaidBooking(user, service, city, {
+      paymentStatus: 'partially-refunded',
+      refundAmount: 20,
+      refundedAt: new Date()
+    });
+
+    const invoice = await issueInvoiceForBooking(booking._id);
+    // Money was charged and partly kept, so the document stands as issued.
+    expect(invoice.status).toBe('issued');
+    expect(invoice.total).toBe(40);
   });
 });
 

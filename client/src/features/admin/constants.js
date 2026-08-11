@@ -74,6 +74,12 @@ export const SUBSCRIPTION_STATUS_META = {
 export const PAYMENT_STATUS_META = {
   paid: { label: "Paid", labelKey: "admin.payment.paid", variant: "success" },
   refunded: { label: "Refunded", labelKey: "admin.payment.refunded", variant: "outline" },
+  // A late self-cancellation: refunded except the retained one-hour fee.
+  "partially-refunded": {
+    label: "Partly refunded",
+    labelKey: "admin.payment.partiallyRefunded",
+    variant: "outline",
+  },
   manual: { label: "Manual / cash", labelKey: "admin.payment.manual", variant: "accent" },
   unpaid: { label: "Unpaid", labelKey: "admin.payment.unpaid", variant: "outline" },
 };

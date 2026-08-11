@@ -210,10 +210,17 @@ const bookingSchema = new mongoose.Schema({
     default: 'card'
   },
   // Lifecycle of the money: unpaid (no charge yet), paid (captured), refunded
-  // (charge reversed on cancellation), or manual (offline booking, no Stripe).
+  // (charge reversed on cancellation), partially-refunded (a late cancellation
+  // that kept the one-hour fee — see utils/cancellation.util.js), or manual
+  // (offline booking, no Stripe).
+  //
+  // 'partially-refunded' is deliberately its own state rather than 'refunded':
+  // money was kept, so an invoice must not be stamped as reversed and the
+  // booking must not read as if the customer got everything back. It also can't
+  // be 'paid', or a support view would show a charge that no longer stands.
   paymentStatus: {
     type: String,
-    enum: ['unpaid', 'paid', 'refunded', 'manual'],
+    enum: ['unpaid', 'paid', 'refunded', 'partially-refunded', 'manual'],
     default: 'unpaid'
   },
   // Amount actually captured, in decimal euros (mirrors totalAmount at pay time).
@@ -228,6 +235,14 @@ const bookingSchema = new mongoose.Schema({
   // Stripe refund id, set when a paid booking is cancelled & refunded.
   refundId: {
     type: String
+  },
+  // How much was actually returned, in decimal euros. Equals totalAmount for a
+  // full refund; for a late cancellation it is the charge minus the retained
+  // one-hour fee, so `totalAmount - refundAmount` is what the customer was
+  // billed for cancelling.
+  refundAmount: {
+    type: Number,
+    min: [0, "Refund amount can't be negative."]
   },
   paidAt: {
     type: Date

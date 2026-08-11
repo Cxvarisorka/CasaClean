@@ -23,6 +23,8 @@ const { formatDuration } = require('../utils/duration.util');
 // Catalogue prices are VAT-exclusive; VAT is added on top for whoever owes it,
 // which depends on their (verified) tax status. See utils/tax.util.js.
 const { priceForCustomer } = require('../utils/tax.util');
+// The refund email states the window a late cancellation fell inside.
+const { CANCELLATION_WINDOW_HOURS } = require('../utils/cancellation.util');
 
 // Single source of truth for booking price. Cleaners multiply labour only.
 const computeBookingTotal = ({ service, hours, cleaners, specialRequests = [], cleaningTools = [] }) =>
@@ -492,11 +494,24 @@ const renderBookingConfirmationEmail = ({
 /**
  * Build the cancellation/refund email. Sent (best-effort) when a paid booking is
  * cancelled and its charge is refunded.
+ *
+ * `amount` is what was actually returned. A late cancellation keeps a one-hour
+ * fee out of the charge, so pass `fee` (and the `charged` total it came out of)
+ * to have the email account for the difference — a customer who sees less back
+ * than they paid must be told why in the same message, not left to work it out.
  */
-const renderRefundEmail = ({ customerName, serviceName, bookingDate, amount }) => {
-  const subject = "CasaClean — Your booking was cancelled & refunded";
+const renderRefundEmail = ({ customerName, serviceName, bookingDate, amount, fee = 0, charged }) => {
+  const partial = Number(fee) > 0;
+  const subject = partial
+    ? "CasaClean — Your booking was cancelled & partially refunded"
+    : "CasaClean — Your booking was cancelled & refunded";
   const name = escapeHtml(customerName);
   const total = formatEuro(amount);
+  const feeNote = partial
+    ? ` As the cancellation came within ${CANCELLATION_WINDOW_HOURS} hours of the appointment, ` +
+      `a late-cancellation fee of ${formatEuro(fee)} (one hour of the booked cleaning) was kept ` +
+      `from the ${formatEuro(charged ?? Number(amount) + Number(fee))} paid.`
+    : "";
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -522,7 +537,7 @@ const renderRefundEmail = ({ customerName, serviceName, bookingDate, amount }) =
                   Your booking for <strong>${escapeHtml(serviceName || "Cleaning service")}</strong>
                   on <strong>${escapeHtml(bookingDate)}</strong> has been cancelled.
                   A refund of <strong>${escapeHtml(total)}</strong> has been issued to your
-                  original payment method and should appear within a few business days.
+                  original payment method and should appear within a few business days.${escapeHtml(feeNote)}
                 </p>
               </td>
             </tr>
@@ -543,7 +558,8 @@ const renderRefundEmail = ({ customerName, serviceName, bookingDate, amount }) =
   const text =
     `Hello ${customerName},\n\n` +
     `Your CasaClean booking for ${serviceName || "Cleaning service"} on ${bookingDate} has been cancelled.\n` +
-    `A refund of ${total} has been issued to your original payment method and should appear within a few business days.\n\n` +
+    `A refund of ${total} has been issued to your original payment method and should appear within a few business days.` +
+    `${feeNote}\n\n` +
     `— CasaClean`;
 
   return { subject, html, text };

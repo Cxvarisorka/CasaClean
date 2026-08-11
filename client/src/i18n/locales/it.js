@@ -105,6 +105,8 @@ export default {
     cancelBooking: "Annulla",
     cancelTitle: "Annullare questa prenotazione?",
     cancelBody: "Verrà annullata la tua pulizia {service} del {date}. L'azione è irreversibile.",
+    cancelFeeWarning:
+      "Questa prenotazione inizia entro {hours} ore, quindi tratteniamo una penale pari a un'ora della pulizia. Il resto viene rimborsato automaticamente sulla tua carta.",
     cancelConfirm: "Sì, annulla la prenotazione",
     keepBooking: "Mantieni la prenotazione",
     cancelError: "Non siamo riusciti ad annullare la prenotazione. Riprova.",
@@ -582,7 +584,7 @@ export default {
       q6: {
         question: "Qual è la politica di cancellazione?",
         answer:
-          "Puoi annullare gratuitamente fino a 24 ore prima dell'appuntamento. Entro le 24 ore si applica una penale del 50%, perché il tuo addetto ha riservato quel tempo per te.",
+          "Puoi annullare gratuitamente fino a 24 ore prima dell'appuntamento. Entro le 24 ore tratteniamo una penale pari a un'ora della pulizia prenotata e rimborsiamo automaticamente il resto, perché il tuo addetto ha riservato quel tempo per te.",
       },
       q7: {
         question: "E se non sono soddisfatto della pulizia?",
@@ -1107,6 +1109,7 @@ export default {
     payment: {
       paid: "Pagato",
       refunded: "Rimborsato",
+      partiallyRefunded: "Parzialmente rimborsato",
       manual: "Manuale / contanti",
       unpaid: "Non pagato",
     },

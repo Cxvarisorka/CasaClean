@@ -158,6 +158,22 @@ const eur = (n) =>
     Number(n) || 0
   );
 
+// Cancelling this close to the appointment keeps a fee worth one hour of the
+// booked cleaning (server: utils/cancellation.util.js, CANCELLATION_WINDOW_HOURS
+// — the deployable default, which is also what the FAQ quotes). Used only to
+// warn BEFORE the customer confirms; the server decides the money either way and
+// its response reports exactly what happened.
+const CANCELLATION_WINDOW_HOURS = 24;
+
+const isLateCancellation = ({ booking_date: date, booking_time: time }) => {
+  const startsAt = localDateFromDateString(date);
+  if (!startsAt) return false;
+
+  const [hour, minute] = String(time || "00:00").split(":").map(Number);
+  startsAt.setHours(Number.isFinite(hour) ? hour : 0, Number.isFinite(minute) ? minute : 0, 0, 0);
+  return startsAt.getTime() - Date.now() < CANCELLATION_WINDOW_HOURS * 60 * 60 * 1000;
+};
+
 // A booking can only be cancelled by the customer while it's still upcoming.
 // Completed/cancelled bookings are terminal (matches the server-side guard).
 const isCancellable = (status) => status === "pending" || status === "confirmed";
@@ -699,6 +715,12 @@ const ProfilePage = () => {
               service: cancelTarget.service_name,
               date: fmtDate(cancelTarget.booking_date, locale),
             })}
+          </p>
+        )}
+        {/* Money is about to be kept — say so before they confirm, not after. */}
+        {cancelTarget && isLateCancellation(cancelTarget) && (
+          <p className="mt-3 text-body-sm text-amber-700">
+            {t("profile.cancelFeeWarning", { hours: CANCELLATION_WINDOW_HOURS })}
           </p>
         )}
         {cancelMutation.isError && (

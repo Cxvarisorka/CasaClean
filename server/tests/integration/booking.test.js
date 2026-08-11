@@ -603,22 +603,153 @@ describe("PATCH /api/v1/booking/:id/cancel (customer self-cancel)", () => {
         expect(fresh.paymentStatus).toBe("paid");
     });
 
-    test("cancelling inside the 24h window keeps the money (no refund)", async () => {
+    test("cancelling inside the 24h window keeps one hour and refunds the rest", async () => {
         const user = await createUser();
         const service = await createService();
         const city = await createCity();
-        // 2h ahead — inside the no-refund window.
+        // 2h ahead — inside the window. €20/h × 2h × 1 cleaner = €40 charged, so
+        // the retained hour is €20 and €20 goes back.
         const booking = await createPaidBooking(user, service, city, dateTimeIn(2));
+
+        stripeMock.refunds.create.mockResolvedValue({ id: "re_partial_1" });
 
         const res = await api.patch(`/api/v1/booking/${booking._id}/cancel`)
             .set("Cookie", cookieFor(user));
 
         expect(res.status).toBe(200);
-        expect(res.body.message).toMatch(/contact support/i);
+        expect(res.body.message).toMatch(/late-cancellation fee/i);
+
+        // Stripe must be asked for a PARTIAL refund, in integer cents.
+        expect(stripeMock.refunds.create).toHaveBeenCalledTimes(1);
+        const [params] = stripeMock.refunds.create.mock.calls[0];
+        expect(params).toMatchObject({ payment_intent: booking.paymentIntentId, amount: 2000 });
+
+        const fresh = await Booking.findById(booking._id);
+        expect(fresh.status).toBe("cancelled");
+        expect(fresh.paymentStatus).toBe("partially-refunded");
+        expect(fresh.refundAmount).toBe(20);
+        expect(fresh.refundId).toBe("re_partial_1");
+        // A partial refund leaves the charge's raw Stripe state alone — only a
+        // full reversal makes it 'refunded'.
+        expect(fresh.stripeStatus).toBe("succeeded");
+    });
+
+    test("the kept hour covers the whole crew, and add-ons come back in full", async () => {
+        const user = await createUser();
+        const service = await createService({ pricePerHour: 20 });
+        const city = await createCity();
+        const addon = await createSpecialRequest({ price: 15 });
+        const tool = await createCleaningTool({ price: 5 });
+        // €20/h × 3h × 2 cleaners = €120 of labour, + €15 + €5 = €140 charged.
+        // The fee is one hour of BOTH cleaners (€40) — the add-ons are not
+        // delivered, so none of their price is kept.
+        const booking = await createPaidBooking(user, service, city, {
+            ...dateTimeIn(2),
+            hours: 3,
+            cleaners: 2,
+            totalAmount: 140,
+            amountPaid: 140,
+            specialRequests: [addon._id],
+            cleaningTools: [tool._id]
+        });
+
+        stripeMock.refunds.create.mockResolvedValue({ id: "re_partial_2" });
+
+        const res = await api.patch(`/api/v1/booking/${booking._id}/cancel`)
+            .set("Cookie", cookieFor(user));
+
+        expect(res.status).toBe(200);
+        expect(stripeMock.refunds.create.mock.calls[0][0].amount).toBe(10000);
+        const fresh = await Booking.findById(booking._id);
+        expect(fresh.refundAmount).toBe(100);
+    });
+
+    test("a late cancellation of a one-hour booking keeps the whole charge", async () => {
+        const user = await createUser();
+        const service = await createService();
+        const city = await createCity();
+        // €20/h × 1h — the retained hour is the entire charge, so there is
+        // nothing left to refund and Stripe is never called.
+        const booking = await createPaidBooking(user, service, city, {
+            ...dateTimeIn(2),
+            hours: 1,
+            totalAmount: 20,
+            amountPaid: 20
+        });
+
+        const res = await api.patch(`/api/v1/booking/${booking._id}/cancel`)
+            .set("Cookie", cookieFor(user));
+
+        expect(res.status).toBe(200);
+        expect(res.body.message).toMatch(/late-cancellation fee/i);
         expect(stripeMock.refunds.create).not.toHaveBeenCalled();
         const fresh = await Booking.findById(booking._id);
         expect(fresh.status).toBe("cancelled");
         expect(fresh.paymentStatus).toBe("paid");
+    });
+
+    test("a failed partial refund leaves the booking uncancelled and fully charged", async () => {
+        const user = await createUser();
+        const service = await createService();
+        const city = await createCity();
+        const booking = await createPaidBooking(user, service, city, dateTimeIn(2));
+
+        stripeMock.refunds.create.mockRejectedValue(
+            Object.assign(new Error("Stripe is down"), { type: "StripeAPIError" })
+        );
+
+        const res = await api.patch(`/api/v1/booking/${booking._id}/cancel`)
+            .set("Cookie", cookieFor(user));
+
+        expect(res.status).toBe(502);
+        // Same invariant as the full-refund path: never leave a booking cancelled
+        // while the customer is still charged for it.
+        const fresh = await Booking.findById(booking._id);
+        expect(fresh.status).toBe("confirmed");
+        expect(fresh.paymentStatus).toBe("paid");
+    });
+
+    test("the customer is emailed what was kept and why", async () => {
+        const user = await createUser();
+        const service = await createService();
+        const city = await createCity();
+        const booking = await createPaidBooking(user, service, city, dateTimeIn(2));
+
+        stripeMock.refunds.create.mockResolvedValue({ id: "re_partial_mail" });
+
+        await api.patch(`/api/v1/booking/${booking._id}/cancel`)
+            .set("Cookie", cookieFor(user));
+
+        const mail = sendEmailMock.mock.calls
+            .map(([args]) => args)
+            .find((args) => args.email === user.email);
+        expect(mail).toBeDefined();
+        expect(mail.subject).toMatch(/partially refunded/i);
+        // Both figures have to appear: what came back, and what did not.
+        expect(mail.text).toContain("€20.00");
+        expect(mail.text).toMatch(/late-cancellation fee/i);
+        expect(mail.text).toMatch(/one hour of the booked cleaning/i);
+    });
+
+    test("an admin cancelling still refunds in full, whatever the window", async () => {
+        const admin = await createAdmin();
+        const user = await createUser();
+        const service = await createService();
+        const city = await createCity();
+        // 2h ahead — the customer would only get half of this back. The admin
+        // override is the escape hatch and is deliberately not fee'd.
+        const booking = await createPaidBooking(user, service, city, dateTimeIn(2));
+
+        stripeMock.refunds.create.mockResolvedValue({ id: "re_admin_full" });
+
+        const res = await api.patch(`/api/v1/booking/${booking._id}`)
+            .set("Cookie", cookieFor(admin))
+            .send({ status: "cancelled" });
+
+        expect(res.status).toBe(200);
+        expect(stripeMock.refunds.create.mock.calls[0][0].amount).toBeUndefined();
+        const fresh = await Booking.findById(booking._id);
+        expect(fresh.paymentStatus).toBe("refunded");
     });
 
     test("a Stripe refund failure aborts the cancellation", async () => {

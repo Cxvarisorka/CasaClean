@@ -170,6 +170,8 @@ export default {
     cancelBooking: "Cancel",
     cancelTitle: "Cancel this booking?",
     cancelBody: "This will cancel your {service} cleaning on {date}. This can't be undone.",
+    cancelFeeWarning:
+      "This booking starts within {hours} hours, so a late-cancellation fee worth one hour of the cleaning is kept. The rest is refunded to your card automatically.",
     cancelConfirm: "Yes, cancel booking",
     keepBooking: "Keep booking",
     cancelError: "We couldn't cancel this booking. Please try again.",
@@ -589,7 +591,7 @@ export default {
       q6: {
         question: "What is your cancellation policy?",
         answer:
-          "Cancel free of charge up to 24 hours before your appointment. Inside 24 hours a 50% fee applies, since your cleaner has reserved that time for you.",
+          "Cancel free of charge up to 24 hours before your appointment. Inside 24 hours we keep a fee worth one hour of your booked cleaning and refund the rest automatically, since your cleaner has reserved that time for you.",
       },
       q7: {
         question: "What if I'm not happy with my clean?",
@@ -1129,6 +1131,7 @@ export default {
     payment: {
       paid: "Paid",
       refunded: "Refunded",
+      partiallyRefunded: "Partly refunded",
       manual: "Manual / cash",
       unpaid: "Unpaid",
     },

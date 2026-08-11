@@ -22,7 +22,8 @@ const {
   assertBookingWindow,
   computeBookingTotal,
   renderBookingConfirmationEmail,
-  renderRefundEmail
+  renderRefundEmail,
+  formatEuro
 } = require('../services/booking.service');
 
 // Invoices track the money, so a refund has to be reflected on them too.
@@ -35,14 +36,15 @@ const { priceForCustomer, applyTaxTreatment } = require('../utils/tax.util');
 // plain string comparison against today is a correct date comparison.
 const { todayString } = require('../utils/date.util');
 
-// Refund policy: a customer self-cancellation gets an automatic full refund
-// only when made at least this many hours before the appointment starts.
-// Inside the window the booking is still cancelled, but the money is kept
-// (an admin can always refund manually via the admin cancel path).
-const CANCELLATION_WINDOW_HOURS =
-  Number(process.env.CANCELLATION_WINDOW_HOURS) >= 0
-    ? Number(process.env.CANCELLATION_WINDOW_HOURS)
-    : 24;
+// Refund policy for a customer self-cancellation: a full refund when made at
+// least CANCELLATION_WINDOW_HOURS before the appointment, and inside that window
+// a refund of everything except a retained one-hour fee. Both rules live in
+// utils/cancellation.util.js.
+const {
+  CANCELLATION_WINDOW_HOURS,
+  isLateCancellation,
+  lateCancellationSettlement
+} = require('../utils/cancellation.util');
 
 // Refund helper lives in the payment controller (it talks to Stripe). Used when
 // a paid booking is cancelled (by the user or an admin).
@@ -629,29 +631,35 @@ const cancelMyBooking = catchAsync(async (req, res, next) => {
 
   const previousStatus = booking.status;
 
-  // Refund policy: an automatic full refund only applies when the cancellation
-  // happens at least CANCELLATION_WINDOW_HOURS before the appointment starts.
-  // Inside the window the booking is still cancelled but the charge is kept —
-  // the message below tells the customer to contact support/an admin, who can
-  // refund case-by-case via the admin cancel path. The start moment is built
-  // from the stored local-format strings ("YYYY-MM-DD" + "HH:MM").
-  const [y, mo, d] = String(booking.bookingDate).split('-').map(Number);
-  const [hh, mm] = String(booking.bookingTime).split(':').map(Number);
-  const startsAt = new Date(y, mo - 1, d, hh, mm);
-  const withinWindow =
-    startsAt.getTime() - Date.now() < CANCELLATION_WINDOW_HOURS * 60 * 60 * 1000;
+  // Refund policy: cancelling at least CANCELLATION_WINDOW_HOURS before the
+  // appointment returns the whole charge. Inside the window the slot is already
+  // burned, so we keep a fee worth one hour of the booked crew and return the
+  // rest. Add-on prices are needed to work out what that hour is worth, and they
+  // live on the referenced catalogue documents.
+  const late = isLateCancellation(booking);
+  let settlement = null;
+  if (late) {
+    await booking.populate([
+      { path: 'specialRequests', select: 'price' },
+      { path: 'cleaningTools', select: 'price' }
+    ]);
+    settlement = lateCancellationSettlement(booking);
+  }
 
   // Release the money. On a Stripe failure we roll the status back to what it
   // was and abort — a booking must never be left cancelled while the customer
-  // is still charged. It's a no-op for manual/offline or unpaid bookings.
+  // is still charged. It's a no-op for manual/offline or unpaid bookings, and
+  // for a late cancellation whose fee swallows the entire charge (a one-hour
+  // booking), which leaves the payment exactly as it was.
   let refundUpdate = null;
-  if (!withinWindow) {
-    try {
-      refundUpdate = await refundBookingPayment(booking);
-    } catch (refundError) {
-      await Booking.updateOne({ _id: id }, { $set: { status: previousStatus } });
-      return next(refundError);
-    }
+  try {
+    refundUpdate = await refundBookingPayment(
+      booking,
+      settlement ? { amount: settlement.refundAmount } : {}
+    );
+  } catch (refundError) {
+    await Booking.updateOne({ _id: id }, { $set: { status: previousStatus } });
+    return next(refundError);
   }
 
   if (refundUpdate) {
@@ -662,10 +670,15 @@ const cancelMyBooking = catchAsync(async (req, res, next) => {
 
   // Best-effort refund email (only when an actual refund was issued).
   if (refundUpdate) {
-    // Stamp the invoice so an exported PDF reflects the reversal.
-    await markInvoiceRefunded(id, refundUpdate.refundedAt).catch((err) =>
-      console.error('Invoice refund stamp error:', err.message)
-    );
+    // Stamp the invoice so an exported PDF reflects the reversal — but only for
+    // a full refund. A late cancellation kept money the invoice correctly says
+    // was charged, so marking that document 'refunded' would misstate it; the
+    // retained fee stands on the invoice as issued.
+    if (refundUpdate.paymentStatus === 'refunded') {
+      await markInvoiceRefunded(id, refundUpdate.refundedAt).catch((err) =>
+        console.error('Invoice refund stamp error:', err.message)
+      );
+    }
 
     try {
       const serviceDoc = await Booking.findById(booking._id).populate('serviceId', 'name').select('serviceId').lean();
@@ -673,7 +686,9 @@ const cancelMyBooking = catchAsync(async (req, res, next) => {
         customerName: booking.customerName,
         serviceName: serviceDoc?.serviceId?.name,
         bookingDate: booking.bookingDate,
-        amount: booking.totalAmount
+        amount: refundUpdate.refundAmount,
+        fee: settlement?.fee || 0,
+        charged: booking.totalAmount
       });
       await sendEmail({ email: booking.customerEmail, subject, html, text });
     } catch (emailError) {
@@ -689,15 +704,25 @@ const cancelMyBooking = catchAsync(async (req, res, next) => {
     .populate('workers', 'fullname')
     .lean();
 
-  // Message reflects the money outcome: refunded, kept (late cancellation of a
-  // paid booking), or nothing to refund (manual/unpaid).
+  // Message reflects the money outcome: fully refunded, refunded minus the
+  // one-hour late-cancellation fee, entirely kept (a late cancellation of a
+  // booking no longer than that hour), or nothing to refund (manual/unpaid).
   const wasPaidCard =
-    booking.paymentMethod === 'card' && ['paid', 'refunded'].includes(booking.paymentStatus);
+    booking.paymentMethod === 'card' &&
+    ['paid', 'refunded', 'partially-refunded'].includes(booking.paymentStatus);
   let message = "Booking cancelled successfully!";
-  if (refundUpdate) {
+  if (refundUpdate && refundUpdate.paymentStatus === 'partially-refunded') {
+    message =
+      `Booking cancelled and ${formatEuro(refundUpdate.refundAmount)} refunded. ` +
+      `Cancellations within ${CANCELLATION_WINDOW_HOURS} hours of the appointment keep a ` +
+      `late-cancellation fee of ${formatEuro(settlement.fee)} — one hour of the booked cleaning.`;
+  } else if (refundUpdate) {
     message = "Booking cancelled and refunded successfully!";
-  } else if (withinWindow && wasPaidCard) {
-    message = `Booking cancelled. Cancellations within ${CANCELLATION_WINDOW_HOURS} hours of the appointment aren't automatically refunded — please contact support.`;
+  } else if (late && wasPaidCard) {
+    message =
+      `Booking cancelled. Cancellations within ${CANCELLATION_WINDOW_HOURS} hours of the ` +
+      `appointment keep a late-cancellation fee of one hour of the booked cleaning, which ` +
+      `covers this booking in full — please contact support if you think that's wrong.`;
   }
 
   res.status(200).json({

@@ -251,7 +251,9 @@ const issueInvoiceForBooking = async (bookingId) => {
   // 'unpaid' is the only state with nothing to invoice. 'manual' covers an
   // offline/cash booking an admin entered, and 'refunded' is invoiced too so a
   // historical booking can still be documented — with the refund on its face.
-  if (!['paid', 'manual', 'refunded'].includes(booking.paymentStatus)) {
+  // 'partially-refunded' (a late cancellation that kept the one-hour fee) is
+  // invoiced as issued: money was charged and kept, so the document stands.
+  if (!['paid', 'manual', 'refunded', 'partially-refunded'].includes(booking.paymentStatus)) {
     throw new AppError('This booking has not been paid, so it cannot be invoiced.', 400);
   }
 
