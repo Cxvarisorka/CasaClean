@@ -695,7 +695,7 @@ export default {
       valuesTitle: "Perché scegliere CasaClean",
       legalLabel: "Informazioni societarie",
       legal:
-        "CasaClean è un marchio gestito da Vacanze Romane SRLS, società italiana regolarmente registrata che opera nel rispetto della normativa italiana offrendo servizi professionali di pulizia.",
+        "CasaClean è un marchio gestito da Vacanze Romane S.r.l.s., società italiana regolarmente registrata che opera nel rispetto della normativa italiana offrendo servizi professionali di pulizia.",
       ctaTitle: "Prenota la tua pulizia con CasaClean",
       ctaSubtitle:
         "Prenotazione semplice e veloce, prezzi trasparenti e personale qualificato — a casa e al lavoro.",

@@ -7,7 +7,7 @@ import { SectionHeading } from "@/components/shared/SectionHeading";
 import { Icon } from "@/components/shared/Icon";
 import { Reveal } from "@/components/shared/Reveal";
 import { Seo } from "@/seo";
-import { PAGE_META } from "@/constants/metadata";
+import { PAGE_META, SITE } from "@/constants/metadata";
 import { IMAGES } from "@/constants/images";
 import { COMPANY_VALUES } from "@/data/company";
 import { SERVICES } from "@/data/services";
@@ -196,6 +196,34 @@ const AboutPage = () => {
             <p className="mt-4 text-body-lg text-ink-600">
               {t("pages.about.legal")}
             </p>
+
+            {/* The registered details themselves. Deliberately label-free and
+                read from SITE rather than the locale files: a company name, a
+                street address, an email and a phone number read the same in
+                every language, and duplicating them per locale is how they end
+                up disagreeing. */}
+            <div className="mt-6 border-t border-ink-100 pt-6 text-body-sm text-ink-500">
+              <p className="font-semibold text-ink-900">{SITE.legalName}</p>
+              <p className="mt-1">
+                {SITE.address.street}, {SITE.address.postalCode}{" "}
+                {SITE.address.city} ({SITE.address.region}), Italia
+              </p>
+              <p className="mt-1">
+                <a
+                  href={`mailto:${SITE.email}`}
+                  className="transition-colors hover:text-brand-600"
+                >
+                  {SITE.email}
+                </a>
+                <span className="mx-2 text-ink-300">·</span>
+                <a
+                  href={SITE.phoneHref}
+                  className="transition-colors hover:text-brand-600"
+                >
+                  {SITE.phone}
+                </a>
+              </p>
+            </div>
           </Reveal>
         </Container>
       </section>

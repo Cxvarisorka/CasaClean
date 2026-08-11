@@ -9,7 +9,7 @@ import { PageHero, CtaSection } from "@/components/sections";
 import { SectionHeading } from "@/components/shared/SectionHeading";
 import { Icon } from "@/components/shared/Icon";
 import { Seo } from "@/seo";
-import { PAGE_META } from "@/constants/metadata";
+import { PAGE_META, SITE } from "@/constants/metadata";
 import { PERKS, OPEN_ROLES } from "@/data/careers";
 import { IMAGES } from "@/constants/images";
 import { ROUTES } from "@/constants/routes";
@@ -103,7 +103,9 @@ const CareersPage = () => {
               OPEN_ROLES.map((role) => (
                 <motion.li key={role.id} variants={staggerItem}>
                   <a
-                    href={`mailto:careers@casaclean.com?subject=Application: ${role.title}`}
+                    href={`mailto:${SITE.email}?subject=${encodeURIComponent(
+                      `Application: ${role.title}`,
+                    )}`}
                     className="group flex flex-col gap-3 rounded-2xl border border-ink-100 bg-surface p-5 shadow-soft transition-shadow hover:shadow-medium sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div>

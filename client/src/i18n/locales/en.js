@@ -703,7 +703,7 @@ export default {
       valuesTitle: "Why choose CasaClean?",
       legalLabel: "Company information",
       legal:
-        "CasaClean is a brand managed by Vacanze Romane SRLS, a legally registered Italian company operating in full compliance with Italian regulations and providing professional cleaning services.",
+        "CasaClean is a brand managed by Vacanze Romane S.r.l.s., a legally registered Italian company operating in full compliance with Italian regulations and providing professional cleaning services.",
       ctaTitle: "Book your cleaning with CasaClean",
       ctaSubtitle:
         "Easy and fast booking, transparent pricing and qualified staff — at home and at work.",

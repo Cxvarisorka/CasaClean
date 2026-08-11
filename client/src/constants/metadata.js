@@ -5,21 +5,33 @@
  * from here so every page ships complete, consistent meta without duplication.
  */
 
+/*
+ * The real registered details of the company behind the brand. They are stated
+ * once here because they are load-bearing in three different places — the
+ * footer/contact channels, the schema.org Organization block and the legal
+ * documents' identity table — and a phone number that disagrees between them is
+ * worse than no phone number at all.
+ */
+const PHONE = "+39 347 5596318";
+
 export const SITE = {
   name: "CasaClean",
-  legalName: "Vacanze Romane SRLS",
+  legalName: "VACANZE ROMANE S.R.L.S.",
   tagline: "Professional cleaning services in Italy",
   description:
     "CasaClean offers professional cleaning services for apartments, holiday homes, Airbnb properties, hotels, offices and commercial spaces — regular, deep, move-in/move-out and emergency cleaning, booked online in about a minute.",
   url: import.meta.env.VITE_SITE_URL || "https://casaclean.com",
   locale: "en_US",
-  email: "hello@casaclean.com",
-  phone: "+39 06 1234 5678",
+  email: "info@casaclean.it",
+  phone: PHONE,
+  // `tel:` needs the dialable form, so it is derived from the displayed number
+  // rather than written out a second time and left to drift.
+  phoneHref: `tel:${PHONE.replace(/[^\d+]/g, "")}`,
   address: {
     street: "Via Giovanni Giorgi 5",
-    city: "Rome",
-    region: "Lazio",
-    postalCode: "00197",
+    city: "Roma",
+    region: "RM",
+    postalCode: "00149",
     country: "IT",
   },
   ogImage: "/og-image.png",
@@ -43,7 +55,7 @@ export const PAGE_META = {
   about: {
     title: "About CasaClean — Professional Cleaning in Italy",
     description:
-      "CasaClean provides high-quality cleaning for apartments, holiday homes, Airbnb properties, hotels, offices and commercial spaces. A brand managed by Vacanze Romane SRLS.",
+      "CasaClean provides high-quality cleaning for apartments, holiday homes, Airbnb properties, hotels, offices and commercial spaces. A brand managed by Vacanze Romane S.r.l.s.",
     path: "/about",
   },
   contact: {

@@ -32,7 +32,7 @@ const ContactPage = () => {
       icon: Phone,
       label: t("pages.contact.phoneLabel"),
       value: SITE.phone,
-      href: "tel:+390612345678",
+      href: SITE.phoneHref,
       note: t("pages.contact.phoneNote"),
     },
     {
