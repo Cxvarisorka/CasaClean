@@ -13,7 +13,12 @@
 // Reference figures: a €120 net catalogue cycle (60/h x 2h x 1 cleaner),
 // charged as €146.40 with VAT and €120 under the reverse charge.
 
-const { stripeMock, sendEmailMock, waitForEmails } = require('../setup/testEnv');
+const {
+  stripeMock,
+  customerEmails,
+  waitForCustomerEmails,
+  waitForBookingAlerts
+} = require('../setup/testEnv');
 const { createUser, createCity, createService, dateStr } = require('../setup/fixtures');
 const { createSubscription } = require('../setup/subscriptionFixtures');
 
@@ -82,7 +87,13 @@ const makeDueAgain = (subscription) =>
  */
 const chargeAndSettle = async (cyclesSoFar = 1) => {
   const result = await runSubscriptionCharges();
-  await waitForEmails(cyclesSoFar);
+  // A charged cycle mails two audiences — the customer's receipt and the team's
+  // booking alert — so both have to have landed before the next test wipes the
+  // collections out from under them.
+  await Promise.all([
+    waitForCustomerEmails(cyclesSoFar),
+    waitForBookingAlerts(cyclesSoFar)
+  ]);
   return result;
 };
 
@@ -295,7 +306,7 @@ describe('the invoice for a recurring cycle', () => {
     const sum = invoice.lineItems.reduce((total, item) => total + item.amount, 0);
     expect(Math.round(sum * 100) / 100).toBe(invoice.subtotal);
 
-    const sent = sendEmailMock.mock.calls[0][0];
+    const [sent] = customerEmails();
     expect(sent.text).toMatch(/reverse charge/i);
   });
 

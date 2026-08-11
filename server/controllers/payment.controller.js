@@ -25,6 +25,7 @@ const { toMinorUnits } = require('../utils/money.util');
 const { buildValidatedBookingDraft } = require('../services/booking.service');
 const { ensureStripeCustomer } = require('../services/stripeCustomer.service');
 const { issueAndDeliverInvoice } = require('../services/invoice.service');
+const { notifyAdminsOfNewBooking } = require('../services/bookingAlert.service');
 const { createSubscriptionFromFirstBooking } = require('../services/subscription.service');
 
 const CURRENCY = 'eur';
@@ -189,6 +190,14 @@ const promotePendingBooking = async (paymentIntentId, paymentIntent = null) => {
     houseNumber: d.houseNumber,
     totalAmount: d.totalAmount
   }).catch((err) => console.error('Invoice delivery error:', err.message));
+
+  // Tell the team a booking just landed. Sits on the fresh-create path only —
+  // the idempotent returns above are the finalize/webhook race resolving, and a
+  // second alert for the same booking would read as a second booking.
+  // Fire-and-forget for the same reason as the invoice above.
+  notifyAdminsOfNewBooking({ booking, serviceName: d.serviceName }).catch((err) =>
+    console.error('Admin booking notification error:', err.message)
+  );
 
   return booking;
 };

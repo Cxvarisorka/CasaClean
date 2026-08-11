@@ -1,7 +1,14 @@
 // Subscription-cycle webhook coverage uses the real Stripe signature verifier
 // exposed by the shared Stripe mock, just like the existing one-off webhook
 // suite.
-const { app, request, stripeMock, sendEmailMock } = require("../setup/testEnv");
+const {
+    app,
+    request,
+    stripeMock,
+    sendEmailMock,
+    waitForCustomerEmails,
+    waitForBookingAlerts
+} = require("../setup/testEnv");
 const { createUser, createCity, createService, dateStr } = require("../setup/fixtures");
 const { createSubscription } = require("../setup/subscriptionFixtures");
 
@@ -77,7 +84,10 @@ describe("subscription-cycle webhooks", () => {
             paymentIntentId: paymentIntent.id,
             amount: 40
         });
-        expect(sendEmailMock).toHaveBeenCalledTimes(1);
+        // One cycle, so exactly one receipt to the customer and one alert to the
+        // team — the redelivered event must not double either.
+        expect(await waitForCustomerEmails(1)).toHaveLength(1);
+        expect(await waitForBookingAlerts(1)).toHaveLength(1);
     });
 
     test("does not create a cycle booking for a cancelled subscription", async () => {

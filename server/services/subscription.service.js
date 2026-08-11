@@ -29,6 +29,7 @@ const {
   formatEuro
 } = require('./booking.service');
 const { issueAndDeliverInvoice } = require('./invoice.service');
+const { notifyAdminsOfNewBooking } = require('./bookingAlert.service');
 // Catalogue prices are VAT-exclusive; VAT is added on top unless the customer is
 // a verified business.
 const { priceForCustomer } = require('../utils/tax.util');
@@ -175,6 +176,39 @@ const renderSubscriptionCancelledEmail = ({ subscription }) => {
  * which case there is nothing to invoice and the plain receipt is sent instead.
  */
 const sendCycleReceipt = ({ subscription, booking, serviceName, serviceDate, amount }) => {
+  // Every charged cycle creates a real, confirmed visit, so the team is told
+  // about it exactly like a one-off booking. Called from the single place both
+  // cycle paths (the charge worker and the webhook backstop) converge on, and
+  // only once the schedule advance won, so a redelivered event can't re-alert.
+  notifyAdminsOfNewBooking({
+    booking: booking?._id
+      ? booking
+      : // The cycle booking couldn't be located (defensive — the charge worker
+        // creates it synchronously). The plan still holds everything the team
+        // needs to staff the visit, so alert from that rather than stay silent.
+        {
+          serviceId: subscription.serviceId,
+          cityId: subscription.cityId,
+          customerName: subscription.customerName,
+          customerEmail: subscription.customerEmail,
+          customerPhone: subscription.customerPhone,
+          streetName: subscription.streetName,
+          houseNumber: subscription.houseNumber,
+          propertySize: subscription.propertySize,
+          doorbellName: subscription.doorbellName,
+          bookingDate: serviceDate,
+          bookingTime: subscription.bookingTime,
+          hours: subscription.hours,
+          cleaners: subscription.cleaners,
+          totalAmount: amount,
+          notes: subscription.notes,
+          paymentMethod: 'card',
+          paymentStatus: 'paid'
+        },
+    serviceName,
+    recurring: true
+  }).catch((err) => console.error('Admin booking notification error:', err.message));
+
   const fallback = {
     customerName: subscription.customerName,
     customerEmail: subscription.customerEmail,

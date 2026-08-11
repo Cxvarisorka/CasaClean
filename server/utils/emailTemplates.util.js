@@ -10,6 +10,10 @@
 //   accent gold -> #f59e0b
 //   ink (text)  -> #0e1424 / #636c88
 
+const { formatEuro, formatDateLong } = require("./invoice.util");
+// Durations are whole or half hours; formatDuration keeps 1.5 out of the text.
+const { formatDuration } = require("./duration.util");
+
 // Shared palette so every template stays on-brand from one place.
 const COLORS = {
     brand: "#0e8b81",
@@ -350,9 +354,142 @@ const contactReplyEmail = ({ customerName, replyBody, originalMessage, originalS
     };
 };
 
+/**
+ * Internal "a booking just came in" alert, sent to the team — the admin accounts
+ * and the business mailbox — NOT to the customer, who gets their own invoice /
+ * confirmation email from invoice.service.js.
+ *
+ * It is written to be actionable from the notification alone: everything needed
+ * to staff the job (when, where, how long, how many cleaners) and to reach the
+ * customer (email and phone as tap-able links) is in the body, so an admin on a
+ * phone doesn't have to open the panel just to find out what arrived.
+ *
+ * Customer-typed values (name, address, doorbell, notes) are escaped like every
+ * other template here — this email is read by staff, which is precisely why it
+ * must not be a place where crafted booking text can inject markup.
+ *
+ * @param {Object} opts
+ * @param {string} opts.bookingId     - the Booking's _id, for panel lookup
+ * @param {string} [opts.serviceName] - resolved catalogue name
+ * @param {string} [opts.cityName]    - resolved city name
+ * @param {boolean} [opts.recurring]  - true for a recurring-plan cycle booking
+ * @param {string} [opts.adminUrl]    - deep link to the admin bookings page
+ * @returns {{ subject: string, html: string, text: string }}
+ */
+const newBookingAlertEmail = ({
+    bookingId,
+    serviceName,
+    cityName,
+    customerName,
+    customerEmail,
+    customerPhone,
+    bookingDate,
+    bookingTime,
+    hours,
+    cleaners,
+    streetName,
+    houseNumber,
+    propertySize,
+    doorbellName,
+    notes,
+    totalAmount,
+    paymentMethod,
+    paymentStatus,
+    recurring = false,
+    adminUrl
+}) => {
+    const service = serviceName || "Cleaning service";
+    // The date and time lead the subject: an inbox full of these is triaged by
+    // "when is it", not by "which of our services was it".
+    const subject = `${recurring ? "New recurring booking" : "New booking"} — ${service} · ${bookingDate || "date TBC"} ${bookingTime || ""}`.trim();
+
+    const address = [
+        [streetName, houseNumber ? `No. ${houseNumber}` : ""].filter(Boolean).join(", "),
+        cityName
+    ].filter(Boolean).join(", ");
+
+    const paid = paymentStatus === "paid" || paymentStatus === "manual";
+    const payment = `${formatEuro(totalAmount)} — ${paid ? "paid" : paymentStatus || "unpaid"}${
+        paymentMethod ? ` (${paymentMethod})` : ""
+    }`;
+
+    const row = (label, value) => `
+        <tr>
+            <td style="padding:6px 12px 6px 0; font-size:13px; color:${COLORS.muted}; white-space:nowrap; vertical-align:top;">${label}</td>
+            <td style="padding:6px 0; font-size:14px; color:${COLORS.ink};">${value}</td>
+        </tr>`;
+
+    const safeEmail = escapeHtml(customerEmail);
+    const safePhone = escapeHtml(customerPhone);
+
+    const bodyContent = `
+        <h1 style="margin:0 0 12px; font-size:22px; color:${COLORS.ink};">
+            ${recurring ? "A recurring cleaning was just charged" : "A new booking was just confirmed"}
+        </h1>
+        <p style="margin:0 0 20px; font-size:15px; line-height:1.6; color:${COLORS.muted};">
+            Payment has been received and the slot is reserved. Replying to this email
+            goes straight to the customer.
+        </p>
+
+        <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%; margin-bottom:20px;">
+            ${row("Service", escapeHtml(service))}
+            ${row("Date", escapeHtml(bookingDate ? formatDateLong(bookingDate) : "—"))}
+            ${row("Time", escapeHtml(bookingTime || "—"))}
+            ${row("Duration", escapeHtml(`${formatDuration(hours)} · ${cleaners} cleaner(s)`))}
+            ${row("Address", escapeHtml(address || "—"))}
+            ${propertySize ? row("Property size", `${escapeHtml(propertySize)} m&sup2;`) : ""}
+            ${doorbellName ? row("Doorbell", escapeHtml(doorbellName)) : ""}
+            ${recurring ? row("Plan", "Recurring service") : ""}
+            ${row("Payment", escapeHtml(payment))}
+            ${bookingId ? row("Booking ID", `<span style="font-family:monospace; font-size:13px;">${escapeHtml(bookingId)}</span>`) : ""}
+        </table>
+
+        <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%; margin-bottom:20px;">
+            ${row("Customer", escapeHtml(customerName))}
+            ${customerEmail ? row("Email", `<a href="mailto:${safeEmail}" style="color:${COLORS.brand};">${safeEmail}</a>`) : ""}
+            ${customerPhone ? row("Phone", `<a href="tel:${safePhone}" style="color:${COLORS.brand};">${safePhone}</a>`) : ""}
+        </table>
+
+        ${notes ? `
+        <p style="margin:0 0 6px; font-size:13px; color:${COLORS.muted};">Customer notes</p>
+        <div style="padding:16px 18px; background-color:${COLORS.canvas}; border:1px solid ${COLORS.border}; border-radius:10px;">
+            <p style="margin:0; font-size:14px; line-height:1.7; color:${COLORS.ink}; white-space:pre-wrap;">${escapeHtml(notes)}</p>
+        </div>` : ""}
+
+        ${adminUrl ? button(adminUrl, "Open in admin panel") : ""}`;
+
+    const text =
+        `${subject}\n\n` +
+        `Service:   ${service}\n` +
+        `Date:      ${bookingDate || "—"} ${bookingTime || ""}\n` +
+        `Duration:  ${formatDuration(hours)} (${cleaners} cleaner(s))\n` +
+        `Address:   ${address || "—"}\n` +
+        (propertySize ? `Size:      ${propertySize} m2\n` : "") +
+        (doorbellName ? `Doorbell:  ${doorbellName}\n` : "") +
+        (recurring ? `Plan:      Recurring service\n` : "") +
+        `Payment:   ${payment}\n` +
+        (bookingId ? `Booking:   ${bookingId}\n` : "") +
+        `\nCustomer:  ${customerName}\n` +
+        (customerEmail ? `Email:     ${customerEmail}\n` : "") +
+        (customerPhone ? `Phone:     ${customerPhone}\n` : "") +
+        (notes ? `\nNotes:\n${notes}\n` : "") +
+        (adminUrl ? `\nAdmin panel: ${adminUrl}\n` : "");
+
+    return {
+        subject,
+        html: baseLayout({
+            title: subject,
+            bodyContent,
+            footerNote: "You received this email because you are notified of new CasaClean bookings."
+        }),
+        text
+    };
+};
+
 module.exports = {
     verificationEmail,
     passwordResetEmail,
     contactMessageEmail,
-    contactReplyEmail
+    contactReplyEmail,
+    newBookingAlertEmail
 };

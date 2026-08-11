@@ -1,6 +1,11 @@
 // The scheduler uses the real Mongoose atomic claim query here; only Stripe
 // and mail are mocked by the shared integration harness.
-const { stripeMock, sendEmailMock, waitForEmails } = require("../setup/testEnv");
+const {
+    stripeMock,
+    sendEmailMock,
+    waitForCustomerEmails,
+    waitForBookingAlerts
+} = require("../setup/testEnv");
 const { createUser, createCity, createService, dateStr } = require("../setup/fixtures");
 const { createSubscription } = require("../setup/subscriptionFixtures");
 
@@ -99,8 +104,14 @@ describe("runSubscriptionCharges", () => {
         });
         // The cycle's invoice email is fire-and-forget (the charge worker must
         // not block on SMTP), so wait for the dispatch before asserting on it.
-        await waitForEmails(1);
+        await waitForCustomerEmails(1);
         expect(sendEmailMock).toHaveBeenCalledWith(expect.objectContaining({ email: user.email }));
+
+        // A charged cycle is a new confirmed visit, so the team is told about it
+        // exactly like a one-off booking.
+        const [alert] = await waitForBookingAlerts(1);
+        expect(alert.subject).toContain("New recurring booking");
+        expect(alert.text).toContain(subscription.customerPhone);
     });
 
     test("treats authentication_required as a card decline and uses a new idempotency key per retry", async () => {

@@ -27,6 +27,15 @@ const sendEmailMock = require("../../utils/email.util");
 // AFTER app.js, whose dotenv load overrides the environment.
 delete process.env.INVOICE_VAT_RATE;
 
+// Every confirmed booking also raises an internal alert to the team
+// (services/bookingAlert.service.js): to each admin ACCOUNT and to a configured
+// business mailbox. Pinned to a known address for the same reason as the VAT
+// rate above — the developer's own MAIL_FROM must not decide how many emails a
+// paid booking sends. Use `bookingAlerts()` / `customerEmails()` to tell the two
+// audiences apart instead of indexing into sendEmailMock.mock.calls.
+const BOOKING_ALERT_EMAIL = "ops@test.casaclean.local";
+process.env.BOOKING_NOTIFY_EMAIL = BOOKING_ALERT_EMAIL;
+
 let mongod;
 
 beforeAll(async () => {
@@ -84,4 +93,50 @@ const waitForEmails = async (count = 1, timeoutMs = 3000) => {
     return sendEmailMock.mock.calls;
 };
 
-module.exports = { app, api, request, stripeMock, sendEmailMock, waitForEmails };
+/** Every mail argument sent so far, in dispatch order. */
+const sentEmails = () => sendEmailMock.mock.calls.map(([mail]) => mail);
+
+/** The internal new-booking alerts (addressed to the team). */
+const bookingAlerts = () =>
+    sentEmails().filter((mail) => String(mail?.email || "").includes(BOOKING_ALERT_EMAIL));
+
+/**
+ * Everything that is NOT a team alert — i.e. the customer-facing mail. The team
+ * alert and the customer's confirmation race each other (both are
+ * fire-and-forget), so suites must select by audience rather than by index.
+ */
+const customerEmails = () =>
+    sentEmails().filter((mail) => !String(mail?.email || "").includes(BOOKING_ALERT_EMAIL));
+
+/** Poll until `count` customer-facing emails have been dispatched. */
+const waitForCustomerEmails = async (count = 1, timeoutMs = 3000) => {
+    const deadline = Date.now() + timeoutMs;
+    while (customerEmails().length < count && Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    return customerEmails();
+};
+
+/** Poll until `count` team booking alerts have been dispatched. */
+const waitForBookingAlerts = async (count = 1, timeoutMs = 3000) => {
+    const deadline = Date.now() + timeoutMs;
+    while (bookingAlerts().length < count && Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    return bookingAlerts();
+};
+
+module.exports = {
+    app,
+    api,
+    request,
+    stripeMock,
+    sendEmailMock,
+    waitForEmails,
+    BOOKING_ALERT_EMAIL,
+    sentEmails,
+    bookingAlerts,
+    customerEmails,
+    waitForCustomerEmails,
+    waitForBookingAlerts
+};

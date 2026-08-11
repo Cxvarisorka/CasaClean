@@ -6,7 +6,13 @@
 // two things that would quietly cost money or leak data if they broke —
 // idempotency across the finalize/webhook race, and cross-customer access.
 
-const { api, stripeMock, sendEmailMock, waitForEmails } = require('../setup/testEnv');
+const {
+  api,
+  stripeMock,
+  sendEmailMock,
+  customerEmails,
+  waitForCustomerEmails
+} = require('../setup/testEnv');
 const {
   createUser,
   createAdmin,
@@ -225,15 +231,15 @@ describe('invoice delivery after payment', () => {
 
     // The invoice is delivered fire-and-forget so the Stripe webhook is never
     // held up by SMTP — wait for the dispatch instead of racing it.
-    await waitForEmails(1);
+    const [sent] = await waitForCustomerEmails(1);
 
     const invoice = await Invoice.findOne({ booking: finalize.body.data.booking._id });
     expect(invoice).toBeTruthy();
 
-    // Exactly one email — a confirmation plus a near-identical receipt would
-    // read as a glitch.
-    expect(sendEmailMock).toHaveBeenCalledTimes(1);
-    const sent = sendEmailMock.mock.calls[0][0];
+    // Exactly one email to the customer — a confirmation plus a near-identical
+    // receipt would read as a glitch. (The team's internal booking alert is a
+    // separate audience and is asserted in adminBookingAlert.test.js.)
+    expect(customerEmails()).toHaveLength(1);
     expect(sent.email).toBe(user.email);
     expect(sent.subject).toContain(invoice.number);
     expect(sent.attachments).toHaveLength(1);
@@ -268,12 +274,11 @@ describe('invoice delivery after payment', () => {
         .send({ paymentIntentId: intent.body.data.paymentIntentId });
 
       expect(finalize.status).toBe(201);
-      await waitForEmails(1);
+      const [sent] = await waitForCustomerEmails(1);
 
       expect(await Invoice.countDocuments({})).toBe(0);
       // Fell back to the plain confirmation email — never silence.
-      expect(sendEmailMock).toHaveBeenCalledTimes(1);
-      const sent = sendEmailMock.mock.calls[0][0];
+      expect(customerEmails()).toHaveLength(1);
       expect(sent.email).toBe(user.email);
       expect(sent.subject).toContain('confirmed');
       expect(sent.attachments).toBeUndefined();

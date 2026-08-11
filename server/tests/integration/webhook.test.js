@@ -1,7 +1,15 @@
 // Stripe webhook (/webhooks/stripe): signature verification runs the REAL
 // Stripe HMAC check — payloads are signed with generateTestHeaderString and the
 // same secret the app reads from STRIPE_WEBHOOK_SECRET.
-const { app, request, stripeMock, sendEmailMock, waitForEmails } = require("../setup/testEnv");
+const {
+    app,
+    request,
+    stripeMock,
+    sendEmailMock,
+    waitForEmails,
+    bookingAlerts,
+    customerEmails
+} = require("../setup/testEnv");
 const {
     createUser,
     createCity,
@@ -117,14 +125,23 @@ describe("payment_intent.succeeded (booking-creation backstop)", () => {
         // Draft consumed; the invoice email is dispatched fire-and-forget after
         // the webhook has already ACKed, so wait for it rather than race it.
         expect(await PendingBooking.countDocuments({ paymentIntentId: "pi_hook_1" })).toBe(0);
-        await waitForEmails(1);
-        expect(sendEmailMock).toHaveBeenCalledTimes(1);
+        // Two audiences, both dispatched after the ACK: the customer's invoice
+        // email and the team's new-booking alert.
+        await waitForEmails(2);
+        expect(customerEmails()).toHaveLength(1);
+        const alerts = bookingAlerts();
+        expect(alerts).toHaveLength(1);
+        expect(alerts[0].subject).toContain("New booking");
+        expect(alerts[0].replyTo).toBe(user.email);
     });
 
-    test("does nothing (but ACKs) when no draft or booking exists", async () => {
+    test("does nothing (but ACKs) for an intent that isn't ours", async () => {
+        // No metadata.type: not a payment this application created, so it is not
+        // ours to promote OR to refund.
         const res = await deliver("payment_intent.succeeded", { id: "pi_ghost", status: "succeeded" });
         expect(res.status).toBe(200);
         expect(await Booking.countDocuments()).toBe(0);
+        expect(stripeMock.refunds.create).not.toHaveBeenCalled();
     });
 
     test("never creates a second booking for an already-promoted intent", async () => {

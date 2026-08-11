@@ -9,7 +9,7 @@
 // take the VAT off their charge. Several tests below exist purely to hold that
 // line.
 
-const { api, stripeMock, sendEmailMock, waitForEmails } = require('../setup/testEnv');
+const { api, stripeMock, waitForCustomerEmails } = require('../setup/testEnv');
 const {
   createUser,
   createAdmin,
@@ -410,7 +410,7 @@ describe('the invoice a business receives', () => {
     // 60 + 12.20 = 72.20 net, charged as-is under the reverse charge.
     expect(finalize.body.data.booking.totalAmount).toBe(72.2);
 
-    await waitForEmails(1);
+    const [sent] = await waitForCustomerEmails(1);
     const invoice = await Invoice.findOne({ booking: finalize.body.data.booking._id }).lean();
 
     expect(invoice.reverseCharge).toBe(true);
@@ -431,7 +431,6 @@ describe('the invoice a business receives', () => {
     expect(Math.round(sum * 100) / 100).toBe(invoice.subtotal);
 
     // And the customer is told why there is no VAT.
-    const sent = sendEmailMock.mock.calls[0][0];
     expect(sent.text).toMatch(/reverse charge/i);
     expect(sent.html).toMatch(/reverse charge/i);
   });
@@ -498,7 +497,7 @@ describe('the invoice a business receives', () => {
       .set('Cookie', cookie)
       .send({ paymentIntentId: intent.body.data.paymentIntentId });
 
-    await waitForEmails(1);
+    const [sent] = await waitForCustomerEmails(1);
     const invoice = await Invoice.findOne({
       booking: finalize.body.data.booking._id
     }).lean();
@@ -515,7 +514,6 @@ describe('the invoice a business receives', () => {
     expect(res.body.subarray(0, 5).toString()).toBe('%PDF-');
 
     // And the emailed copy states the legal basis, with the number it rests on.
-    const sent = sendEmailMock.mock.calls[0][0];
     expect(sent.text).toMatch(/Article 196/);
     expect(sent.html).toMatch(/Article 196/);
     expect(sent.html).toContain('IT09876543210');
@@ -539,7 +537,7 @@ describe('the invoice a business receives', () => {
       .set('Cookie', cookie)
       .send({ paymentIntentId: intent.body.data.paymentIntentId });
 
-    await waitForEmails(1);
+    await waitForCustomerEmails(1);
     const bookingId = finalize.body.data.booking._id;
 
     const cancelled = await api
