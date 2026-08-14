@@ -107,9 +107,9 @@ export function BillingProfile() {
   const status = user?.vatStatus && user.vatStatus !== "none" ? user.vatStatus : null;
 
   return (
-    <Card className="p-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
+    <Card className="p-5 sm:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+        <div className="min-w-0">
           <h3 className="text-heading-sm text-ink-900">{t("profile.billing.title")}</h3>
           <p className="mt-1 text-body-sm text-ink-500">{t("profile.billing.subtitle")}</p>
         </div>
@@ -139,7 +139,7 @@ export function BillingProfile() {
               }`}
             >
               <Icon className={`mt-0.5 size-4.5 shrink-0 ${active ? "text-brand-600" : "text-ink-400"}`} />
-              <span>
+              <span className="min-w-0">
                 <span className="block text-body-sm font-semibold text-ink-900">
                   {t(option.labelKey)}
                 </span>
@@ -218,7 +218,7 @@ export function BillingProfile() {
         </div>
       )}
 
-      <div className="mt-5 flex items-center gap-3">
+      <div className="mt-5 flex flex-wrap items-center gap-3">
         <Button loading={saveMutation.isPending} onClick={() => saveMutation.mutate()}>
           {t("profile.billing.save")}
         </Button>

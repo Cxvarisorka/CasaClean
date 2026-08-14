@@ -122,7 +122,7 @@ function ChangePasswordModal({ open, onClose, hasPassword }) {
             </div>
           )}
 
-          <div className="flex justify-end gap-3">
+          <div className="flex flex-wrap justify-end gap-3">
             <Button variant="ghost" type="button" onClick={close} disabled={mutation.isPending}>
               {t("admin.form.cancel")}
             </Button>
@@ -221,7 +221,7 @@ export function AccountSecurity() {
   const hasPassword = user?.hasPassword ?? user?.provider !== "google";
 
   return (
-    <Card className="p-6">
+    <Card className="p-5 sm:p-6">
       <h2 className="text-heading-sm text-ink-900">{t("profile.security.title")}</h2>
 
       <div className="mt-5 space-y-3">

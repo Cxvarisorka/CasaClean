@@ -89,9 +89,20 @@ const sectionForHash = (hash) => {
 /* One nav, two shapes: a scroll-snapping pill row until `lg`, a sticky vertical
    rail from `lg` up. Same markup, so the active section survives a resize. */
 const SectionNav = ({ sections, active, onSelect, t }) => (
-  <nav aria-label={t("profile.title")} className="lg:sticky lg:top-28">
+  /* `min-w-0` is load-bearing, not defensive. The pill row below is a row of
+     `shrink-0`, `whitespace-nowrap` items, so its min-content width is the sum
+     of all five pills (~780px) — and `overflow-x-auto` does NOT reduce that for
+     a block box, it only allows scrolling once the box is narrower. Without
+     `min-w-0` that min-content becomes the grid TRACK's floor, and because the
+     layout is a single-column grid below `lg`, the content column shares the
+     same track: every section card gets stretched to ~740px inside a phone
+     viewport and the whole page scrolls sideways. */
+  <nav aria-label={t("profile.title")} className="min-w-0 lg:sticky lg:top-28">
+    {/* The negative margin must match the Container's gutter at every width it
+        applies to, or the row either clips its first pill or overflows the page. */}
     <ul
       className="scrollbar-none -mx-5 flex snap-x snap-mandatory gap-2 overflow-x-auto px-5 pb-2
+                 sm:-mx-6 sm:px-6
                  lg:mx-0 lg:flex-col lg:gap-1 lg:overflow-visible lg:px-0 lg:pb-0"
     >
       {sections.map(({ id, icon: Icon, labelKey, badge }) => {
@@ -366,40 +377,50 @@ const ProfilePage = () => {
               account-wide actions (admin console, sign out) live here rather
               than at the bottom of a column the user has to scroll to. */}
           <Card className="p-5 sm:p-6">
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-              {user.avatar ? (
-                <img
-                  src={user.avatar}
-                  alt={user.fullname}
-                  referrerPolicy="no-referrer"
-                  className="size-16 shrink-0 rounded-3xl object-cover shadow-soft sm:size-20"
-                />
-              ) : (
-                <span className="grid size-16 shrink-0 place-items-center rounded-3xl bg-brand-600 text-heading-sm font-bold text-white shadow-soft sm:size-20 sm:text-heading-md">
-                  {initials(user.fullname)}
-                </span>
-              )}
-              <div className="min-w-0 flex-1">
-                <h1 className="wrap-break-word text-heading-md text-ink-900 sm:text-heading-lg">
-                  {user.fullname}
-                </h1>
-                <p className="mt-1 truncate text-body-md text-ink-500">{user.email}</p>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <Badge variant={isAdmin ? "dark" : "neutral"} size="sm">
-                    {user.role}
-                  </Badge>
-                  {user.isVerified ? (
-                    <Badge variant="success" size="sm" icon={ShieldCheck}>
-                      {t("profile.verified")}
+            {/* Identity and actions only share a row from `md`: at 640px the two
+                buttons squeeze the name into a two-line wrap. The avatar, though,
+                sits beside the name at every width — stacking it wastes a whole
+                screenful of a phone before any content appears. */}
+            <div className="flex flex-col gap-5 md:flex-row md:items-center">
+              <div className="flex min-w-0 flex-1 items-center gap-4 sm:gap-5">
+                {user.avatar ? (
+                  <img
+                    src={user.avatar}
+                    alt={user.fullname}
+                    referrerPolicy="no-referrer"
+                    className="size-14 shrink-0 rounded-3xl object-cover shadow-soft sm:size-20"
+                  />
+                ) : (
+                  <span className="grid size-14 shrink-0 place-items-center rounded-3xl bg-brand-600 text-heading-sm font-bold text-white shadow-soft sm:size-20 sm:text-heading-md">
+                    {initials(user.fullname)}
+                  </span>
+                )}
+                <div className="min-w-0 flex-1">
+                  <h1 className="wrap-break-word text-heading-md text-ink-900 sm:text-heading-lg">
+                    {user.fullname}
+                  </h1>
+                  {/* Wrapped, not truncated: a hidden half of your own address
+                      reads as the wrong account being signed in. */}
+                  <p className="mt-1 wrap-break-word text-body-md text-ink-500">
+                    {user.email}
+                  </p>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <Badge variant={isAdmin ? "dark" : "neutral"} size="sm">
+                      {user.role}
                     </Badge>
-                  ) : (
-                    <Badge variant="outline" size="sm">
-                      {t("profile.unverified")}
-                    </Badge>
-                  )}
+                    {user.isVerified ? (
+                      <Badge variant="success" size="sm" icon={ShieldCheck}>
+                        {t("profile.verified")}
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" size="sm">
+                        {t("profile.unverified")}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+              <div className="flex flex-wrap items-center gap-2 md:shrink-0">
                 {isAdmin && (
                   <Button
                     to={ROUTES.admin.dashboard}
@@ -569,7 +590,7 @@ const ProfilePage = () => {
                           return (
                             <li
                               key={b._id || b.reference}
-                              className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:gap-4"
+                              className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 md:flex-row md:items-center md:gap-4"
                             >
                               <div className="min-w-0 flex-1">
                                 <div className="flex flex-wrap items-center gap-2">
@@ -602,9 +623,10 @@ const ProfilePage = () => {
                                 </p>
                               </div>
                               {/* Price and actions share a row of their own on
-                                  phones (spread apart), and rejoin the entry on
-                                  wider screens. */}
-                              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 sm:shrink-0 sm:justify-end">
+                                  phones and tablets (spread apart), and rejoin the
+                                  entry once the row is wide enough to hold the
+                                  service name, the meta line and both actions. */}
+                              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 md:shrink-0 md:justify-end">
                                 <span className="text-body-md font-bold text-ink-900">
                                   {eur(b.total_amount)}
                                 </span>

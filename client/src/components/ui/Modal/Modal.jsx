@@ -95,7 +95,7 @@ export function Modal({
             </div>
 
             {footer && (
-              <div className="flex shrink-0 justify-end gap-3 border-t border-ink-100 px-6 py-4">
+              <div className="flex shrink-0 flex-wrap justify-end gap-3 border-t border-ink-100 px-6 py-4">
                 {footer}
               </div>
             )}

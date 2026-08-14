@@ -71,15 +71,18 @@ function SubscriptionRow({
             <p className="mt-0.5 text-caption text-ink-400">{subscription.cityName}</p>
           )}
         </div>
-        <span className="rounded-full bg-brand-50 px-2.5 py-1 text-caption font-semibold text-brand-700">
+        <span className="shrink-0 rounded-full bg-brand-50 px-2.5 py-1 text-caption font-semibold text-brand-700">
           {intervalLabel(t, subscription.intervalDays)}
         </span>
       </div>
 
       {paymentPaused && (
-        <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-body-sm text-amber-800">
-          <AlertCircle className="size-4.5 shrink-0" aria-hidden="true" />
-          <span className="min-w-0 flex-1">
+        <div className="mt-4 flex flex-wrap items-start gap-x-2 gap-y-1 rounded-xl border border-amber-200 bg-amber-50 p-3 text-body-sm text-amber-800">
+          <AlertCircle className="mt-0.5 size-4.5 shrink-0" aria-hidden="true" />
+          {/* `flex-1` alone would shrink this to one word per line rather than
+              wrap, because the button beside it is nowrap and won't give way.
+              A basis makes the row break instead once the text can't keep it. */}
+          <span className="min-w-0 flex-1 basis-48">
             {t("profile.subscriptions.paymentPaused")}
           </span>
           <Button href="#saved-cards" variant="link" size="sm">
@@ -218,12 +221,12 @@ export function MySubscriptions() {
     actionMutation.isPending && actionMutation.variables?.id === id;
 
   return (
-    <Card className="p-6">
+    <Card className="p-5 sm:p-6">
       <div className="flex items-center gap-3">
         <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600">
           <CalendarClock className="size-5" aria-hidden="true" />
         </span>
-        <div>
+        <div className="min-w-0">
           <h2 className="text-heading-sm text-ink-900">{t("profile.subscriptions.title")}</h2>
           <p className="text-body-sm text-ink-500">{t("profile.subscriptions.subtitle")}</p>
         </div>
@@ -347,20 +350,20 @@ export function MySubscriptions() {
             {cardsQuery.data.map((card) => (
               <label
                 key={card.id}
-                className="flex cursor-pointer items-center gap-3 rounded-xl border border-ink-100 p-3 has-[:checked]:border-brand-400 has-[:checked]:bg-brand-50"
+                className="flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-ink-100 p-3 has-[:checked]:border-brand-400 has-[:checked]:bg-brand-50"
               >
                 <input
                   type="radio"
                   name="subscription-card"
                   checked={selectedCard === card.id}
                   onChange={() => setSelectedCard(card.id)}
-                  className="accent-brand-600"
+                  className="shrink-0 accent-brand-600"
                 />
-                <CreditCard className="size-5 text-ink-500" />
+                <CreditCard className="size-5 shrink-0 text-ink-500" />
                 <span className="text-body-sm font-medium text-ink-900">
                   {String(card.brand || "card").toUpperCase()} •••• {card.last4}
                 </span>
-                <span className="ml-auto text-caption text-ink-400">
+                <span className="ml-auto shrink-0 text-caption text-ink-400">
                   {String(card.expMonth).padStart(2, "0")}/{card.expYear}
                 </span>
               </label>

@@ -117,8 +117,8 @@ export function SavedCards() {
   if (!isStripeConfigured) return null;
 
   return (
-    <Card id="saved-cards" className="p-6">
-      <div className="flex items-center justify-between gap-3">
+    <Card id="saved-cards" className="p-5 sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-heading-sm text-ink-900">{t("profile.payments.title")}</h2>
         <Button
           variant="outline"
@@ -139,13 +139,16 @@ export function SavedCards() {
         ) : cards.length === 0 ? (
           <p className="text-body-sm text-ink-500">{t("profile.payments.empty")}</p>
         ) : (
+          /* Brand, expiry, the default badge and the two actions don't fit one
+             line on a phone, so each row wraps; `ml-auto` keeps the actions on
+             the right whether they wrapped or not. */
           <ul className="space-y-2.5">
             {cards.map((card) => (
               <li
                 key={card.id}
-                className="flex items-center gap-3 rounded-2xl border border-ink-100 bg-surface p-3.5"
+                className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-ink-100 bg-surface p-3.5"
               >
-                <CreditCard className="size-5 text-ink-500" />
+                <CreditCard className="size-5 shrink-0 text-ink-500" />
                 <span className="text-body-sm font-medium text-ink-900">
                   {String(card.brand || "card").toUpperCase()} •••• {card.last4}
                 </span>
@@ -157,7 +160,7 @@ export function SavedCards() {
                     {t("profile.payments.default")}
                   </Badge>
                 )}
-                <span className="ml-auto flex items-center gap-1">
+                <span className="ml-auto flex shrink-0 items-center gap-1">
                   {!card.isDefault && (
                     <button
                       type="button"
