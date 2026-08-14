@@ -18,7 +18,7 @@ Deep references already exist — read them before large changes instead of re-d
 
 **Server** (`cd server`):
 - `npm install`
-- `node app.js` — start the API. There is **no `start`/`dev` script** despite what `api-testing/00-setup.md` says (`npm start` will fail with "Missing script: start"). Use `node app.js`, or run nodemon yourself for reload.
+- `npm start` (= `node app.js`) — start the API. This is what `render.yaml`'s `startCommand` runs, so it must keep working. There is still **no `dev` script**; run nodemon yourself if you want reload.
 - `npm test` — Jest (`--runInBand`) over `server/tests/{unit,integration}`; integration suites boot an in-memory MongoDB and mock Stripe + email (`tests/setup/testEnv.js`). Also `npm run test:watch` / `test:coverage`. For anything not covered there, verify against `api-testing/` manually or via the Postman collection.
 
 **Client** (`cd client`):
@@ -36,9 +36,19 @@ Both sides need a `.env` (copy from each `.env.example`). The server **refuses t
 `assertEnv()` (fail-fast on bad config) → `helmet` → Stripe webhook (raw body) → `/healthz` → `compression` → `express.static('/uploads')` → CORS allow-list (`CLIENT_URL` only, `credentials:true`) → `globalLimiter` → `passport.initialize()` → `express.json({limit:'4mb'})` + `cookieParser` → `csrfGuard` → `sanitizeMongo` → routers (`/api/v1/{auth,city,service,booking,special-request,review,subscription,invoice,contact}`) → `/*splat` 404 → Sentry error handler → `globalErrorHandler` (must be last).
 
 ### File uploads
-A service's cover image is uploaded via **multer** (`middlewares/upload.middleware.js`) to `server/uploads/services/` (git-ignored, recreated at boot by `ensureUploadDirs()`) and served read-only from `/uploads` — mounted *before* the rate limiter so image fetches don't burn API quota, with `Cross-Origin-Resource-Policy: cross-origin` so the SPA on another origin can render them. `utils/upload.util.js` owns the paths and the traversal-safe delete.
+A service's cover image is parsed by **multer** (`middlewares/upload.middleware.js`) into **memory** — nothing is persisted until the controller asks for it, so a request rejected by validation leaves no orphan behind. `services/imageStorage.service.js` then decides *where* it goes:
 
-Documents store the **relative** path (`/uploads/services/<random>.png`); the client resolves it against the API origin (`services/api/assets.js` `assetUrl()`). Filenames are random + an extension derived from the MIME type — never from `originalname`.
+- **Cloudinary** whenever `CLOUDINARY_URL` (or the `CLOUDINARY_CLOUD_NAME`/`API_KEY`/`API_SECRET` trio) is set. The document stores the absolute `https` URL.
+- **Local disk** otherwise — `server/uploads/services/`, served read-only from `/uploads`, mounted *before* the rate limiter so image fetches don't burn API quota, with `Cross-Origin-Resource-Policy: cross-origin` so the SPA on another origin can render them. This is the default so a fresh clone and the test suite work with no account.
+
+The local driver is a genuine trap on a container host: Render/Fly filesystems are ephemeral, so every deploy silently deletes every uploaded image while the DB keeps referencing them. The server logs a warning at boot when it detects production + local disk.
+
+**Deletion dispatches on the stored VALUE, not the active driver** — a database written before the switch still holds `/uploads/…` paths, and those must stay deletable after Cloudinary is turned on. A Cloudinary asset is only destroyed when its `public_id` parses out of one of *our* delivery URLs and sits inside our own folder (`cloudinaryPublicId`), because an admin can paste any URL — including someone else's Cloudinary URL — into the `image` field, and deleting a third party's asset is far worse than orphaning ours.
+
+The client resolves whatever is stored via `services/api/assets.js` `assetUrl()`, which passes absolute URLs through untouched. Asset names are random; the local driver's extension comes from the MIME type — never from `originalname`.
+
+### Seeding
+`npm run seed` (`server/scripts/seed.js`) populates 12 cities, 6 services and 6 add-ons with Italian/Georgian/Russian/Greek translations. Idempotent (upserts by name), touches **only** catalogue collections, and `--reset` refuses to run while any booking references them. City names are load-bearing: they must match the client's local-page data (`client/src/data/cityGeo.js`) exactly, or a city the API offers has no page to send anyone to.
 
 `POST /service` and `PATCH /service/:id` accept **either** JSON **or** `multipart/form-data`; multer no-ops on JSON. On multipart, `coerceMultipart` (`middlewares/multipart.middleware.js`) re-types the flattened string fields (numbers/booleans/JSON-encoded arrays and objects, the latter carrying the `translations` map) so the one strict Zod schema validates both encodings. `sanitizeMongo` is re-run inside the service router because the app-level pass happens before multer populates `req.body`. A router-level error handler unlinks `req.file` on any downstream failure so nothing is orphaned; the controller deletes the previous file after a successful replace and on service delete.
 

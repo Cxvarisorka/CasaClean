@@ -1,0 +1,125 @@
+# Render Blueprint for the CasaClean API (`server/`).
+#
+# The front end is NOT here — it is a static build on Vercel (see client/vercel.json).
+# Import this file in Render via "New → Blueprint".
+#
+# Secrets are deliberately `sync: false`: Render will prompt for each on first
+# deploy and store it, rather than this file carrying credentials into git.
+
+services:
+  - type: web
+    name: casaclean-api
+    runtime: node
+    rootDir: server
+    # There is no build step — the API is plain CommonJS, no transpile.
+    # `--omit=dev` skips jest and its tree on the production instance.
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+
+    # DO NOT drop this to the free plan. Free instances sleep after ~15 minutes
+    # of inactivity, and this API is not merely request-driven:
+    #   - node-cron runs the recurring subscription charges (jobs/index.js). A
+    #     sleeping instance simply never charges anyone.
+    #   - Stripe webhooks would hit a cold start and can time out, and a missed
+    #     `customer.tax_id.updated` leaves a business paying VAT it shouldn't.
+    #   - The Vercel build reads /service and /city to discover which pages to
+    #     prerender; a cold start there costs pages in the sitemap.
+    plan: starter
+    region: frankfurt # closest to the Italian customer base
+    healthCheckPath: /healthz
+
+    # NO DISK — uploads go to Cloudinary (see the CLOUDINARY_* vars below).
+    #
+    # Render's filesystem is ephemeral, so writing images locally means every
+    # deploy silently deletes every service cover image while the database keeps
+    # referencing them. Cloudinary removes the problem rather than working around
+    # it, and unlike a mounted disk it does not pin the API to a single instance.
+    #
+    # If you ever run WITHOUT Cloudinary, you must add a disk here instead —
+    # the server logs a warning at boot when it detects that combination:
+    #
+    #   disk:
+    #     name: uploads
+    #     mountPath: /opt/render/project/src/server/uploads
+    #     sizeGB: 1
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Render injects PORT and expects the process to bind it; app.js already
+      # reads process.env.PORT, and assertEnv requires it to be present.
+      - key: PORT
+        value: 10000
+
+      # --- Required by assertEnv(); the server refuses to boot without them ---
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false # at least 32 random characters, or startup aborts
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: COOKIE_EXPIRES
+        value: "7" # days; must be a positive number
+
+      # The canonical front-end origin. This is BOTH the CORS allow-list and the
+      # base for emailed links and OAuth redirects, so it must be the real
+      # public site — not a Vercel preview URL.
+      - key: CLIENT_URL
+        value: https://casaclean.it
+      # Optional, comma-separated: additional first-party origins (e.g. the www.
+      # variant) that may call the API.
+      - key: EXTRA_CORS_ORIGINS
+        value: https://www.casaclean.it
+      # This service's own public URL — used to build absolute links back to it.
+      - key: SERVER_URL
+        value: https://api.casaclean.it
+
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false # from the Stripe dashboard webhook pointing at SERVER_URL
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      # Must match the redirect URI registered in the Google Cloud console.
+      - key: GOOGLE_CALLBACK_URL
+        value: https://api.casaclean.it/api/v1/auth/google/callback
+
+      # --- Mail. Required by assertEnv (except MAIL_FROM, which falls back to
+      # MAIL_USERNAME): without it nothing is delivered — no email verification,
+      # no password reset, no invoices, no admin alerts. Skipping one of these
+      # prompts used to produce a site that booted fine and then silently
+      # swallowed every message; now it refuses to start instead.
+      - key: MAIL_HOST
+        sync: false
+      - key: MAIL_PORT
+        value: "587"
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+
+      # --- Image storage ---
+      # Where admin-uploaded service cover images go. Without these the server
+      # writes to its own ephemeral disk and every deploy wipes the images.
+      # One URL from the Cloudinary dashboard: cloudinary://key:secret@cloud
+      - key: CLOUDINARY_URL
+        sync: false
+      # Namespaces the assets, so staging and production can share one account
+      # without deleting each other's images.
+      - key: CLOUDINARY_FOLDER
+        value: casaclean
+
+      # --- Optional ---
+      # Unset means no VAT is added and the reverse-charge feature is invisible.
+      - key: INVOICE_VAT_RATE
+        sync: false
+      - key: BOOKING_NOTIFY_EMAIL
+        sync: false
+      - key: CONTACT_NOTIFY_EMAIL
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
