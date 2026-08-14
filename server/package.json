@@ -3,7 +3,12 @@
   "version": "1.0.0",
   "description": "",
   "main": "app.js",
+  "engines": {
+    "node": ">=22 <25"
+  },
   "scripts": {
+    "start": "node app.js",
+    "seed": "node scripts/seed.js",
     "test": "jest --runInBand",
     "test:watch": "jest --runInBand --watch",
     "test:coverage": "jest --runInBand --coverage"
@@ -25,6 +30,7 @@
   "dependencies": {
     "@sentry/node": "^10.57.0",
     "bcrypt": "^6.0.0",
+    "cloudinary": "^2.10.0",
     "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",

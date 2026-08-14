@@ -37,6 +37,7 @@ const sanitizeMongo = require('./middlewares/sanitize.middleware');
 const { globalLimiter } = require('./middlewares/rateLimit.middleware');
 const AppError = require('./utils/appError.util');
 const { UPLOADS_ROOT, ensureUploadDirs } = require('./utils/upload.util');
+const { describeStorage, storageDriver } = require('./services/imageStorage.service');
 
 // Routers
 const authRouter = require('./routers/auth.router');
@@ -236,6 +237,24 @@ const start = async () => {
 
         const server = app.listen(process.env.PORT, () => {
             console.log(`Server is running on port ${process.env.PORT}`);
+            console.log(`Image storage: ${describeStorage()}`);
+
+            /*
+             * On a container host (Render, Fly, most PaaS) the filesystem is
+             * ephemeral: every deploy and restart wipes it, taking every
+             * admin-uploaded service image with it while the database keeps
+             * pointing at them. This is not fatal — a mounted disk is a valid
+             * setup — but it is silent, and a silently broken catalogue is worth
+             * shouting about once at boot.
+             */
+            if (isProduction && storageDriver() === "local") {
+                console.warn(
+                    "WARNING: uploads are going to this server's local disk in production.\n" +
+                    "         Set CLOUDINARY_URL (or CLOUDINARY_CLOUD_NAME/API_KEY/API_SECRET),\n" +
+                    "         or make sure a persistent volume is mounted at the uploads path —\n" +
+                    "         otherwise every service image is deleted on the next deploy."
+                );
+            }
         });
         startJobs();
 

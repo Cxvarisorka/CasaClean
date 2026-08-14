@@ -17,19 +17,28 @@ const {
     MAX_INTERVAL_DAYS,
     isValidIntervalDays
 } = require("../utils/date.util");
-const { serviceImageUrl, removeServiceImage } = require("../utils/upload.util");
+const { storeServiceImage, removeServiceImage } = require("../services/imageStorage.service");
 const { TRANSLATABLE_FIELDS, normalizeTranslations } = require("../utils/translations.util");
 
 /**
  * The image value to store for a write request.
  *
- * A multipart upload (req.file, put there by multer) always wins — the file is
- * already on disk, so the document must point at it. Otherwise the body's
- * `image` field is used, which lets an admin keep supplying a hosted URL (or
- * send "" to clear the image) without uploading anything.
+ * A multipart upload (buffered in memory by multer) always wins: it is uploaded
+ * here — to Cloudinary or to disk, whichever is configured — and the resulting
+ * URL/path is what the document stores. Otherwise the body's `image` field is
+ * used, which lets an admin keep supplying a hosted URL (or send "" to clear the
+ * image) without uploading anything.
+ *
+ * The stored value is recorded on `req.storedImage` so the router's cleanup
+ * handler can remove it if anything downstream fails — by this point the asset
+ * really has been persisted, so a later error would otherwise orphan it.
  */
-const resolveImage = (req) =>
-    req.file ? serviceImageUrl(req.file.filename) : req.body.image;
+const resolveImage = async (req) => {
+    if (!req.file) return req.body.image;
+
+    req.storedImage = await storeServiceImage(req.file);
+    return req.storedImage;
+};
 
 // Blank fields and empty languages are stripped before storing — see
 // utils/translations.util.js for why.
@@ -224,7 +233,7 @@ const createService = catchAsync(async (req, res, next) => {
     // An uploaded file (multipart) takes precedence over an `image` URL in the
     // body. Any failure below leaves the file orphaned on disk — the service
     // router's cleanup handler unlinks it.
-    const image = resolveImage(req);
+    const image = await resolveImage(req);
 
     // Guard required fields up-front so we never hit `name[0]` on undefined and
     // the client gets a clear 400 instead of a generic schema error.
@@ -275,7 +284,7 @@ const editService = catchAsync(async (req, res, next) => {
     const { id } = req.params;
     const { name, subtitle, description, includes, translations, pricePerHour, enabled, allCities, cities, allSpecialRequests, specialRequests, recurringEnabled, recurringIntervalDays } = req.body;
 
-    const image = resolveImage(req);
+    const image = await resolveImage(req);
 
     const service = await Service.findById(id);
 

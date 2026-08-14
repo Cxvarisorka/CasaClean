@@ -11,8 +11,8 @@ const sanitizeMongo = require('../middlewares/sanitize.middleware');
 const coerceMultipart = require('../middlewares/multipart.middleware');
 const { uploadServiceImage } = require('../middlewares/upload.middleware');
 
-// Utils
-const { removeServiceImage, serviceImageUrl } = require('../utils/upload.util');
+// Services
+const { removeServiceImage } = require('../services/imageStorage.service');
 
 // Validations
 const { createServiceSchema, editServiceSchema } = require('../validations/service.validation');
@@ -53,13 +53,26 @@ serviceRouter
     .delete(deleteService)
     .patch(parseServiceBody, validate(editServiceSchema), editService);
 
-// Orphan cleanup. multer has already written the file to disk by the time
-// validation or the controller rejects the request, so any failure downstream
-// of the upload would otherwise leave a file nothing references. Runs before the
-// global error handler and always re-throws — it only tidies up.
+/*
+ * Orphan cleanup.
+ *
+ * multer now buffers the upload in memory and persists nothing, so a request
+ * rejected by validation or by the controller's own checks leaves no asset
+ * behind at all — the common case needs no cleanup.
+ *
+ * What remains is the narrow window AFTER the controller has stored the image
+ * (Cloudinary upload or disk write, recorded on `req.storedImage`) but before
+ * the document referencing it is saved: a duplicate-name collision, a failed
+ * save, a dead database. Without this the asset would exist with nothing
+ * pointing at it, forever.
+ *
+ * Runs before the global error handler and always re-throws — it only tidies up.
+ */
 serviceRouter.use((err, req, res, next) => {
-    if (req.file) {
-        removeServiceImage(serviceImageUrl(req.file.filename));
+    if (req.storedImage) {
+        // Best-effort and un-awaited: the response is already an error, and a
+        // slow delete must not delay it. removeServiceImage never throws.
+        removeServiceImage(req.storedImage);
     }
     next(err);
 });

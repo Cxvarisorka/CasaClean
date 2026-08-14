@@ -41,7 +41,16 @@ const assertEnv = () => {
         // Google OAuth: the strategy is registered unconditionally at boot, and a
         // missing value would only surface when a user clicks "Sign in with
         // Google" — fail at startup instead.
-        "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_CALLBACK_URL"
+        "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_CALLBACK_URL",
+        // SMTP transport. Without it the server still boots and still accepts
+        // signups, but every outbound message is silently lost: nobody can
+        // verify an email address (and therefore nobody can sign in), no
+        // password can be reset, no invoice reaches a paying customer and no
+        // booking alert reaches the team. That is a dead site that looks alive,
+        // which is exactly the failure mode this check exists to prevent.
+        // MAIL_FROM is deliberately NOT required — it falls back to
+        // MAIL_USERNAME in utils/email.util.js.
+        "MAIL_HOST", "MAIL_USERNAME", "MAIL_PASSWORD"
     ];
     for (const name of required) {
         if (!process.env[name]) {

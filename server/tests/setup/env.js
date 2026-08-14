@@ -31,6 +31,28 @@ process.env.MAIL_PASSWORD = "test";
 // Keep Sentry disabled in tests.
 process.env.SENTRY_DSN = "";
 
+/*
+ * Force the LOCAL disk driver for image uploads.
+ *
+ * These are set to "" rather than deleted, and that distinction is the whole
+ * point. dotenv does not override a variable that already EXISTS, but it does
+ * inject one that is missing — so `delete` would hand the real value straight
+ * back when app.js calls dotenv.config(). An empty string is present (dotenv
+ * leaves it alone) and falsy, and services/imageStorage.service.js decides on
+ * truthiness, so the local driver wins.
+ *
+ * Without this, a developer with real Cloudinary credentials in server/.env ran
+ * the entire suite against their LIVE account: every run uploaded a real asset
+ * into the production folder, and serviceUpload.test.js failed on an assertion
+ * about /uploads/... paths for reasons that had nothing to do with the code
+ * under test. CI, having no credentials, passed — so the breakage only ever
+ * appeared on the machines that could do real damage.
+ */
+process.env.CLOUDINARY_URL = "";
+process.env.CLOUDINARY_CLOUD_NAME = "";
+process.env.CLOUDINARY_API_KEY = "";
+process.env.CLOUDINARY_API_SECRET = "";
+
 // Refund policy window used by cancelMyBooking (kept at the production default
 // so the tests document the real behaviour).
 process.env.CANCELLATION_WINDOW_HOURS = "24";

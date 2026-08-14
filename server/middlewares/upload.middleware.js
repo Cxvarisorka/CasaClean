@@ -2,57 +2,45 @@
  * File uploads (multer).
  *
  * Only one upload exists today: the single cover image an admin attaches when
- * creating or editing a service. It is stored on disk under
- * `server/uploads/services/` (see utils/upload.util.js) and served read-only
- * from `/uploads/...`.
+ * creating or editing a service. Where it ends up — Cloudinary or this server's
+ * own disk — is decided by `services/imageStorage.service.js`, not here.
+ *
+ * This middleware buffers the file IN MEMORY and stores nothing. That is a
+ * deliberate change from the previous `diskStorage` setup, which wrote the file
+ * the moment it arrived: before Zod validation, before the duplicate-name check,
+ * before the controller had agreed to accept the request. Every rejected upload
+ * therefore left an orphan on disk, and the service router needed a dedicated
+ * error handler to chase them. Buffering instead means nothing is persisted
+ * until the controller asks for it, so the rejected case leaves nothing behind
+ * at all. Capped at 5 MB with one file per request, so the buffer cannot be used
+ * to exhaust memory.
  *
  * Security posture:
  *   - The route is already behind `protect` + `restrictTo("admin")`, so only a
  *     signed-in admin can reach multer at all.
  *   - `limits` caps the size AND the number of files/fields, so a multipart
- *     body can't be used to exhaust disk or memory.
- *   - Filenames are generated server-side from random bytes plus an extension
- *     derived from the MIME type — the client-supplied `originalname` is never
- *     used, which rules out traversal (`../../app.js`) and double-extension
- *     tricks (`logo.png.php`).
+ *     body can't be used to exhaust memory.
+ *   - Asset names are generated server-side from random bytes, and the local
+ *     driver's extension comes from the MIME type — the client-supplied
+ *     `originalname` is never used, which rules out traversal (`../../app.js`)
+ *     and double-extension tricks (`logo.png.php`).
  *   - `fileFilter` rejects anything outside the raster image allow-list. Paired
  *     with helmet's `X-Content-Type-Options: nosniff` on the static mount, a
  *     stored file can't be re-interpreted as script by a browser.
  */
 
-const crypto = require("crypto");
 const multer = require("multer");
 
 // Utils
 const AppError = require("../utils/appError.util");
-const {
-    SERVICE_IMAGE_DIR,
-    ALLOWED_IMAGE_TYPES,
-    ensureUploadDirs
-} = require("../utils/upload.util");
+const { ALLOWED_IMAGE_TYPES } = require("../utils/upload.util");
 
 // 5 MB — the admin panel downscales client-side before uploading (typically a
 // couple hundred KB), so this is a generous backstop rather than a target.
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        try {
-            ensureUploadDirs();
-            cb(null, SERVICE_IMAGE_DIR);
-        } catch (err) {
-            cb(err);
-        }
-    },
-    filename: (req, file, cb) => {
-        // Random name + allow-listed extension. Never derived from user input.
-        const ext = ALLOWED_IMAGE_TYPES.get(file.mimetype) || "";
-        cb(null, `${Date.now()}-${crypto.randomBytes(12).toString("hex")}${ext}`);
-    }
-});
-
 const serviceImageUpload = multer({
-    storage,
+    storage: multer.memoryStorage(),
     limits: {
         fileSize: MAX_IMAGE_BYTES,
         files: 1,

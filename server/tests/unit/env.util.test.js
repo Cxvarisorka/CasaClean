@@ -41,7 +41,8 @@ describe("env.util", () => {
         test.each([
             "MONGO_URI", "JWT_SECRET", "JWT_EXPIRES_IN", "CLIENT_URL", "SERVER_URL",
             "PORT", "COOKIE_EXPIRES", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET",
-            "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_CALLBACK_URL"
+            "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_CALLBACK_URL",
+            "MAIL_HOST", "MAIL_USERNAME", "MAIL_PASSWORD"
         ])("throws when %s is missing", (name) => {
             delete process.env[name];
             expect(() => load().assertEnv()).toThrow(new RegExp(name));
