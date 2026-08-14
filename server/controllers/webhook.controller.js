@@ -176,7 +176,7 @@ const handleStripeWebhook = async (req, res) => {
           const booking = await Booking.findOneAndUpdate(
             { paymentIntentId },
             { paymentStatus: 'refunded', refundedAt: new Date(), stripeStatus: 'refunded' },
-            { new: true }
+            { returnDocument: 'after' }
           );
 
           // Keep the invoice honest: a downloaded PDF must never claim money was
@@ -207,7 +207,7 @@ const handleStripeWebhook = async (req, res) => {
                   lastError: 'A charge for this plan was refunded, so upcoming visits are on hold.'
                 }
               },
-              { new: true }
+              { returnDocument: 'after' }
             );
 
             if (paused) {
@@ -239,7 +239,7 @@ const handleStripeWebhook = async (req, res) => {
         const booking = await Booking.findOneAndUpdate(
           { paymentIntentId },
           { $set: { stripeStatus: 'disputed' } },
-          { new: true }
+          { returnDocument: 'after' }
         );
 
         // Pause any plan this charge belonged to. Paused rather than cancelled:
@@ -258,7 +258,7 @@ const handleStripeWebhook = async (req, res) => {
                 lastError: 'A charge for this plan was disputed, so upcoming visits are on hold.'
               }
             },
-            { new: true }
+            { returnDocument: 'after' }
           );
 
           if (paused) {

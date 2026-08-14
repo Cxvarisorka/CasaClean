@@ -519,11 +519,12 @@ const editBooking = catchAsync(async (req, res, next) => {
     // Same atomic claim as the customer cancel path: exactly one caller may
     // transition a booking into 'cancelled', and only that caller performs the
     // refund. Without this, two concurrent admin cancels both see paymentStatus
-    // 'paid' and both call Stripe. `new: false` returns the pre-update document.
+    // 'paid' and both call Stripe. `returnDocument: 'before'` returns the
+    // pre-update document.
     const claimed = await Booking.findOneAndUpdate(
       { _id: id, status: { $ne: 'cancelled' } },
       { $set: { status: 'cancelled' } },
-      { new: false }
+      { returnDocument: 'before' }
     )
       .select('paymentMethod paymentStatus paymentIntentId status customerName customerEmail bookingDate totalAmount serviceId')
       .populate('serviceId', 'name');
@@ -570,7 +571,7 @@ const editBooking = catchAsync(async (req, res, next) => {
   }
 
   const booking = await Booking.findByIdAndUpdate(id, updates, {
-    new: true,
+    returnDocument: 'after',
     runValidators: true
   })
     .populate('serviceId', 'name')
@@ -603,15 +604,15 @@ const cancelMyBooking = catchAsync(async (req, res, next) => {
 
   // Claim the cancellation ATOMICALLY before touching Stripe. Two concurrent
   // cancels (a double-clicked button is enough) would otherwise both read
-  // paymentStatus 'paid' and both issue a refund. `new: false` returns the
-  // PRE-update document, which carries the payment fields we need plus the
-  // status to restore if the refund fails.
+  // paymentStatus 'paid' and both issue a refund. `returnDocument: 'before'`
+  // returns the PRE-update document, which carries the payment fields we need
+  // plus the status to restore if the refund fails.
   // Ownership is enforced in the query itself: a booking that isn't the user's
   // simply isn't found (no information leak about other users' bookings).
   const booking = await Booking.findOneAndUpdate(
     { _id: id, user: req.user._id, status: { $in: ['pending', 'confirmed'] } },
     { $set: { status: 'cancelled' } },
-    { new: false }
+    { returnDocument: 'before' }
   );
 
   if (!booking) {

@@ -281,7 +281,7 @@ const markInvoiceRefunded = async (bookingId, refundedAt = new Date()) =>
   Invoice.findOneAndUpdate(
     { booking: bookingId, status: 'issued' },
     { $set: { status: 'refunded', refundedAt } },
-    { new: true }
+    { returnDocument: 'after' }
   );
 
 /* ------------------------------------------------------ email rendering ---- */

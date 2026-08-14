@@ -34,7 +34,7 @@ counterSchema.statics.next = async function next(key) {
       const doc = await this.findOneAndUpdate(
         { _id: key },
         { $inc: { seq: 1 } },
-        { new: true, upsert: true }
+        { returnDocument: 'after', upsert: true }
       );
       return doc.seq;
     } catch (err) {

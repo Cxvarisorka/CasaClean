@@ -275,7 +275,7 @@ const setReviewVisibility = catchAsync(async (req, res, next) => {
   const review = await Review.findByIdAndUpdate(
     id,
     { isPublished, publishedAt: isPublished ? new Date() : null },
-    { new: true, runValidators: true }
+    { returnDocument: "after", runValidators: true }
   ).populate(ADMIN_REVIEW_POPULATE);
 
   if (!review) {

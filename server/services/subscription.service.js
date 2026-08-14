@@ -441,7 +441,7 @@ const markCycleSucceeded = async ({ subscription, serviceDate, paymentIntent, to
         amount: totalAmount
       })
     },
-    { new: true }
+    { returnDocument: 'after' }
   );
 };
 
@@ -493,7 +493,7 @@ const pauseSubscription = async ({
       processingAt: subscription.processingAt
     },
     update,
-    { new: true }
+    { returnDocument: 'after' }
   );
 };
 
@@ -545,7 +545,7 @@ const handleChargeFailure = async (subscription, err, amount = undefined) => {
       $set: set,
       ...pushChargeAttempt(attempt)
     },
-    { new: true }
+    { returnDocument: 'after' }
   );
 
   if (!updated) return null;

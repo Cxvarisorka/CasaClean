@@ -43,7 +43,7 @@ const runSubscriptionCharges = async () => {
       const subscription = await Subscription.findOneAndUpdate(
         claimFilter,
         { $set: { processingAt: now } },
-        { new: true }
+        { returnDocument: 'after' }
       );
 
       if (!subscription) break;

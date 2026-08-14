@@ -137,7 +137,7 @@ const applyVerificationResult = async (taxId) => {
   return User.findOneAndUpdate(
     { stripeTaxIdId: taxId.id },
     { $set: { vatStatus: status } },
-    { new: true }
+    { returnDocument: 'after' }
   );
 };
 
@@ -151,7 +151,7 @@ const applyVatNumberDeleted = async (taxId) => {
   return User.findOneAndUpdate(
     { stripeTaxIdId: taxId.id },
     { $set: { vatStatus: 'none', vatNumber: '' }, $unset: { stripeTaxIdId: '' } },
-    { new: true }
+    { returnDocument: 'after' }
   );
 };
 
@@ -177,7 +177,7 @@ const refreshVatStatus = async (user) => {
   const status = mapVerification(taxId.verification?.status);
   if (status === user.vatStatus) return user;
 
-  return User.findByIdAndUpdate(user._id, { $set: { vatStatus: status } }, { new: true });
+  return User.findByIdAndUpdate(user._id, { $set: { vatStatus: status } }, { returnDocument: 'after' });
 };
 
 module.exports = {

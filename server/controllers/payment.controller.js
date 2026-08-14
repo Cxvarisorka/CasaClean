@@ -76,7 +76,7 @@ const claimPaymentAttempt = async (key, userId) => {
     return await PaymentAttempt.findOneAndUpdate(
       { key },
       { $setOnInsert: { key, user: userId } },
-      { new: true, upsert: true, setDefaultsOnInsert: true }
+      { returnDocument: 'after', upsert: true, setDefaultsOnInsert: true }
     );
   } catch (err) {
     if (err.code !== 11000) throw err;

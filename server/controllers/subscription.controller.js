@@ -117,7 +117,7 @@ const resumeSubscription = async (subscription) => {
       },
       $unset: { pausedAt: '' }
     },
-    { new: true }
+    { returnDocument: 'after' }
   ).select(CUSTOMER_SUBSCRIPTION_FIELDS);
 
   if (!resumed) {
@@ -171,7 +171,7 @@ const pauseMySubscription = catchAsync(async (req, res, next) => {
         processingAt: null
       }
     },
-    { new: true }
+    { returnDocument: 'after' }
   ).select(CUSTOMER_SUBSCRIPTION_FIELDS);
 
   if (!paused) return next(new AppError('Subscription state changed; please try again.', 409));
@@ -223,7 +223,7 @@ const cancelSubscription = async ({ subscription, ownerId = null }) => {
         processingAt: null
       }
     },
-    { new: true }
+    { returnDocument: 'after' }
   );
 
   if (!cancelled) {
@@ -297,7 +297,7 @@ const updateMySubscriptionCard = catchAsync(async (req, res, next) => {
         lastError: null
       }
     },
-    { new: true }
+    { returnDocument: 'after' }
   ).select(CUSTOMER_SUBSCRIPTION_FIELDS);
 
   // A charge may have claimed the doc (or its state changed) between the guard
@@ -395,7 +395,7 @@ const adminPauseSubscription = catchAsync(async (req, res, next) => {
         processingAt: null
       }
     },
-    { new: true }
+    { returnDocument: 'after' }
   ).select(ADMIN_SUBSCRIPTION_FIELDS);
   if (!paused) return next(new AppError('Subscription state changed; please try again.', 409));
 
