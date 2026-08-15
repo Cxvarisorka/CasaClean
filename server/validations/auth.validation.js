@@ -1,6 +1,18 @@
 // Modules
 const { z } = require("zod");
 
+const { phoneField } = require("./phone.validation");
+
+/*
+ * A phone number is optional on an ACCOUNT.
+ *
+ * Signing in needs an email and a password; a number is what a crew rings on the
+ * day, so it is required where that matters — the booking — and merely offered
+ * here. `allowEmpty` lets a profile edit clear one that was stored earlier; on
+ * signup an empty string is simply the same as leaving the field out.
+ */
+const accountPhone = phoneField({ allowEmpty: true }).optional();
+
 // Schema for validate register request body
 const signupSchema = z.object({
     fullname: z
@@ -14,12 +26,7 @@ const signupSchema = z.object({
         .trim()
         .email({ message: "Invalid email address!" }),
 
-    phone: z
-        .string()
-        .trim()
-        .min(7, { message: "Phone number must contain at least 7 characters!" })
-        .max(20, { message: "Phone number is too long!" })
-        .regex(/^[0-9+\s-]+$/, { message: "Phone number may only contain digits, spaces, plus signs and dashes!" }),
+    phone: accountPhone,
 
     password: z
         .string()
@@ -75,10 +82,7 @@ const createUserSchema = z.object({
         .trim()
         .email({ message: "Invalid email address!" }),
 
-    phone: z
-        .string()
-        .trim()
-        .min(1, { message: "Phone is required!" }),
+    phone: accountPhone,
 
     password: z
         .string()
@@ -130,11 +134,8 @@ const updateMeSchema = z.object({
         .max(50, { message: "Fullname is too long!" })
         .optional(),
 
-    phone: z
-        .string()
-        .trim()
-        .min(1, { message: "Phone can't be empty!" })
-        .optional()
+    // "" is meaningful here: it removes the stored number (see updateMe).
+    phone: accountPhone
 
 }).strict({ message: "Unknown fields are not allowed!" });
 

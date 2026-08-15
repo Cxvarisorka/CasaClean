@@ -28,6 +28,7 @@ export default {
     password: "Пароль",
     fullName: "Полное имя",
     phone: "Телефон",
+    countryCode: "Код страны",
     optional: "Необязательно",
     search: "Поиск",
     close: "Закрыть",
@@ -90,7 +91,8 @@ export default {
     account: "Аккаунт",
     personalInfo: "Личная информация",
     emailHint: "Эл. почту нельзя изменить здесь.",
-    phonePlaceholder: "+39 ...",
+    phonePlaceholder: "331 234 5678",
+    phoneHint: "Нужен только для заказа: бригада позвонит, если не найдёт дверь.",
     memberSince: "С нами с",
     role: "Роль",
     verified: "Подтверждён",
@@ -245,6 +247,7 @@ export default {
     signup: {
       title: "Создайте аккаунт",
       subtitle: "Закажите первую уборку за считанные минуты.",
+      phoneHint: "Необязательно — мы спросим номер, когда вы будете заказывать уборку.",
       submit: "Создать аккаунт",
       haveAccount: "Уже есть аккаунт?",
       signInInstead: "Войти",
@@ -280,7 +283,7 @@ export default {
     placeholders: {
       fullName: "Иван Петров",
       email: "you@email.com",
-      phone: "+39 ...",
+      phone: "331 234 5678",
       password: "••••••••",
     },
     errors: {
@@ -981,7 +984,7 @@ export default {
       name: "Полное имя",
       namePlaceholder: "Lela Gorelishvili",
       emailPlaceholder: "you@email.com",
-      phonePlaceholder: "+39 ...",
+      phonePlaceholder: "331 234 5678",
       notes: "Примечания для доступа",
       notesHint:
         "Необязательно — коды от ворот, парковка, животные, где найти ключи и т. д.",
@@ -1352,6 +1355,7 @@ export default {
         fullname: "Полное имя",
         email: "Эл. почта",
         phone: "Телефон",
+        phoneHint: "Необязательно. Укажите номер с кодом страны, например +39 331 234 5678.",
         password: "Пароль",
         passwordEditHint: "Оставьте пустым, чтобы сохранить текущий пароль.",
         role: "Роль",

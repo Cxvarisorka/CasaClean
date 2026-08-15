@@ -51,6 +51,25 @@ describe("makeSignUpSchema", () => {
 
   test("rejects an invalid phone number", () => {
     expect(schema.safeParse({ ...valid, phone: "abc" }).success).toBe(false);
+    // Ambiguous across the markets this product sells in — the picker always
+    // supplies a prefix, so a number without one is a mistake.
+    expect(schema.safeParse({ ...valid, phone: "3312345678" }).success).toBe(false);
+  });
+
+  // The phone is collected at BOOKING time, where a crew actually needs it, so
+  // registration accepts an account without one (mirrors the API's signupSchema).
+  test("accepts a registration with no phone number", () => {
+    const withoutPhone = { ...valid };
+    delete withoutPhone.phone;
+
+    expect(schema.safeParse(withoutPhone).success).toBe(true);
+    expect(schema.safeParse({ ...valid, phone: "" }).success).toBe(true);
+  });
+
+  test("accepts Georgian and other European numbers", () => {
+    for (const phone of ["+995555123456", "+306912345678", "+441234567890"]) {
+      expect(schema.safeParse({ ...valid, phone }).success).toBe(true);
+    }
   });
 });
 

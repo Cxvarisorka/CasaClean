@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isValidPhone } from "@/lib/phone";
 
 /*
  * Auth validation
@@ -7,8 +8,6 @@ import { z } from "zod";
  * is localized in the user's current language. Components build the schema with
  * their `t` and pass it to the resolver.
  */
-
-const phoneRe = /^[+\d][\d\s()-]{6,}$/;
 
 export const makeSignInSchema = (t) =>
   z.object({
@@ -22,7 +21,14 @@ export const makeSignUpSchema = (t) =>
     .object({
       fullname: z.string().trim().min(2, t("auth.errors.nameMin")),
       email: z.string().trim().email(t("auth.errors.emailInvalid")),
-      phone: z.string().trim().regex(phoneRe, t("auth.errors.phoneInvalid")),
+      // Optional: registering needs an email and a password. A number is what a
+      // crew rings on the day, so the booking asks for it (and the API requires
+      // it there) — mirrors server/validations/auth.validation.js.
+      phone: z
+        .string()
+        .trim()
+        .refine((v) => v === "" || isValidPhone(v), t("auth.errors.phoneInvalid"))
+        .optional(),
       password: z
         .string()
         .min(8, t("auth.errors.passwordMin"))

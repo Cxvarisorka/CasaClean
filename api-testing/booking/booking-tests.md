@@ -43,7 +43,10 @@ Important things to know:
 - **Contact details come from your account.** You do **not** send `customerName`
   or `customerEmail` — the server fills those from your logged-in profile.
 - **Phone:** if your account has a phone number, it is used automatically. If it
-  does not (for example a Google account), you must send `customerPhone` in the body.
+  does not (a Google account, or anyone who skipped the optional field at signup),
+  you must send `customerPhone` in the body. It must carry the country prefix
+  (`+39 331 234 5678`, `+995 555 12 34 56`); spacing and dashes are normalised
+  away, a bare `3312345678` is rejected as ambiguous.
 - **Required fields:** `serviceId`, `cityId`, `streetName`, `houseNumber`,
   `propertySize`, `doorbellName`, `bookingDate`, `bookingTime`, `hours`,
   `cleaners`, `totalAmount`. Missing any of these gives a 400.

@@ -114,6 +114,43 @@ describe("POST /api/v1/payment/booking/intent", () => {
         expect(pending.draft.bookingTime).toBe("12:20");
     });
 
+    // The wizard collects a phone even though registration doesn't, so an
+    // account created without one still books in one pass — and the draft keeps
+    // the number the customer just typed.
+    test("accepts the wizard's phone for an account that has none", async () => {
+        const user = await createUser({ phone: undefined });
+        const service = await createService();
+        const city = await createCity();
+        mockCustomerCreate();
+        mockIntentCreate();
+
+        const res = await api.post("/api/v1/payment/booking/intent")
+            .set("Cookie", cookieFor(user))
+            .send(validBookingBody(service, city, { customerPhone: "+39 331 234 5678" }));
+
+        expect(res.status).toBe(201);
+        const pending = await PendingBooking.findOne({ paymentIntentId: "pi_test_1" });
+        expect(pending.draft.customerPhone).toBe("+393312345678");
+    });
+
+    // Nothing is charged and no draft is written: the guard runs before Stripe.
+    test("refuses to take money when no phone is available at all", async () => {
+        const user = await createUser({ phone: undefined });
+        const service = await createService();
+        const city = await createCity();
+        mockCustomerCreate();
+        mockIntentCreate();
+
+        const res = await api.post("/api/v1/payment/booking/intent")
+            .set("Cookie", cookieFor(user))
+            .send(validBookingBody(service, city));
+
+        expect(res.status).toBe(400);
+        expect(res.body.message).toMatch(/phone number/i);
+        expect(stripeMock.paymentIntents.create).not.toHaveBeenCalled();
+        expect(await PendingBooking.countDocuments()).toBe(0);
+    });
+
     test("reuses an existing Stripe customer", async () => {
         const user = await createUser({ stripeCustomerId: "cus_existing" });
         const service = await createService();

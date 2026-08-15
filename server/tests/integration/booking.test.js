@@ -74,6 +74,48 @@ describe("POST /api/v1/booking (admin manual bookings)", () => {
         expect(res.body.data.booking.customerEmail).toBe(customer.email);
     });
 
+    // A phone is optional on the ACCOUNT and required for the BOOKING: someone
+    // has to be reachable at the door. The booking carries it when the profile
+    // doesn't, and is refused when neither does.
+    test("refuses a booking when neither the request nor the account has a phone", async () => {
+        const admin = await createAdmin({ phone: undefined });
+        const service = await createService();
+        const city = await createCity();
+
+        const res = await api.post("/api/v1/booking")
+            .set("Cookie", cookieFor(admin))
+            .send(validBookingBody(service, city));
+
+        expect(res.status).toBe(400);
+        expect(res.body.message).toMatch(/phone number/i);
+    });
+
+    test("takes the phone from the request when the account has none", async () => {
+        const admin = await createAdmin({ phone: undefined });
+        const service = await createService();
+        const city = await createCity();
+
+        const res = await api.post("/api/v1/booking")
+            .set("Cookie", cookieFor(admin))
+            .send(validBookingBody(service, city, { customerPhone: "+995 555 12 34 56" }));
+
+        expect(res.status).toBe(201);
+        expect(res.body.data.booking.customerPhone).toBe("+995555123456");
+    });
+
+    test("rejects a booking phone that has no country prefix", async () => {
+        const admin = await createAdmin();
+        const service = await createService();
+        const city = await createCity();
+
+        const res = await api.post("/api/v1/booking")
+            .set("Cookie", cookieFor(admin))
+            .send(validBookingBody(service, city, { customerPhone: "3312345678" }));
+
+        expect(res.status).toBe(400);
+        expect(res.body.message).toMatch(/Validation failed/);
+    });
+
     test("client-supplied totalAmount is rejected by the strict schema", async () => {
         const admin = await createAdmin();
         const service = await createService();

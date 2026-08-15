@@ -25,6 +25,7 @@ export default {
     password: "პაროლი",
     fullName: "სახელი და გვარი",
     phone: "ტელეფონი",
+    countryCode: "ქვეყნის კოდი",
     optional: "არასავალდებულო",
     search: "ძებნა",
     close: "დახურვა",
@@ -87,7 +88,8 @@ export default {
     account: "ანგარიში",
     personalInfo: "პირადი ინფორმაცია",
     emailHint: "ელ. ფოსტის შეცვლა აქ შეუძლებელია.",
-    phonePlaceholder: "+39 ...",
+    phonePlaceholder: "555 12 34 56",
+    phoneHint: "საჭიროა მხოლოდ ჯავშნისთვის — გუნდი დაგირეკავთ, თუ კარს ვერ იპოვის.",
     memberSince: "რეგისტრაციის თარიღი",
     role: "როლი",
     verified: "ვერიფიცირებული",
@@ -242,6 +244,7 @@ export default {
     signup: {
       title: "ანგარიშის შექმნა",
       subtitle: "დაიწყეთ დასუფთავების დაჯავშნა სულ რამდენიმე წუთში.",
+      phoneHint: "არასავალდებულო — დაგვჭირდება მხოლოდ დაჯავშნისას.",
       submit: "რეგისტრაცია",
       haveAccount: "უკვე გაქვთ ანგარიში?",
       signInInstead: "შესვლა",
@@ -278,7 +281,7 @@ export default {
     placeholders: {
       fullName: "მაგ: ლელა გორელიშვილი",
       email: "you@email.com",
-      phone: "+995 ...",
+      phone: "555 12 34 56",
       password: "••••••••",
     },
     errors: {
@@ -970,7 +973,7 @@ export default {
       name: "სრული სახელი",
       namePlaceholder: "Lela Gorelishvili",
       emailPlaceholder: "you@email.com",
-      phonePlaceholder: "+39 ...",
+      phonePlaceholder: "555 12 34 56",
       notes: "წვდომის შენიშვნები",
       notesHint:
         "არასავალდებულო — ჭიშკრის კოდი, პარკინგი, შინაური ცხოველები, სად ვიპოვოთ გასაღები და ა.შ.",
@@ -1341,6 +1344,7 @@ export default {
         fullname: "სახელი და გვარი",
         email: "ელ. ფოსტა",
         phone: "ტელეფონის ნომერი",
+        phoneHint: "არასავალდებულო. მიუთითეთ ქვეყნის კოდით, მაგ. +995 555 12 34 56.",
         password: "პაროლი",
         passwordEditHint: "დატოვეთ ცარიელი მიმდინარე პაროლის შესანარჩუნებლად.",
         role: "როლი",

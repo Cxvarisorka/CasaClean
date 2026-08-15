@@ -94,6 +94,18 @@ describe("bookingSchema", () => {
   test("validates the phone format", () => {
     expect(bookingSchema.safeParse({ ...validValues, phone: "not-a-phone" }).success).toBe(false);
     expect(bookingSchema.safeParse({ ...validValues, phone: "+39 (331) 234-5678" }).success).toBe(true);
+    // Georgian and other European numbers, not only Italian ones.
+    expect(bookingSchema.safeParse({ ...validValues, phone: "+995 555 12 34 56" }).success).toBe(true);
+  });
+
+  // Optional on the account, required here: this is the number a crew rings.
+  test("requires a phone number, with its country prefix", () => {
+    const missing = bookingSchema.safeParse({ ...validValues, phone: "" });
+    expect(missing.success).toBe(false);
+
+    const noPrefix = bookingSchema.safeParse({ ...validValues, phone: "331 234 5678" });
+    expect(noPrefix.success).toBe(false);
+    expect(errorsOf(noPrefix).phone).toMatch(/country prefix/i);
   });
 
   test("validates the email format", () => {

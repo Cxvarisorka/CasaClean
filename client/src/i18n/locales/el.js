@@ -27,6 +27,7 @@ export default {
     password: "Κωδικός",
     fullName: "Ονοματεπώνυμο",
     phone: "Τηλέφωνο",
+    countryCode: "Κωδικός χώρας",
     optional: "Προαιρετικό",
     search: "Αναζήτηση",
     close: "Κλείσιμο",
@@ -89,7 +90,8 @@ export default {
     account: "Λογαριασμός",
     personalInfo: "Προσωπικά στοιχεία",
     emailHint: "Το email δεν μπορεί να αλλάξει εδώ.",
-    phonePlaceholder: "+39 ...",
+    phonePlaceholder: "691 234 5678",
+    phoneHint: "Χρειάζεται μόνο για την κράτηση — το συνεργείο καλεί αν δεν βρίσκει την πόρτα.",
     memberSince: "Μέλος από",
     role: "Ρόλος",
     verified: "Επιβεβαιωμένο",
@@ -244,6 +246,7 @@ export default {
     signup: {
       title: "Δημιουργήστε τον λογαριασμό σας",
       subtitle: "Κλείστε τον πρώτο σας καθαρισμό σε λίγα λεπτά.",
+      phoneHint: "Προαιρετικό — θα το ζητήσουμε όταν κάνετε κράτηση.",
       submit: "Δημιουργία λογαριασμού",
       haveAccount: "Έχετε ήδη λογαριασμό;",
       signInInstead: "Σύνδεση",
@@ -279,7 +282,7 @@ export default {
     placeholders: {
       fullName: "Γιώργος Παπαδόπουλος",
       email: "you@email.com",
-      phone: "+30 ...",
+      phone: "691 234 5678",
       password: "••••••••",
     },
     errors: {
@@ -980,7 +983,7 @@ export default {
       name: "Πλήρες όνομα",
       namePlaceholder: "Lela Gorelishvili",
       emailPlaceholder: "you@email.com",
-      phonePlaceholder: "+39 ...",
+      phonePlaceholder: "691 234 5678",
       notes: "Σημειώσεις πρόσβασης",
       notesHint:
         "Προαιρετικό — κωδικοί πύλης, στάθμευση, κατοικίδια, πού θα βρείτε τα κλειδιά κ.λπ.",
@@ -1351,6 +1354,7 @@ export default {
         fullname: "Πλήρες όνομα",
         email: "Email",
         phone: "Τηλέφωνο",
+        phoneHint: "Προαιρετικό. Συμπεριλάβετε τον κωδικό χώρας, π.χ. +30 691 234 5678.",
         password: "Κωδικός",
         passwordEditHint: "Αφήστε το κενό για να διατηρήσετε τον τρέχοντα κωδικό.",
         role: "Ρόλος",

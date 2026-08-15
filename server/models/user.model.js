@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 
+const { normalizePhone, isValidPhone, PHONE_ERROR_MESSAGE } = require('../utils/phone.util');
+
 // How long an email-verification link stays valid (in hours).
 const VERIFICATION_TOKEN_TTL_HOURS = 24;
 
@@ -27,14 +29,31 @@ const userSchema = new mongoose.Schema({
         lowercase: true,                 // normalise so logins are case-insensitive
         trim: true
     },
+    // Optional on the ACCOUNT. Registration asks for an email and a password —
+    // the two things signing in needs — and nothing else; a phone number is only
+    // load-bearing when a crew has to reach someone at a door, so it is required
+    // at BOOKING time instead (booking.service.js / booking.controller.js, which
+    // fall back to this field and refuse the booking when it is empty too).
+    //
+    // The setter is what keeps that optionality safe: it normalises the number
+    // to international form and turns a blank into `undefined`, so the field is
+    // absent rather than "" and the sparse unique index below skips it. Without
+    // it the second phone-less signup would collide on "" (E11000).
     phone: {
         type: String,
-        required: [function () { return this.provider === "local" }, "Phone number is required!"],
         trim: true,
-        // sparse: Google users are created without a phone. A non-sparse unique
-        // index puts every phone-less document into the index as null, so the
-        // SECOND Google user ever would collide (E11000) and be unable to sign
-        // up. Local users always have a phone, so their uniqueness is unchanged.
+        set: (value) => {
+            const normalized = normalizePhone(value);
+            return normalized === "" ? undefined : normalized;
+        },
+        validate: {
+            validator: (value) => value == null || isValidPhone(value),
+            message: PHONE_ERROR_MESSAGE
+        },
+        // sparse: Google users are created without a phone, and so is anyone who
+        // skips the field at signup. A non-sparse unique index puts every one of
+        // those documents into the index as null, so the SECOND such account
+        // would collide and be unable to sign up.
         unique: true,
         sparse: true
     },

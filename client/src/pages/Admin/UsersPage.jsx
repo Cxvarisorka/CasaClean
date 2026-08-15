@@ -40,7 +40,13 @@ export default function UsersPage() {
     () => [
       { name: "fullname", label: t("admin.users.field.fullname"), required: true },
       { name: "email", label: t("admin.users.field.email"), type: "email", required: true },
-      { name: "phone", label: t("admin.users.field.phone"), required: true },
+      // Optional on the account (the booking is what requires a number), but the
+      // API only stores it in international form — hence the hint.
+      {
+        name: "phone",
+        label: t("admin.users.field.phone"),
+        hint: t("admin.users.field.phoneHint"),
+      },
       {
         name: "password",
         label: t("admin.users.field.password"),

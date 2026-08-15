@@ -26,6 +26,7 @@ export default {
     password: "Password",
     fullName: "Nome completo",
     phone: "Telefono",
+    countryCode: "Prefisso internazionale",
     optional: "Facoltativo",
     search: "Cerca",
     close: "Chiudi",
@@ -88,7 +89,8 @@ export default {
     account: "Account",
     personalInfo: "Informazioni personali",
     emailHint: "L'email non può essere modificata qui.",
-    phonePlaceholder: "+39 ...",
+    phonePlaceholder: "331 234 5678",
+    phoneHint: "Serve solo per le prenotazioni: il team ti chiama se non trova la porta.",
     memberSince: "Membro dal",
     role: "Ruolo",
     verified: "Verificato",
@@ -243,6 +245,7 @@ export default {
     signup: {
       title: "Crea il tuo account",
       subtitle: "Prenota la tua prima pulizia in pochi minuti.",
+      phoneHint: "Facoltativo — ci serve solo quando prenoti una pulizia.",
       submit: "Crea account",
       haveAccount: "Hai già un account?",
       signInInstead: "Accedi",
@@ -279,7 +282,7 @@ export default {
     placeholders: {
       fullName: "Lela Gorelishvili",
       email: "tu@email.com",
-      phone: "+39 ...",
+      phone: "331 234 5678",
       password: "••••••••",
     },
     errors: {
@@ -979,7 +982,7 @@ export default {
       name: "Nome completo",
       namePlaceholder: "Lela Gorelishvili",
       emailPlaceholder: "you@email.com",
-      phonePlaceholder: "+39 ...",
+      phonePlaceholder: "331 234 5678",
       notes: "Note di accesso",
       notesHint:
         "Facoltativo — codici del cancello, parcheggio, animali, dove trovare le chiavi, ecc.",
@@ -1350,6 +1353,7 @@ export default {
         fullname: "Nome completo",
         email: "Email",
         phone: "Telefono",
+        phoneHint: "Facoltativo. Includi il prefisso internazionale, es. +39 331 234 5678.",
         password: "Password",
         passwordEditHint: "Lascia vuoto per mantenere la password attuale.",
         role: "Ruolo",

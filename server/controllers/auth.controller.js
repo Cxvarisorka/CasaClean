@@ -146,7 +146,13 @@ const signup = catchAsync(async (req, res, next) => {
 
     // One lookup covers both uniqueness checks (email OR phone) instead of two
     // sequential round-trips; the matched field decides which message to return.
-    const existing = await User.findOne({ $or: [{ email }, { phone }] })
+    //
+    // The phone clause is added only when there IS a number — the field is
+    // optional now, and `{ phone: undefined }` is not a filter that matches
+    // phone-less accounts: Mongoose drops undefined values, leaving an empty
+    // `{}` inside the $or, which matches the first user in the collection and
+    // would reject every signup as a duplicate.
+    const existing = await User.findOne({ $or: phone ? [{ email }, { phone }] : [{ email }] })
         .select("email phone")
         .lean();
 
@@ -160,7 +166,7 @@ const signup = catchAsync(async (req, res, next) => {
     }
 
     // Whitelist fields explicitly so a client can't inject role/isVerified.
-    const user = await User.create({ fullname, email, phone, password });
+    const user = await User.create({ fullname, email, password, ...(phone ? { phone } : {}) });
 
     // Generate + email the verification link (throws an AppError on send failure,
     // which catchAsync forwards to the global error handler).
@@ -333,19 +339,53 @@ const getAllUsers = catchAsync(async (req, res, next) => {
     });
 });
 
+/**
+ * Apply a phone change to a user document, guarding the unique index.
+ *
+ * Three cases, because the field is optional: absent means "leave it alone",
+ * "" means "remove the stored number" (the schema lets that through on purpose),
+ * and anything else is a change that must not collide with another account.
+ * Nothing is saved here — the caller owns the write.
+ *
+ * @param {import("mongoose").Document} user the document being edited
+ * @param {string|undefined} phone the validated, normalised value from the body
+ * @returns {Promise<AppError|null>} the conflict to forward, or null when applied
+ */
+const applyPhoneChange = async (user, phone) => {
+    if (phone === undefined || phone === user.phone) return null;
+
+    if (phone === "") {
+        // Unsets the path (the schema's setter maps "" to undefined), which is
+        // what keeps the sparse unique index from collecting empty strings.
+        user.phone = undefined;
+        return null;
+    }
+
+    if (await User.exists({ phone, _id: { $ne: user._id } })) {
+        return new AppError("An account with that phone number already exists.", 409);
+    }
+
+    user.phone = phone;
+    return null;
+};
+
 // POST /api/v1/auth/users -> admin creates an account directly. Unlike signup,
 // no verification email is sent; the admin decides the role and whether the
 // account is already verified.
 const createUser = catchAsync(async (req, res, next) => {
     const { fullname, email, phone, password, role, isVerified } = req.body;
 
-    if (!fullname || !email || !phone || !password) {
-        return next(new AppError("Please provide fullname, email, phone and password!", 400));
+    // Phone is deliberately not in this list: an account needs an identity and a
+    // credential, and the number is collected when a booking actually needs it.
+    if (!fullname || !email || !password) {
+        return next(new AppError("Please provide fullname, email and password!", 400));
     }
 
     // One lookup covers both uniqueness checks (email OR phone) instead of two
     // sequential round-trips; the matched field decides which message to return.
-    const existing = await User.findOne({ $or: [{ email }, { phone }] })
+    // The phone clause is only added when there is a number to check — see the
+    // note in signup on why `{ phone: undefined }` must never reach the filter.
+    const existing = await User.findOne({ $or: phone ? [{ email }, { phone }] : [{ email }] })
         .select("email phone")
         .lean();
 
@@ -361,8 +401,8 @@ const createUser = catchAsync(async (req, res, next) => {
     const user = await User.create({
         fullname,
         email,
-        phone,
         password,
+        ...(phone ? { phone } : {}),
         role: role === "admin" ? "admin" : "user",
         isVerified: Boolean(isVerified)
     });
@@ -398,12 +438,8 @@ const updateUser = catchAsync(async (req, res, next) => {
         user.email = email;
     }
 
-    if (phone && phone !== user.phone) {
-        if (await User.findOne({ phone, _id: { $ne: id } })) {
-            return next(new AppError("An account with that phone number already exists.", 409));
-        }
-        user.phone = phone;
-    }
+    const phoneConflict = await applyPhoneChange(user, phone);
+    if (phoneConflict) return next(phoneConflict);
 
     if (fullname) user.fullname = fullname;
     if (role === "user" || role === "admin") user.role = role;
@@ -629,12 +665,11 @@ const updateMe = catchAsync(async (req, res, next) => {
         return next(new AppError("The user for this session no longer exists!", 401));
     }
 
-    if (phone && phone !== user.phone) {
-        if (await User.findOne({ phone, _id: { $ne: user._id } })) {
-            return next(new AppError("An account with that phone number already exists.", 409));
-        }
-        user.phone = phone;
-    }
+    // Sending "" removes the number — the customer added it once and wants it
+    // gone; the next booking will ask for one again.
+    const phoneConflict = await applyPhoneChange(user, phone);
+    if (phoneConflict) return next(phoneConflict);
+
     if (fullname) user.fullname = fullname;
 
     await user.save();

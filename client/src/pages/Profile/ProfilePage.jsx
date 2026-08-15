@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   User,
   Mail,
-  Phone,
   ShieldCheck,
   CalendarDays,
   CalendarClock,
@@ -24,6 +23,7 @@ import { Container } from "@/components/ui/Container";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { PhoneInput } from "@/components/ui/PhoneInput";
 import { Textarea } from "@/components/ui/Textarea";
 import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
@@ -344,10 +344,14 @@ const ProfilePage = () => {
   const dirty =
     form.fullname !== (user.fullname || "") || form.phone !== (user.phone || "");
 
-  const onChange = (key) => (e) => {
-    setForm((f) => ({ ...f, [key]: e.target.value }));
+  // PhoneInput hands back a value, not an event (it drives two controls), so the
+  // setter is split from the event adapter the plain inputs use.
+  const onChangeValue = (key, value) => {
+    setForm((f) => ({ ...f, [key]: value }));
     if (status !== "idle") setStatus("idle");
   };
+
+  const onChange = (key) => (e) => onChangeValue(key, e.target.value);
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -356,10 +360,13 @@ const ProfilePage = () => {
     try {
       const res = await updateProfile({
         fullname: form.fullname.trim(),
+        // "" is sent deliberately: it clears the stored number.
         phone: form.phone.trim(),
       });
       const updated = res?.user ?? res ?? form;
-      updateUser({ fullname: updated.fullname, phone: updated.phone });
+      // A cleared number comes back absent, so fall back to "" rather than
+      // leaving the previous value in the auth context.
+      updateUser({ fullname: updated.fullname, phone: updated.phone ?? "" });
       setStatus("saved");
     } catch (err) {
       setErrorMsg(err?.message || t("auth.errors.generic"));
@@ -479,12 +486,16 @@ const ProfilePage = () => {
                         disabled
                         hint={t("profile.emailHint")}
                       />
-                      <Input
-                        label={t("common.phone")}
-                        leftIcon={Phone}
+                      {/* Optional on the account: an empty value clears the
+                          stored number, and the booking wizard asks for one
+                          when a crew actually has to ring a doorbell. */}
+                      <PhoneInput
+                        label={`${t("common.phone")} (${t("common.optional")})`}
+                        countryLabel={t("common.countryCode")}
                         value={form.phone}
-                        onChange={onChange("phone")}
+                        onChange={(next) => onChangeValue("phone", next)}
                         placeholder={t("profile.phonePlaceholder")}
+                        hint={t("profile.phoneHint")}
                       />
 
                       {status === "saved" && (

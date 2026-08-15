@@ -57,11 +57,55 @@ describe("POST /api/v1/auth/signup", () => {
         expect(res.body.message).toMatch(/Validation failed/);
     });
 
-    test("rejects empty and malformed phone numbers at validation", async () => {
-        const empty = await api.post("/api/v1/auth/signup").send({ ...SIGNUP_BODY, phone: "" });
+    test("rejects a malformed phone number at validation", async () => {
         const malformed = await api.post("/api/v1/auth/signup").send({ ...SIGNUP_BODY, phone: "call-me" });
-        expect(empty.status).toBe(400);
         expect(malformed.status).toBe(400);
+    });
+
+    // Registration asks for the two things signing in needs. The number is
+    // collected at booking time, where not having one actually costs a visit.
+    test("creates an account with no phone number", async () => {
+        const { phone, ...withoutPhone } = SIGNUP_BODY;
+
+        const res = await api.post("/api/v1/auth/signup").send(withoutPhone);
+        expect(res.status).toBe(201);
+
+        const user = await User.findOne({ email: SIGNUP_BODY.email });
+        expect(user.phone).toBeUndefined();
+    });
+
+    // The trap the sparse unique index exists for: two phone-less accounts must
+    // not collide on a stored "" (or on a null in the index).
+    test("lets a SECOND account register without a phone number", async () => {
+        const { phone, ...withoutPhone } = SIGNUP_BODY;
+
+        const first = await api.post("/api/v1/auth/signup").send(withoutPhone);
+        const second = await api.post("/api/v1/auth/signup")
+            .send({ ...withoutPhone, email: "second@test.casaclean.local" });
+
+        expect(first.status).toBe(201);
+        expect(second.status).toBe(201);
+        expect(await User.countDocuments({ phone: { $exists: false } })).toBe(2);
+    });
+
+    // An empty string is the same as leaving the field out — and must not make
+    // the duplicate lookup match an unrelated account.
+    test("treats a blank phone as no phone, even alongside existing accounts", async () => {
+        await createUser();
+        const { phone, ...withoutPhone } = SIGNUP_BODY;
+
+        const res = await api.post("/api/v1/auth/signup").send({ ...withoutPhone, phone: "" });
+
+        expect(res.status).toBe(201);
+        expect((await User.findOne({ email: SIGNUP_BODY.email })).phone).toBeUndefined();
+    });
+
+    test("stores one canonical form however the number was spaced", async () => {
+        const res = await api.post("/api/v1/auth/signup")
+            .send({ ...SIGNUP_BODY, phone: "0039 331 234-5678" });
+
+        expect(res.status).toBe(201);
+        expect((await User.findOne({ email: SIGNUP_BODY.email })).phone).toBe("+393312345678");
     });
 
     test("returns ONE generic message for duplicate email or phone (anti-enumeration)", async () => {
@@ -302,6 +346,40 @@ describe("profile self-service", () => {
             .set("Cookie", cookieFor(user))
             .send({ phone: other.phone });
         expect(res.status).toBe(409);
+    });
+
+    // Optional means removable: "" unsets the field rather than storing a blank
+    // (which the sparse unique index would then treat as a real value).
+    test("PATCH /me clears the phone when sent an empty string", async () => {
+        const user = await createUser();
+
+        const res = await api.patch("/api/v1/auth/me")
+            .set("Cookie", cookieFor(user))
+            .send({ phone: "" });
+
+        expect(res.status).toBe(200);
+        expect(res.body.data.user.phone).toBeUndefined();
+
+        const stored = await User.findById(user._id).lean();
+        expect("phone" in stored).toBe(false);
+
+        // And a second account can clear its number too.
+        const another = await createUser();
+        const second = await api.patch("/api/v1/auth/me")
+            .set("Cookie", cookieFor(another))
+            .send({ phone: "" });
+        expect(second.status).toBe(200);
+    });
+
+    test("PATCH /me adds a phone to an account that registered without one", async () => {
+        const user = await createUser({ phone: undefined });
+
+        const res = await api.patch("/api/v1/auth/me")
+            .set("Cookie", cookieFor(user))
+            .send({ phone: "+995 555 12 34 56" });
+
+        expect(res.status).toBe(200);
+        expect(res.body.data.user.phone).toBe("+995555123456");
     });
 
     test("PATCH /me cannot change role or email (strict schema)", async () => {

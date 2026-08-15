@@ -1,6 +1,7 @@
 import { useEffect } from "react";
-import { useFormContext } from "react-hook-form";
+import { Controller, useFormContext } from "react-hook-form";
 import { Input } from "@/components/ui/Input";
+import { PhoneInput } from "@/components/ui/PhoneInput";
 import { Textarea } from "@/components/ui/Textarea";
 import { useTranslation } from "@/i18n";
 import { useAuth } from "@/features/admin/context";
@@ -12,12 +13,18 @@ import { useAuth } from "@/features/admin/context";
  * optional notes on the booking model. The contact fields are pre-filled from
  * the signed-in user's account (booking is auth-only), and only when still
  * empty — so any edits the customer makes are preserved across step navigation.
+ *
+ * The phone is REQUIRED here even though an account can exist without one: this
+ * is the number the crew rings at the door, and it is the one moment where not
+ * having it costs a visit. An account that skipped it at registration simply
+ * fills it in here.
  */
 
 export function ContactStep() {
   const { t } = useTranslation();
   const {
     register,
+    control,
     setValue,
     getValues,
     formState: { errors },
@@ -51,13 +58,23 @@ export function ContactStep() {
           error={errors.email?.message}
           {...register("email")}
         />
-        <Input
-          label={t("booking.fields.phone")}
-          type="tel"
-          placeholder={t("booking.contact.phonePlaceholder")}
-          required
-          error={errors.phone?.message}
-          {...register("phone")}
+        <Controller
+          name="phone"
+          control={control}
+          render={({ field }) => (
+            <PhoneInput
+              label={t("booking.fields.phone")}
+              countryLabel={t("common.countryCode")}
+              placeholder={t("booking.contact.phonePlaceholder")}
+              required
+              error={errors.phone?.message}
+              name={field.name}
+              value={field.value}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              ref={field.ref}
+            />
+          )}
         />
       </div>
 

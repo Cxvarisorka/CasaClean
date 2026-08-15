@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isValidPhone } from "@/lib/phone";
 import { todayDateString } from "../utils/recurrence";
 import {
   DURATION_STEP_HOURS,
@@ -66,10 +67,13 @@ export const bookingSchema = z.object({
   // Step 4 — contact
   name: z.string().trim().min(2, "Enter your full name"),
   email: z.string().trim().email("Enter a valid email"),
+  // Required here even though it is optional on the account: this is the number
+  // the crew rings at the door, and the API refuses a booking without one
+  // (server/services/booking.service.js).
   phone: z
     .string()
     .trim()
-    .regex(/^[+\d][\d\s()-]{6,}$/, "Enter a valid phone number"),
+    .refine(isValidPhone, "Enter a valid phone number, including the country prefix"),
   notes: z.string().trim().max(500, "Keep notes under 500 characters").optional(),
 });
 

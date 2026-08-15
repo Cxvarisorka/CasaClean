@@ -290,6 +290,7 @@ Supporting sheets: `typography.css` (type scale utilities), `utilities.css` (lay
 |-----------|-------------|
 | `Button` | Variants, sizes, `loading`, `leftIcon` / `rightIcon` |
 | `Input`, `Textarea`, `Select` | Form controls with error states |
+| `PhoneInput` | Country picker + national number; controlled (`value`/`onChange` with the joined `+39…` string, so react-hook-form drives it through `<Controller>`, not `register`). Country list and parsing live in `lib/phone.js` |
 | `Checkbox`, `Radio`, `Switch` | Boolean / single-choice inputs |
 | `Card`, `Badge`, `Image` | Content containers and media |
 | `Accordion`, `Tabs` | FAQ, settings-style UI |

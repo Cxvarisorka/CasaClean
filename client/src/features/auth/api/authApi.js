@@ -4,7 +4,7 @@ import { request, ENDPOINTS } from "@/services/api";
  * Auth API
  * --------
  * Maps form values onto the backend auth contract:
- *   signup → { fullname, email, phone, password }
+ *   signup → { fullname, email, password, phone? }
  *   signin → { email, password }  (sets an http-only cookie server-side)
  * Like the rest of the app, these degrade gracefully when the API isn't
  * reachable (preview environments) so the flows are always demonstrable;
@@ -46,7 +46,9 @@ export function signUp({ fullname, email, phone, password }) {
       request({
         method: "POST",
         url: ENDPOINTS.auth.signup,
-        data: { fullname, email, phone, password },
+        // Phone is optional at registration: send the key only when there is a
+        // number, so a skipped field is an absent one rather than a blank.
+        data: { fullname, email, password, ...(phone ? { phone } : {}) },
       }),
     { message: "User created" }
   );

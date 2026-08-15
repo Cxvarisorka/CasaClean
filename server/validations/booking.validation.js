@@ -8,6 +8,8 @@ const {
     MAX_DURATION_HOURS
 } = require("../utils/duration.util");
 
+const { phoneField } = require("./phone.validation");
+
 const objectId = z
     .string()
     .trim()
@@ -58,12 +60,11 @@ const createBookingSchema = z.object({
     // Optional registered account to attach the booking to (admin-on-behalf).
     userId: objectId.optional(),
 
-    // customerPhone falls back to req.user.phone but may be overridden.
-    customerPhone: z
-        .string()
-        .trim()
-        .min(1, { message: "Customer phone can't be empty!" })
-        .optional(),
+    // Optional in the SCHEMA, required for the booking: it falls back to
+    // req.user.phone, and the controller refuses the booking when neither the
+    // request nor the account carries a number (an account can be created
+    // without one — the crew still has to be able to ring someone).
+    customerPhone: phoneField().optional(),
 
     streetName: z
         .string()
@@ -167,11 +168,7 @@ const createBookingSchema = z.object({
 // and tool eligibility and re-settling an already-captured charge; until that
 // is designed, cancel and re-book.
 const editBookingSchema = z.object({
-    customerPhone: z
-        .string()
-        .trim()
-        .min(1, { message: "Customer phone can't be empty!" })
-        .optional(),
+    customerPhone: phoneField().optional(),
 
     streetName: z
         .string()
