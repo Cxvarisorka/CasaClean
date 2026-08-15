@@ -1,13 +1,20 @@
 // Models
 const SpecialRequest = require("../models/specialRequest.model");
+const Service = require("../models/service.model");
+const Booking = require("../models/booking.model");
+const Subscription = require("../models/subscription.model");
 
 // Utils
 const AppError = require("../utils/appError.util");
 const catchAsync = require("../utils/catchAsync.util");
+const formatName = require("../utils/formatName.util");
+const { assertNotReferenced } = require("../utils/referentialGuard.util");
+const { TRANSLATABLE_FIELDS, normalizeTranslations } = require("../utils/translations.util");
 
-// "fRIDGE cleaning" -> "Fridge cleaning". Capitalise the first letter and
-// lowercase the rest so the same item can't be stored under different casings.
-const formatName = (name) => name[0].toUpperCase() + name.slice(1).toLowerCase();
+// Blank fields and empty languages are stripped before storing — see
+// utils/translations.util.js for why.
+const cleanTranslations = (translations) =>
+    normalizeTranslations(translations, TRANSLATABLE_FIELDS.specialRequest);
 
 // GET /api/v1/special-request -> paginated list (public, so the booking wizard
 // can show the available add-ons).
@@ -17,13 +24,22 @@ const getSpecialRequests = catchAsync(async (req, res, next) => {
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 10));
 
+    // Soft-disabled add-ons are an admin concern: the public list (booking
+    // wizard) only ever sees enabled records. An admin opts into the full
+    // catalogue with ?includeDisabled=true — honoured only when the live DB
+    // role is admin (req.user comes from the attachUser middleware).
+    const includeDisabled = req.query.includeDisabled === "true" && req.user?.role === "admin";
+    const filter = includeDisabled ? {} : { enabled: true };
+
+    // For the unfiltered admin view, estimatedDocumentCount reads collection
+    // metadata (O(1)) instead of scanning every document.
     const [specialRequests, specialRequestCount] = await Promise.all([
-        SpecialRequest.find()
+        SpecialRequest.find(filter)
             .sort({ createdAt: -1 })
             .skip((page - 1) * limit)
             .limit(limit)
             .lean(),
-        SpecialRequest.countDocuments()
+        includeDisabled ? SpecialRequest.estimatedDocumentCount() : SpecialRequest.countDocuments(filter)
     ]);
 
     res.status(200).json({
@@ -53,7 +69,7 @@ const getSpecialRequestById = catchAsync(async (req, res, next) => {
 
 // POST /api/v1/special-request -> create an add-on (admin only)
 const addSpecialRequest = catchAsync(async (req, res, next) => {
-    const { name, description, price, services } = req.body;
+    const { name, description, translations, price, services } = req.body;
 
     // Guard required fields up-front so we never hit `name[0]` on undefined and
     // the client gets a clear 400. Price is compared against undefined so a
@@ -73,6 +89,7 @@ const addSpecialRequest = catchAsync(async (req, res, next) => {
     const specialRequest = await SpecialRequest.create({
         name: formattedName,
         description,
+        translations: cleanTranslations(translations),
         price,
         services
     });
@@ -87,7 +104,7 @@ const addSpecialRequest = catchAsync(async (req, res, next) => {
 // PATCH /api/v1/special-request/:id -> partial update (admin only)
 const editSpecialRequest = catchAsync(async (req, res, next) => {
     const { id } = req.params;
-    const { name, description, price, enabled, services = [] } = req.body;
+    const { name, description, translations, price, enabled, services = [] } = req.body;
 
     const specialRequest = await SpecialRequest.findById(id);
 
@@ -110,6 +127,11 @@ const editSpecialRequest = catchAsync(async (req, res, next) => {
     }
 
     if (description !== undefined) specialRequest.description = description;
+    // Replaced wholesale rather than merged: the panel edits every language in
+    // one dialog and posts the complete set, so a locale missing from the body
+    // is an explicit "remove this translation". A request that omits the field
+    // entirely (e.g. the row-level enable toggle) leaves translations untouched.
+    if (translations !== undefined) specialRequest.translations = cleanTranslations(translations);
     if (price !== undefined) specialRequest.price = price;
     // Compared against undefined (not truthiness) so `enabled: false` is honoured.
     if (enabled === true || enabled === false) specialRequest.enabled = enabled;
@@ -127,6 +149,14 @@ const editSpecialRequest = catchAsync(async (req, res, next) => {
 // DELETE /api/v1/special-request/:id -> remove an add-on (admin only)
 const deleteSpecialRequest = catchAsync(async (req, res, next) => {
     const { id } = req.params;
+
+    // Existing bookings price their add-ons by id at edit time, so deleting one
+    // silently changes historical totals. Disable instead.
+    await assertNotReferenced([
+        { model: Booking, filter: { specialRequests: id }, noun: "bookings" },
+        { model: Subscription, filter: { specialRequests: id }, noun: "recurring subscriptions" },
+        { model: Service, filter: { specialRequests: id }, noun: "service add-on lists" }
+    ], "add-on");
 
     const specialRequest = await SpecialRequest.findByIdAndDelete(id);
 

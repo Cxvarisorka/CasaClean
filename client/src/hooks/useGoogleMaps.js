@@ -15,8 +15,11 @@ const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
 let loaderPromise = null;
 
+const librariesReady = () =>
+  Boolean(window.google?.maps?.Map && window.google?.maps?.Geocoder);
+
 function loadGoogleMaps() {
-  if (window.google?.maps?.Map) return Promise.resolve();
+  if (librariesReady()) return Promise.resolve();
   if (loaderPromise) return loaderPromise;
 
   loaderPromise = new Promise((resolve, reject) => {
@@ -27,9 +30,13 @@ function loadGoogleMaps() {
     // With `loading=async`, `onload` only means the bootstrap loader is ready —
     // the Map/Marker/etc. classes aren't on `google.maps` until we import the
     // library. Await it here so callers can safely use `new google.maps.Map(...)`.
+    // "geocoding" is loaded alongside so the admin bookings map can resolve
+    // street addresses to coordinates via `new google.maps.Geocoder()`.
     script.onload = () => {
-      window.google.maps
-        .importLibrary("maps")
+      Promise.all([
+        window.google.maps.importLibrary("maps"),
+        window.google.maps.importLibrary("geocoding"),
+      ])
         .then(() => resolve())
         .catch((err) => {
           loaderPromise = null;
@@ -49,7 +56,7 @@ function loadGoogleMaps() {
 /** @returns {"no-key"|"loading"|"ready"|"error"} */
 export function useGoogleMaps() {
   const [status, setStatus] = useState(() =>
-    API_KEY ? (window.google?.maps?.Map ? "ready" : "loading") : "no-key"
+    API_KEY ? (librariesReady() ? "ready" : "loading") : "no-key"
   );
 
   useEffect(() => {

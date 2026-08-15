@@ -6,10 +6,44 @@ const City = require("../models/city.model");
 const AppError = require("../utils/appError.util");
 const catchAsync = require("../utils/catchAsync.util");
 const SpecialRequest = require("../models/specialRequest.model");
+const CleaningTool = require("../models/cleaningTool.model");
+const Booking = require("../models/booking.model");
+const Subscription = require("../models/subscription.model");
+const Review = require("../models/review.model");
+const formatName = require("../utils/formatName.util");
+const { assertNotReferenced } = require("../utils/referentialGuard.util");
+const {
+    MIN_INTERVAL_DAYS,
+    MAX_INTERVAL_DAYS,
+    isValidIntervalDays
+} = require("../utils/date.util");
+const { storeServiceImage, removeServiceImage } = require("../services/imageStorage.service");
+const { TRANSLATABLE_FIELDS, normalizeTranslations } = require("../utils/translations.util");
 
-// "rEGULAR cleaning" -> "Regular cleaning". Capitalise the first letter and
-// lowercase the rest so the same service can't be stored under different casings.
-const formatName = (name) => name[0].toUpperCase() + name.slice(1).toLowerCase();
+/**
+ * The image value to store for a write request.
+ *
+ * A multipart upload (buffered in memory by multer) always wins: it is uploaded
+ * here — to Cloudinary or to disk, whichever is configured — and the resulting
+ * URL/path is what the document stores. Otherwise the body's `image` field is
+ * used, which lets an admin keep supplying a hosted URL (or send "" to clear the
+ * image) without uploading anything.
+ *
+ * The stored value is recorded on `req.storedImage` so the router's cleanup
+ * handler can remove it if anything downstream fails — by this point the asset
+ * really has been persisted, so a later error would otherwise orphan it.
+ */
+const resolveImage = async (req) => {
+    if (!req.file) return req.body.image;
+
+    req.storedImage = await storeServiceImage(req.file);
+    return req.storedImage;
+};
+
+// Blank fields and empty languages are stripped before storing — see
+// utils/translations.util.js for why.
+const cleanTranslations = (translations) =>
+    normalizeTranslations(translations, TRANSLATABLE_FIELDS.service);
 
 /**
  * Resolve and validate the coverage a service should have ("all cities",
@@ -91,6 +125,50 @@ const resolveSpecialRequest = async (allSpecialRequests, specialRequests) => {
     return { allSpecialRequests: false, specialRequests: uniqueIds };
 };
 
+/**
+ * Resolve and validate whether a service can be booked on a recurring schedule,
+ * and on which cadences.
+ *
+ * Accepts:
+ *   - recurringEnabled: false / absent      -> one-off only; list cleared
+ *   - recurringEnabled: true, no list       -> the customer picks any cadence
+ *                                              between MIN and MAX days
+ *   - recurringEnabled: true, [7, 14]       -> only those cadences are offered
+ *
+ * Returns { recurringEnabled, recurringIntervalDays } ready to store. Values are
+ * deduplicated and sorted so the stored list is directly renderable; anything
+ * outside the accepted range throws (Zod already bounds it — this is the same
+ * defense-in-depth the coverage resolver applies).
+ */
+const resolveRecurrence = (recurringEnabled, recurringIntervalDays) => {
+    // Not recurring wins outright — no cadence list is needed or kept.
+    if (recurringEnabled !== true) {
+        return { recurringEnabled: false, recurringIntervalDays: [] };
+    }
+
+    const raw = Array.isArray(recurringIntervalDays)
+        ? recurringIntervalDays
+        : recurringIntervalDays !== undefined && recurringIntervalDays !== null
+            ? [recurringIntervalDays]
+            : [];
+
+    // An empty list is valid and meaningful: it means "no cadence restriction".
+    if (raw.length === 0) {
+        return { recurringEnabled: true, recurringIntervalDays: [] };
+    }
+
+    const intervals = [...new Set(raw.map(Number))].sort((a, b) => a - b);
+
+    if (!intervals.every(isValidIntervalDays)) {
+        throw new AppError(
+            `Recurring intervals must be whole numbers between ${MIN_INTERVAL_DAYS} and ${MAX_INTERVAL_DAYS} days!`,
+            400
+        );
+    }
+
+    return { recurringEnabled: true, recurringIntervalDays: intervals };
+};
+
 // GET /api/v1/service -> paginated list of services
 const getServices = catchAsync(async (req, res, next) => {
     // Query params arrive as strings; sanitise them into safe, bounded numbers
@@ -98,15 +176,26 @@ const getServices = catchAsync(async (req, res, next) => {
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 10));
 
-    const services = await Service.find()
-        .populate("cities")
-        .populate("specialRequests")
-        .sort({ createdAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .lean();
+    // Soft-disabled services are an admin concern: the public list (homepage,
+    // booking wizard) only ever sees enabled records. An admin opts into the
+    // full catalogue with ?includeDisabled=true — honoured only when the live
+    // DB role is admin (req.user comes from the attachUser middleware).
+    const includeDisabled = req.query.includeDisabled === "true" && req.user?.role === "admin";
+    const filter = includeDisabled ? {} : { enabled: true };
 
-    const serviceCount = await Service.countDocuments();
+    // Run the page query and the total count in parallel (independent reads).
+    // For the unfiltered admin view, estimatedDocumentCount reads collection
+    // metadata (O(1)) instead of scanning every document.
+    const [services, serviceCount] = await Promise.all([
+        Service.find(filter)
+            .populate("cities")
+            .populate("specialRequests")
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit)
+            .lean(),
+        includeDisabled ? Service.estimatedDocumentCount() : Service.countDocuments(filter)
+    ]);
 
     res.status(200).json({
         status: "success",
@@ -139,7 +228,12 @@ const getServiceById = catchAsync(async (req, res, next) => {
 
 // POST /api/v1/service -> create a service (admin only)
 const createService = catchAsync(async (req, res, next) => {
-    const { name, description, pricePerHour, allCities, cities, allSpecialRequests, specialRequests } = req.body;
+    const { name, subtitle, description, includes, translations, pricePerHour, allCities, cities, allSpecialRequests, specialRequests, recurringEnabled, recurringIntervalDays } = req.body;
+
+    // An uploaded file (multipart) takes precedence over an `image` URL in the
+    // body. Any failure below leaves the file orphaned on disk — the service
+    // router's cleanup handler unlinks it.
+    const image = await resolveImage(req);
 
     // Guard required fields up-front so we never hit `name[0]` on undefined and
     // the client gets a clear 400 instead of a generic schema error.
@@ -160,13 +254,20 @@ const createService = catchAsync(async (req, res, next) => {
     // Validate the chosen coverage (all / one / multiple cities).
     const coverage = await resolveCoverage(allCities, cities);
     const specialRequest = await resolveSpecialRequest(allSpecialRequests, specialRequests);
+    const recurrence = resolveRecurrence(recurringEnabled, recurringIntervalDays);
 
     const service = await Service.create({
         name: formattedName,
+        subtitle,
         description,
+        image,
+        // Drop empty/blank entries so the card never renders an empty bullet.
+        includes: Array.isArray(includes) ? includes.map((i) => i.trim()).filter(Boolean) : undefined,
+        translations: cleanTranslations(translations),
         pricePerHour,
         ...coverage,
-        ...specialRequest
+        ...specialRequest,
+        ...recurrence
     });
 
     res.status(201).json({
@@ -181,13 +282,19 @@ const createService = catchAsync(async (req, res, next) => {
 // PATCH /api/v1/service/:id -> partial update (admin only)
 const editService = catchAsync(async (req, res, next) => {
     const { id } = req.params;
-    const { name, description, pricePerHour, enabled, allCities, cities, allSpecialRequests, specialRequests } = req.body;
+    const { name, subtitle, description, includes, translations, pricePerHour, enabled, allCities, cities, allSpecialRequests, specialRequests, recurringEnabled, recurringIntervalDays } = req.body;
+
+    const image = await resolveImage(req);
 
     const service = await Service.findById(id);
 
     if (!service) {
         return next(new AppError("Service not found to edit!", 404));
     }
+
+    // Remembered so a replaced/cleared upload can be unlinked after the save
+    // succeeds (never before — a failed save must leave the old file in place).
+    const previousImage = service.image;
 
     if (name) {
         const formattedName = formatName(name);
@@ -203,7 +310,22 @@ const editService = catchAsync(async (req, res, next) => {
         service.name = formattedName;
     }
 
+    // Compared against undefined so an explicit "" clears the subtitle/image.
+    if (subtitle !== undefined) service.subtitle = subtitle;
     if (description) service.description = description;
+    if (image !== undefined) service.image = image;
+    if (includes !== undefined) {
+        service.includes = Array.isArray(includes)
+            ? includes.map((i) => i.trim()).filter(Boolean)
+            : [];
+    }
+    // Replaced wholesale rather than merged: the panel edits every language in
+    // one dialog and posts the complete set, so a locale missing from the body
+    // is an explicit "remove this translation". A request that omits the field
+    // entirely (e.g. the row-level enable toggle) leaves translations untouched.
+    if (translations !== undefined) {
+        service.translations = cleanTranslations(translations);
+    }
     if (pricePerHour !== undefined) service.pricePerHour = pricePerHour;
     // Compared against undefined (not truthiness) so `enabled: false` is honoured.
     if (enabled === false || enabled === true) service.enabled = enabled;
@@ -231,7 +353,25 @@ const editService = catchAsync(async (req, res, next) => {
         service.specialRequests = resolved.specialRequests;
     }
 
+    // Likewise for recurrence: a plain rename must not silently turn a recurring
+    // service into a one-off one (recurringEnabled would read as undefined).
+    if (recurringEnabled !== undefined || recurringIntervalDays !== undefined) {
+        const recurrence = resolveRecurrence(
+            recurringEnabled !== undefined ? recurringEnabled : service.recurringEnabled,
+            recurringIntervalDays !== undefined ? recurringIntervalDays : service.recurringIntervalDays
+        );
+
+        service.recurringEnabled = recurrence.recurringEnabled;
+        service.recurringIntervalDays = recurrence.recurringIntervalDays;
+    }
+
     await service.save();
+
+    // The old file is only garbage once the new value is durably stored.
+    // Best-effort and non-blocking: a stale file must never fail the request.
+    if (previousImage && previousImage !== service.image) {
+        removeServiceImage(previousImage);
+    }
 
     res.status(200).json({
         status: "success",
@@ -246,11 +386,24 @@ const editService = catchAsync(async (req, res, next) => {
 const deleteService = catchAsync(async (req, res, next) => {
     const { id } = req.params;
 
+    // A deleted service breaks every record pointing at it — and an active
+    // recurring plan would only find out when its next charge fails reference
+    // resolution. Disable instead (see referentialGuard.util.js).
+    await assertNotReferenced([
+        { model: Booking, filter: { serviceId: id }, noun: "bookings" },
+        { model: Subscription, filter: { serviceId: id }, noun: "recurring subscriptions" },
+        { model: Review, filter: { service_id: id }, noun: "reviews" },
+        { model: CleaningTool, filter: { services: id }, noun: "cleaning tool restrictions" }
+    ], "service");
+
     const service = await Service.findByIdAndDelete(id);
 
     if (!service) {
         return next(new AppError("Service not found to delete!", 404));
     }
+
+    // Nothing references the cover image any more — drop it from disk too.
+    removeServiceImage(service.image);
 
     res.status(200).json({
         status: "success",

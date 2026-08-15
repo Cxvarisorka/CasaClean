@@ -23,9 +23,22 @@ A service looks like this:
   "pricePerHour": 19.9,
   "allCities": false,
   "cities": ["CITY_ID_1", "CITY_ID_2"],
-  "enabled": true
+  "recurringEnabled": true,
+  "recurringIntervalDays": [7, 14],
+  "enabled": true,
+  "translations": {
+    "it": { "name": "Pulizia regolare", "includes": ["Cucina"] },
+    "ka": { "name": "რეგულარული დასუფთავება" }
+  }
 }
 ```
+
+Rules about **languages** (`translations`): the top-level `name`, `subtitle`,
+`description` and `includes` are the English copy; `translations` holds the same
+four fields for `ka`, `it`, `el` and `ru`. The full contract (fallbacks, blanks,
+replace-not-merge on PATCH) is shared with the other catalogue endpoints and is
+written down once in **[translations.md](../translations.md)** — read it before
+running the language tests below.
 
 Rules about **where a service is offered** (coverage) — this is the tricky part:
 - `allCities: true` → the service is offered **everywhere**. The `cities` list is ignored.
@@ -33,6 +46,16 @@ Rules about **where a service is offered** (coverage) — this is the tricky par
 - `cities` can be **one id as text** (`"abc123"`) or a **list of ids** (`["abc","def"]`).
 - Every city id must be a **real city** that exists, or you get an error.
 - Other rules: `name` must be unique, `pricePerHour` cannot be negative.
+
+Rules about **recurring bookings** — the same shape, for cadences instead of cities:
+- `recurringEnabled: false` (the default) → the service can only be booked once.
+  Any `recurringIntervalDays` you send is cleared.
+- `recurringEnabled: true`, empty `recurringIntervalDays` → the customer picks any
+  cadence from **every 1 day up to every 14 days**.
+- `recurringEnabled: true` with a list → only those cadences are offered. Values are
+  deduplicated and sorted; each must be a whole number from 1 to 14 (30 is rejected).
+- Turning `recurringEnabled` off later clears the list and **pauses** any live
+  subscription on that service at its next charge.
 
 > **Tip:** Create at least one city first (see [city tests](../city/city-tests.md)),
 > so you have a real city id to use here.
@@ -123,6 +146,10 @@ curl -X POST http://localhost:3000/api/v1/service ^
 | 10| Send a negative price like `-5`                            | **400**         | message about price can't be negative                                |
 | 11| A normal user (not admin) tries this                       | **403**         | "You do not have permission to perform this action!"                 |
 | 12| Not logged in                                              | **401**         | "Authorization is required!"                                          |
+| 13| Send `translations` with `it` and `ka` filled in           | **201**         | `data.service.translations` holds both languages                      |
+| 14| Send a language where every field is blank                 | **201**         | That language is **not** in `data.service.translations`               |
+| 15| Send `translations: { "fr": { "name": "Nettoyage" } }`     | **400**         | message about supported translation languages                        |
+| 16| Send `translations: { "en": { "name": "Clean" } }`         | **400**         | Rejected — English belongs in the top-level fields                    |
 
 > **Check #7 carefully:** `pricePerHour: 0` is allowed (free). Only a **missing** price
 > is rejected. So sending `pricePerHour: 0` should succeed.
@@ -163,6 +190,9 @@ curl -X PATCH http://localhost:3000/api/v1/service/PASTE_SERVICE_ID ^
 | 8 | Set coverage to a city id that does not exist             | **400**         | "One or more selected cities do not exist!"      |
 | 9 | A normal user tries this                                   | **403**         | "You do not have permission..."                  |
 | 10| Not logged in                                             | **401**         | "Authorization is required!"                     |
+| 11| Change only the price (don't send `translations`)          | **200**         | All existing translations are still there        |
+| 12| Send `translations` with only `it` (a service that had `it` + `ka`) | **200** | Only `it` remains — `ka` was removed             |
+| 13| Send `translations: {}`                                    | **200**         | All translations removed; English copy untouched |
 
 ---
 
@@ -183,3 +213,59 @@ curl -X DELETE http://localhost:3000/api/v1/service/PASTE_SERVICE_ID -b cookie.t
 | 4 | Delete with a broken id              | **400**         | message about invalid id                         |
 | 5 | A normal user tries this             | **403**         | "You do not have permission..."                  |
 | 6 | Not logged in                        | **401**         | "Authorization is required!"                     |
+| 7 | Delete a service that had an uploaded cover image | **200** | The file under `server/uploads/services/` is gone too |
+
+---
+
+## 6. Cover image upload (admin only)
+
+POST `/` and PATCH `/:id` accept **one** cover image as `multipart/form-data`
+instead of JSON. The file is stored in `server/uploads/services/` and the
+service's `image` field holds the path it is served from, e.g.
+`/uploads/services/1770000000000-ab12….png`. Fetch it at
+`http://localhost:3000/uploads/services/…` (no login needed — it's public
+imagery).
+
+Because multipart carries only text, send the non-string fields like this:
+- numbers and booleans as text — `pricePerHour=19.9`, `allCities=false`
+- lists as **JSON text** — `cities=["CITY_ID"]`, `includes=["Kitchen"]`
+  (that's the only way an empty list `[]` survives the trip)
+
+Rules: PNG / JPEG / WebP / GIF only, **5 MB** max, exactly one file, under the
+field name `image`. The stored filename is generated by the server — the name
+you upload is ignored.
+
+**curl:**
+```bash
+# Create with a cover image
+curl -X POST http://localhost:3000/api/v1/service -b cookie.txt \
+  -H "X-Requested-With: XMLHttpRequest" \
+  -F "name=Deep cleaning" \
+  -F "description=A thorough clean of the whole property" \
+  -F "pricePerHour=24.5" \
+  -F "allCities=true" \
+  -F "cities=[]" \
+  -F "image=@./cover.png"
+
+# Replace just the image on an existing service
+curl -X PATCH http://localhost:3000/api/v1/service/PASTE_SERVICE_ID -b cookie.txt \
+  -H "X-Requested-With: XMLHttpRequest" \
+  -F "image=@./new-cover.png"
+```
+
+### Tests
+
+| # | What you do                                              | Expected status | Expected answer                                            |
+|---|----------------------------------------------------------|-----------------|-------------------------------------------------------------|
+| 1 | Admin creates a service with a PNG attached              | **201**         | `data.service.image` starts with `/uploads/services/`        |
+| 2 | Open that path in the browser                            | **200**         | The image loads                                              |
+| 3 | Check `server/uploads/services/`                         | —               | The file is there, with a server-generated name              |
+| 4 | PATCH the same service with a different image            | **200**         | New path returned; the **old file is deleted** from disk     |
+| 5 | PATCH sending `{"image": ""}` as JSON                    | **200**         | `image` is `""` and the file is deleted                      |
+| 6 | PATCH sending the same `/uploads/services/…` path back   | **200**         | Nothing changes, file still there                            |
+| 7 | Upload a `.txt` / `.php` / SVG file                      | **400**         | "Image must be a PNG, JPEG, WebP or GIF file!"; nothing saved |
+| 8 | Upload a file larger than 5 MB                           | **413**         | "Image is too large — 5 MB maximum!"                         |
+| 9 | Attach two files, or use a field name other than `image` | **400**         | 'Only a single file, sent as "image", may be uploaded!'      |
+| 10| Upload with a bad name (e.g. `name=Ab`)                  | **400**         | Validation error — and **no orphan file** is left on disk    |
+| 11| Upload a name that already exists                        | **409**         | "Service already exists!" — and no orphan file               |
+| 12| A normal user / logged-out caller uploads                | **403** / **401** | Rejected before multer ever writes anything                |

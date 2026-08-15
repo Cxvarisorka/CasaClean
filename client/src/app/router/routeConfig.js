@@ -14,16 +14,18 @@ import { ROUTES } from "@/constants/routes";
 // --- Lazy page imports (one chunk per page) --------------------------------
 const HomePage = lazy(() => import("@/pages/Home/HomePage"));
 const ServicesPage = lazy(() => import("@/pages/Services/ServicesPage"));
-const PricingPage = lazy(() => import("@/pages/Pricing/PricingPage"));
+const ServiceDetailPage = lazy(() => import("@/pages/Services/ServiceDetailPage"));
 const AboutPage = lazy(() => import("@/pages/About/AboutPage"));
 const ContactPage = lazy(() => import("@/pages/Contact/ContactPage"));
 const FaqPage = lazy(() => import("@/pages/FAQ/FaqPage"));
 const CareersPage = lazy(() => import("@/pages/Careers/CareersPage"));
-const BlogPage = lazy(() => import("@/pages/Blog/BlogPage"));
-const BlogPostPage = lazy(() => import("@/pages/Blog/BlogPostPage"));
+const PrivacyPage = lazy(() => import("@/pages/Legal/PrivacyPage"));
+const TermsPage = lazy(() => import("@/pages/Legal/TermsPage"));
 const BookingPage = lazy(() => import("@/pages/Booking/BookingPage"));
 const SignInPage = lazy(() => import("@/pages/Auth/SignInPage"));
 const SignUpPage = lazy(() => import("@/pages/Auth/SignUpPage"));
+const ForgotPasswordPage = lazy(() => import("@/pages/Auth/ForgotPasswordPage"));
+const ResetPasswordPage = lazy(() => import("@/pages/Auth/ResetPasswordPage"));
 const AdminLoginPage = lazy(() => import("@/pages/Auth/AdminLoginPage"));
 const ProfilePage = lazy(() => import("@/pages/Profile/ProfilePage"));
 const NotFoundPage = lazy(() => import("@/pages/NotFound/NotFoundPage"));
@@ -34,23 +36,30 @@ const AdminLayout = lazy(() =>
 );
 const AdminDashboardPage = lazy(() => import("@/pages/Admin/DashboardPage"));
 const AdminBookingsPage = lazy(() => import("@/pages/Admin/BookingsPage"));
+const AdminSubscriptionsPage = lazy(() => import("@/pages/Admin/SubscriptionsPage"));
+const AdminInvoicesPage = lazy(() => import("@/pages/Admin/InvoicesPage"));
+const AdminCalendarPage = lazy(() => import("@/pages/Admin/CalendarPage"));
 const AdminServicesPage = lazy(() => import("@/pages/Admin/ServicesPage"));
 const AdminSpecialRequestsPage = lazy(() => import("@/pages/Admin/SpecialRequestsPage"));
+const AdminCleaningToolsPage = lazy(() => import("@/pages/Admin/CleaningToolsPage"));
 const AdminCitiesPage = lazy(() => import("@/pages/Admin/CitiesPage"));
 const AdminCoverageMapPage = lazy(() => import("@/pages/Admin/CoverageMapPage"));
 const AdminUsersPage = lazy(() => import("@/pages/Admin/UsersPage"));
+const AdminWorkersPage = lazy(() => import("@/pages/Admin/WorkersPage"));
+const AdminQualityPage = lazy(() => import("@/pages/Admin/QualityPage"));
+const AdminMessagesPage = lazy(() => import("@/pages/Admin/MessagesPage"));
 
 /** Routes hosted by the marketing MainLayout (Navbar + Footer). */
 export const MAIN_ROUTES = [
   { path: ROUTES.home, element: HomePage, index: true },
   { path: ROUTES.services, element: ServicesPage },
-  { path: ROUTES.pricing, element: PricingPage },
+  { path: ROUTES.serviceDetail(), element: ServiceDetailPage },
   { path: ROUTES.about, element: AboutPage },
   { path: ROUTES.contact, element: ContactPage },
   { path: ROUTES.faq, element: FaqPage },
   { path: ROUTES.careers, element: CareersPage },
-  { path: ROUTES.blog, element: BlogPage },
-  { path: ROUTES.blogPost(), element: BlogPostPage },
+  { path: ROUTES.privacy, element: PrivacyPage },
+  { path: ROUTES.terms, element: TermsPage },
   // Account area — requires a registered, signed-in user.
   { path: ROUTES.profile, element: ProfilePage, protected: true },
 ];
@@ -65,6 +74,10 @@ export const FOCUSED_ROUTES = [
 export const BARE_ROUTES = [
   { path: ROUTES.signin, element: SignInPage },
   { path: ROUTES.signup, element: SignUpPage },
+  // Password recovery — public by nature (the user can't sign in). The reset
+  // page is opened from the one-time link in the email.
+  { path: ROUTES.forgotPassword, element: ForgotPasswordPage },
+  { path: ROUTES.resetPassword(), element: ResetPasswordPage },
   // Dedicated admin login. Declared as a standalone full-path route (not a child
   // of the guarded /admin shell) so it stays reachable when AdminRoute redirects
   // an unauthenticated visitor here — otherwise the guard would loop.
@@ -76,10 +89,17 @@ export const ADMIN_LAYOUT = AdminLayout;
 export const ADMIN_ROUTES = [
   { path: "", element: AdminDashboardPage, index: true },
   { path: "bookings", element: AdminBookingsPage },
+  { path: "subscriptions", element: AdminSubscriptionsPage },
+  { path: "invoices", element: AdminInvoicesPage },
+  { path: "calendar", element: AdminCalendarPage },
   { path: "services", element: AdminServicesPage },
   { path: "special-requests", element: AdminSpecialRequestsPage },
+  { path: "cleaning-tools", element: AdminCleaningToolsPage },
   { path: "cities", element: AdminCitiesPage },
   { path: "coverage", element: AdminCoverageMapPage },
+  { path: "workers", element: AdminWorkersPage },
+  { path: "quality", element: AdminQualityPage },
+  { path: "messages", element: AdminMessagesPage },
   { path: "users", element: AdminUsersPage },
 ];
 

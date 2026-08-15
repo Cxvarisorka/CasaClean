@@ -9,7 +9,7 @@ import { SITE } from "@/constants/metadata";
  * @param {object} props
  * @param {string} props.title
  * @param {string} [props.description]
- * @param {string} [props.path] - canonical path (e.g. "/pricing")
+ * @param {string} [props.path] - canonical path (e.g. "/services")
  * @param {string} [props.image] - absolute or site-relative OG image
  * @param {"website"|"article"} [props.type="website"]
  * @param {boolean} [props.noIndex=false]
@@ -45,8 +45,8 @@ export function MetaTags({
       <meta property="og:locale" content={SITE.locale} />
 
       {/* Twitter */}
+      {/* No `twitter:site` — the brand has no X account to attribute the card to. */}
       <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:site" content={SITE.twitter} />
       <meta name="twitter:title" content={fullTitle} />
       <meta name="twitter:description" content={description} />
       <meta name="twitter:image" content={ogImage} />

@@ -26,12 +26,15 @@ export function ContactForm() {
     formState: { errors },
   } = useForm({
     resolver: zodResolver(contactSchema),
-    defaultValues: { name: "", email: "", phone: "", topic: "", message: "" },
+    defaultValues: { name: "", email: "", phone: "", topic: "", message: "", website: "" },
   });
 
   const { mutateAsync, isPending, isSuccess, error } = useSubmitContact();
 
   const onSubmit = (values) => mutateAsync(values);
+
+  // Schema messages are i18n keys (see contactSchema.js) — resolve them here.
+  const fieldError = (field) => (field?.message ? t(field.message) : undefined);
 
   // Translate the topic labels while keeping the stable submission values.
   const topicOptions = CONTACT_TOPICS.map((topic) => ({
@@ -61,20 +64,40 @@ export function ContactForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
+      {/*
+        Honeypot. Kept out of the layout with absolute positioning rather than
+        `display:none` — some bots skip hidden inputs but happily fill this one.
+        A non-empty value makes the server drop the submission silently.
+      */}
+      <div
+        className="pointer-events-none absolute h-0 w-0 overflow-hidden"
+        style={{ left: "-9999px" }}
+        aria-hidden="true"
+      >
+        <label htmlFor="contact-website">Website</label>
+        <input
+          id="contact-website"
+          type="text"
+          tabIndex={-1}
+          autoComplete="off"
+          {...register("website")}
+        />
+      </div>
+
       <div className="grid gap-5 sm:grid-cols-2">
         <Input
           label={t("pages.contact.fields.name")}
-          placeholder="Jane Cooper"
+          placeholder={t("pages.contact.fields.namePlaceholder")}
           required
-          error={errors.name?.message}
+          error={fieldError(errors.name)}
           {...register("name")}
         />
         <Input
           label={t("pages.contact.fields.email")}
           type="email"
-          placeholder="jane@email.com"
+          placeholder={t("pages.contact.fields.emailPlaceholder")}
           required
-          error={errors.email?.message}
+          error={fieldError(errors.email)}
           {...register("email")}
         />
       </div>
@@ -83,9 +106,9 @@ export function ContactForm() {
         <Input
           label={t("pages.contact.fields.phone")}
           type="tel"
-          placeholder="+39 ..."
+          placeholder={t("pages.contact.fields.phonePlaceholder")}
           hint={t("common.optional")}
-          error={errors.phone?.message}
+          error={fieldError(errors.phone)}
           {...register("phone")}
         />
         <Select
@@ -93,7 +116,7 @@ export function ContactForm() {
           placeholder={t("pages.contact.fields.topicPlaceholder")}
           required
           options={topicOptions}
-          error={errors.topic?.message}
+          error={fieldError(errors.topic)}
           {...register("topic")}
         />
       </div>
@@ -103,12 +126,16 @@ export function ContactForm() {
         placeholder={t("pages.contact.fields.messagePlaceholder")}
         rows={5}
         required
-        error={errors.message?.message}
+        error={fieldError(errors.message)}
         {...register("message")}
       />
 
+      {/*
+        The submission genuinely failed — the message was NOT stored. Show the
+        translated apology rather than the API's English-only error text.
+      */}
       {error && (
-        <p className="text-body-sm text-red-600">{error.message}</p>
+        <p className="text-body-sm text-red-600">{t("pages.contact.errorBody")}</p>
       )}
 
       <Button type="submit" size="lg" loading={isPending} rightIcon={Send}>

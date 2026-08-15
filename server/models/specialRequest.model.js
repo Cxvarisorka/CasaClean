@@ -11,6 +11,9 @@
 
 const mongoose = require("mongoose");
 
+const { translationsPath } = require("./translations.schema");
+const { TRANSLATABLE_FIELDS } = require("../utils/translations.util");
+
 const specialRequestSchema = new mongoose.Schema(
     {
         name: {
@@ -24,6 +27,9 @@ const specialRequestSchema = new mongoose.Schema(
             trim: true,
             default: ""
         },
+        // Per-language overrides of the two customer-facing texts above, keyed
+        // by locale code. See utils/translations.util.js for the shared contract.
+        translations: translationsPath(TRANSLATABLE_FIELDS.specialRequest),
         services: {
             type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Service' }],
             default: []

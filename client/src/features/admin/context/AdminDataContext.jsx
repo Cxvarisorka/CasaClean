@@ -27,9 +27,20 @@ const EMPTY_DB = {
   cities: [],
   services: [],
   specialRequests: [],
+  // Physical tools (mop, vacuum, …) with a surcharge and per-service availability.
+  cleaningTools: [],
   bookings: [],
   // Loaded from the admin-only GET /auth/users endpoint (read-only).
   users: [],
+  // Cleaning staff, managed via the admin-only /worker endpoints.
+  workers: [],
+  // Customer reviews, loaded from the admin-only GET /review feed. They're
+  // authored by customers, so the panel only reads and moderates them: publish
+  // / hide on the public site, or delete.
+  reviews: [],
+  // Website contact-form submissions. Read-only apart from their triage status
+  // (new / handled).
+  contactMessages: [],
 };
 
 export function AdminDataProvider({ children }) {
@@ -41,7 +52,7 @@ export function AdminDataProvider({ children }) {
   // (e.g. bookings, which needs the admin role) doesn't blank the whole panel.
   const refresh = useCallback(async () => {
     setLoading(true);
-    const names = ["cities", "services", "specialRequests", "bookings", "users"];
+    const names = ["cities", "services", "specialRequests", "cleaningTools", "bookings", "users", "workers", "reviews", "contactMessages"];
     const results = await Promise.allSettled(
       names.map((name) => RESOURCES[name].list())
     );
@@ -60,7 +71,12 @@ export function AdminDataProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    refresh();
+    // Defer the initial async load one task so React does not receive a
+    // synchronous state update while this effect is being committed.
+    const initialLoad = setTimeout(() => {
+      void refresh();
+    }, 0);
+    return () => clearTimeout(initialLoad);
   }, [refresh]);
 
   // Run a mutation against the backend. On failure we surface the server's
@@ -80,9 +96,19 @@ export function AdminDataProvider({ children }) {
             window.alert("This collection isn't backed by the API.");
           return false;
         }
+        // A rejected write is usually a per-field validation failure, and the
+        // bare envelope message ("Validation failed!") tells the admin nothing
+        // about WHICH field. The API returns the field errors alongside it —
+        // append them so the dialog is actionable.
         const message =
           err?.message || "The request failed. Please try again.";
-        if (typeof window !== "undefined") window.alert(message);
+        const details = err?.fields
+          ? Object.entries(err.fields)
+              .map(([field, msgs]) => `• ${field}: ${[].concat(msgs).join(" ")}`)
+              .join("\n")
+          : "";
+        if (typeof window !== "undefined")
+          window.alert(details ? `${message}\n\n${details}` : message);
         await refresh();
         return false;
       }
@@ -139,6 +165,20 @@ export function AdminDataProvider({ children }) {
       return acc;
     }, {});
 
+    // Quality metrics from the review feed: count, mean score and a 1–5
+    // distribution the Quality page renders as bars.
+    const ratingDistribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    let ratingSum = 0;
+    db.reviews.forEach((r) => {
+      const score = Number(r.rating) || 0;
+      if (score >= 1 && score <= 5) {
+        ratingDistribution[score] += 1;
+        ratingSum += score;
+      }
+    });
+    const reviewCount = db.reviews.length;
+    const avgRating = reviewCount ? ratingSum / reviewCount : 0;
+
     return {
       bookings: db.bookings.length,
       revenue,
@@ -147,8 +187,15 @@ export function AdminDataProvider({ children }) {
       cities: db.cities.length,
       activeCities: db.cities.filter((c) => c.enabled).length,
       specialRequests: db.specialRequests.length,
+      cleaningTools: db.cleaningTools.length,
       users: db.users.length,
       byStatus,
+      reviews: reviewCount,
+      avgRating,
+      ratingDistribution,
+      contactMessages: db.contactMessages.length,
+      // Untriaged messages — what the inbox badge counts.
+      newContactMessages: db.contactMessages.filter((m) => m.status !== "handled").length,
     };
   }, [db]);
 

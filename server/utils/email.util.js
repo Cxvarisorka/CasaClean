@@ -17,13 +17,27 @@ let transporter;
 const getTransporter = () => {
     if (transporter) return transporter;
 
+    const port = Number(process.env.MAIL_PORT) || 587;
+
     transporter = nodemailer.createTransport({
         host: process.env.MAIL_HOST,
-        port: Number(process.env.MAIL_PORT) || 587,
+        port,
+        // Port 465 is implicit TLS; 587/25 negotiate via STARTTLS. Getting this
+        // wrong doesn't error — the connection hangs until timeout — so derive
+        // it from the port (override with MAIL_SECURE=true/false if needed).
+        secure: process.env.MAIL_SECURE
+            ? process.env.MAIL_SECURE === 'true'
+            : port === 465,
         auth: {
             user: process.env.MAIL_USERNAME,
             pass: process.env.MAIL_PASSWORD
-        }
+        },
+        // Fail fast instead of nodemailer's defaults (up to 2 min to connect,
+        // 10 min socket) — an unreachable SMTP host must never stall a request
+        // or a Stripe webhook for minutes.
+        connectionTimeout: 10_000,
+        greetingTimeout: 10_000,
+        socketTimeout: 20_000
     });
 
     return transporter;
@@ -38,16 +52,33 @@ const getTransporter = () => {
  * @param {string}  options.html     - HTML body
  * @param {string} [options.text]    - optional plain-text fallback (good for
  *                                     deliverability and non-HTML clients)
+ * @param {string} [options.replyTo] - address a reply should go to instead of
+ *                                     the sending mailbox. Used by the
+ *                                     contact-form notification so the team can
+ *                                     just hit Reply and reach the customer.
+ * @param {Array}  [options.attachments] - nodemailer attachment descriptors,
+ *                                     e.g. [{ filename, content: Buffer,
+ *                                     contentType }]. Used for the invoice PDF.
  */
-const sendEmail = async ({ email, subject, html, text }) => {
+const sendEmail = async ({ email, subject, html, text, replyTo, attachments }) => {
     await getTransporter().sendMail({
         // Friendly "From" name; the address itself comes from config so it can
-        // differ between environments.
-        from: process.env.MAIL_FROM || '"CasaClean" <noreply@casaclean.com>',
+        // differ between environments. Nodemailer derives the envelope sender
+        // from this, and providers reject the message outright ("550 Sender
+        // address is not allowed") when it isn't an address the authenticated
+        // account may send as — so fall back to that account, never to a
+        // hard-coded domain we may not even control.
+        from: process.env.MAIL_FROM || process.env.MAIL_USERNAME,
         to: email,
         subject,
         html,
-        text
+        text,
+        // Omitted unless set, so the From address stays the reply target for
+        // every existing caller.
+        ...(replyTo ? { replyTo } : {}),
+        // Omitted entirely when there's nothing to attach — nodemailer treats an
+        // empty array as a multipart message with no parts.
+        ...(attachments?.length ? { attachments } : {})
     });
 };
 

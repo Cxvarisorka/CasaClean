@@ -61,7 +61,7 @@ export function NewsletterForm({ tone = "light", className }) {
             <div className="flex gap-2">
               <div className="flex-1">
                 <label htmlFor="newsletter-email" className="sr-only">
-                  Email address
+                  {t("footer.emailLabel")}
                 </label>
                 <input
                   id="newsletter-email"

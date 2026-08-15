@@ -2,14 +2,20 @@ import { useMemo, useState } from "react";
 import { Sparkles, Plus, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { Switch } from "@/components/ui/Switch";
 import {
   PageHeader,
   DataTable,
   ResourceModal,
   ConfirmDialog,
   useCollection,
+  contentField,
+  toContentValue,
+  fromContentValue,
 } from "@/features/admin";
 import { useTranslation } from "@/i18n";
+import { assetUrl } from "@/services/api";
+import { MAX_INTERVAL_DAYS, MIN_INTERVAL_DAYS } from "@/features/booking/constants";
 
 /*
  * Services management
@@ -17,6 +23,12 @@ import { useTranslation } from "@/i18n";
  * Full CRUD over the service catalog (backed by the real API): name,
  * description, price per hour and coverage — either every city, or an explicit
  * set chosen from the cities collection.
+ *
+ * The customer-facing copy (name, sub-title, description, inclusions) is
+ * multilingual. It is edited as a single "i18n" field so the dialog shows one
+ * language at a time instead of four inputs times five languages; on the wire it
+ * splits back into the API's shape — the default locale in the root fields, the
+ * rest in `translations` (see features/admin/utils/localizedContent.js).
  */
 
 const eur = (n) =>
@@ -48,11 +60,68 @@ export default function ServicesPage() {
     [specialRequests]
   );
 
+  // Every cadence the platform accepts (1–14 days). Selecting none is the
+  // meaningful "let the customer choose" state, so this field is never required.
+  const intervalOptions = useMemo(
+    () =>
+      Array.from(
+        { length: MAX_INTERVAL_DAYS - MIN_INTERVAL_DAYS + 1 },
+        (_, i) => MIN_INTERVAL_DAYS + i
+      ).map((days) => ({
+        value: days,
+        label:
+          days === 1
+            ? t("admin.services.everyDay")
+            : t("admin.services.everyDays", { days }),
+      })),
+    [t]
+  );
+
+  // The translatable copy, declared once: it drives both the "one language at a
+  // time" form field and the mapping to/from the API payload.
+  const contentSubfields = useMemo(
+    () => [
+      {
+        name: "name",
+        label: t("admin.services.field.name"),
+        required: true,
+      },
+      {
+        name: "subtitle",
+        label: t("admin.services.field.subtitle"),
+        hint: t("admin.services.field.subtitleHint"),
+        placeholder: t("admin.services.field.subtitlePlaceholder"),
+      },
+      {
+        name: "description",
+        label: t("admin.services.field.description"),
+        type: "textarea",
+        required: true,
+        rows: 4,
+      },
+      {
+        name: "includes",
+        label: t("admin.services.field.includes"),
+        type: "list",
+        hint: t("admin.services.field.includesHint"),
+        placeholder: t("admin.services.field.includesPlaceholder"),
+        addLabel: t("admin.services.field.includesAdd"),
+      },
+    ],
+    [t]
+  );
+
   const fields = useMemo(
     () => [
-      { name: "name", label: t("admin.services.field.name"), required: true },
+      {
+        name: "image",
+        label: t("admin.services.field.image"),
+        type: "image",
+        hint: t("admin.services.field.imageHint"),
+        full: true,
+      },
       { name: "price_per_hour", label: t("admin.services.field.pricePerHour"), type: "number", required: true },
-      { name: "description", label: t("admin.services.field.description"), type: "textarea", required: true, full: true },
+      contentField(t("admin.services.field.content"), contentSubfields),
       {
         name: "all_cities",
         label: t("admin.services.field.allCities"),
@@ -87,14 +156,41 @@ export default function ServicesPage() {
         // Only pick specific add-ons when "all special requests" is off.
         show: (v) => !v.all_special_requests,
       },
+      {
+        name: "recurring_enabled",
+        label: t("admin.services.field.recurringEnabled"),
+        hint: t("admin.services.field.recurringEnabledHint"),
+        type: "switch",
+        full: true,
+      },
+      {
+        name: "recurring_interval_days",
+        label: t("admin.services.field.recurringIntervalDays"),
+        type: "multiselect",
+        options: intervalOptions,
+        hint: t("admin.services.field.recurringIntervalDaysHint"),
+        full: true,
+        // Cadences only mean anything once the service repeats at all.
+        show: (v) => Boolean(v.recurring_enabled),
+      },
+      {
+        name: "enabled",
+        label: t("admin.services.field.enabled"),
+        type: "switch",
+        full: true,
+      },
     ],
-    [cityOptions, specialRequestOptions, t]
+    [cityOptions, specialRequestOptions, intervalOptions, contentSubfields, t]
   );
 
   const handleSubmit = async (values) => {
+    // Split the localized group back into the flat payload the API expects.
+    const { content, ...rest } = values;
+    const payload = { ...rest, ...fromContentValue(content, contentSubfields) };
+
     const ok = editing
-      ? await update(editing._id, values)
-      : await create(values);
+      ? await update(editing._id, payload)
+      : await create(payload);
     if (ok) setEditing(undefined);
   };
 
@@ -102,12 +198,53 @@ export default function ServicesPage() {
     {
       key: "name",
       header: t("admin.services.col.service"),
-      render: (s) => <p className="font-semibold text-ink-900">{s.name}</p>,
+      render: (s) => (
+        <div className="flex items-center gap-3">
+          {s.image ? (
+            // Stored as a relative /uploads path — resolve it against the API
+            // origin (see services/api/assets.js).
+            <img
+              src={assetUrl(s.image)}
+              alt=""
+              className="size-11 shrink-0 rounded-lg object-cover"
+            />
+          ) : (
+            <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-ink-100 text-ink-300">
+              <Sparkles className="size-5" />
+            </span>
+          )}
+          <div className="min-w-0">
+            <p className="font-semibold text-ink-900">{s.name}</p>
+            {s.subtitle && (
+              <p className="truncate text-body-sm text-ink-500">{s.subtitle}</p>
+            )}
+          </div>
+        </div>
+      ),
     },
     {
       key: "price_per_hour",
       header: t("admin.services.col.pricePerHr"),
       render: (s) => <span className="font-medium">{eur(s.price_per_hour)}</span>,
+    },
+    {
+      key: "recurring_enabled",
+      header: t("admin.services.col.recurring"),
+      // Three states worth distinguishing at a glance: one-off only, repeats on
+      // a cadence the admin pinned, or repeats on whatever the customer picks.
+      render: (s) => {
+        if (!s.recurring_enabled) return <span className="text-ink-300">—</span>;
+        const days = Array.isArray(s.recurring_interval_days)
+          ? s.recurring_interval_days
+          : [];
+        return (
+          <Badge variant="brand" size="sm">
+            {days.length === 0
+              ? t("admin.services.recurringFlexible")
+              : t("admin.services.recurringFixed", { days: days.join(", ") })}
+          </Badge>
+        );
+      },
     },
     {
       key: "cities",
@@ -132,6 +269,19 @@ export default function ServicesPage() {
           </span>
         );
       },
+    },
+    {
+      key: "enabled",
+      header: t("admin.services.col.status"),
+      align: "center",
+      // A disabled service is hidden from the public site (useServices filters
+      // on `enabled`) and can't be booked (the API rejects disabled services).
+      render: (s) => (
+        <Switch
+          checked={Boolean(s.enabled)}
+          onChange={() => update(s._id, { enabled: !s.enabled })}
+        />
+      ),
     },
   ];
 
@@ -180,12 +330,19 @@ export default function ServicesPage() {
         title={editing ? t("admin.services.editTitle") : t("admin.services.addTitle")}
         fields={fields}
         initialValues={
-          editing || {
-            all_cities: true,
-            cities: [],
-            all_special_requests: false,
-            special_requests: [],
-          }
+          editing
+            ? { ...editing, content: toContentValue(editing, contentSubfields) }
+            : {
+                image: "",
+                content: toContentValue(null, contentSubfields),
+                all_cities: true,
+                cities: [],
+                all_special_requests: false,
+                special_requests: [],
+                recurring_enabled: false,
+                recurring_interval_days: [],
+                enabled: true,
+              }
         }
         submitLabel={editing ? t("admin.form.saveChanges") : t("admin.form.create")}
       />

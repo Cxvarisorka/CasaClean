@@ -123,7 +123,7 @@ export function HeroSection() {
             <motion.div style={{ y: imageY }} className="relative aspect-[4/5]">
               <Image
                 src={IMAGES.heroInterior}
-                alt="A bright, freshly cleaned vacation rental living space"
+                alt={t("hero.imageAlt")}
                 priority
                 rounded="rounded-3xl"
                 className="size-full shadow-premium"
@@ -141,7 +141,7 @@ export function HeroSection() {
                         Via Giovanni Giorgi 5
                       </p>
                       <p className="text-body-sm text-brand-100">
-                        Rome · 2 bed · 1 bath
+                        2 bed · 1 bath
                       </p>
                     </div>
                   </>
@@ -160,9 +160,11 @@ export function HeroSection() {
                   <ShieldCheck className="size-5" />
                 </span>
                 <div>
-                  <p className="text-caption text-ink-500">Status</p>
+                  <p className="text-caption text-ink-500">
+                    {t("hero.cardStatusLabel")}
+                  </p>
                   <p className="text-body-sm font-semibold text-ink-900">
-                    Guest-ready ✓
+                    {t("hero.cardStatus")}
                   </p>
                 </div>
               </div>
@@ -179,7 +181,7 @@ export function HeroSection() {
                 <span className="text-heading-sm font-bold text-ink-900">4.97</span>
               </div>
               <p className="mt-0.5 text-caption text-ink-500">
-                Avg. guest cleanliness
+                {t("hero.cardRatingLabel")}
               </p>
             </motion.div>
           </motion.div>

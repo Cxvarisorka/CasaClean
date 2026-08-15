@@ -1,43 +1,144 @@
-import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   User,
   Mail,
-  Phone,
   ShieldCheck,
   CalendarDays,
+  CalendarClock,
+  CreditCard,
   LogOut,
   LayoutDashboard,
   CheckCircle2,
   AlertCircle,
   CalendarCheck,
   Clock,
+  Lock,
   Sparkles,
+  XCircle,
+  Star,
 } from "lucide-react";
 import { Page } from "@/components/shared/Page";
 import { Container } from "@/components/ui/Container";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { PhoneInput } from "@/components/ui/PhoneInput";
+import { Textarea } from "@/components/ui/Textarea";
 import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
+import { Modal } from "@/components/ui/Modal";
 import { useAuth } from "@/features/admin/context";
 import { BOOKING_STATUS_META } from "@/features/admin/constants";
 import { updateProfile } from "@/features/auth/api/authApi";
-import { getMyBookings } from "@/features/booking";
+import { AccountSecurity, BillingProfile } from "@/features/auth";
+import {
+  getMyBookings,
+  cancelMyBooking,
+  getMyReviews,
+  createBookingReview,
+  MySubscriptions,
+} from "@/features/booking";
 import { useCities } from "@/features/booking/hooks/useCities";
+import { SavedCards } from "@/features/booking/components/SavedCards";
 import { useServices } from "@/features/services";
 import { Seo } from "@/seo";
 import { useTranslation } from "@/i18n";
 import { ROUTES } from "@/constants/routes";
+import { cn } from "@/lib/cn";
+import { localDateFromDateString } from "@/features/booking/utils/recurrence";
 
 /*
  * ProfilePage
  * -----------
- * The signed-in user's account home. Renders identity + account metadata and
- * lets the user edit their personal details (name, phone). The route is wrapped
- * in <RequireAuth>, so this only ever renders for a real, registered user.
+ * The signed-in user's account home. The route is wrapped in <RequireAuth>, so
+ * this only ever renders for a real, registered user.
+ *
+ * The account grew far more than two columns can carry (details, bookings,
+ * subscriptions, cards, billing, security), so the page is split into sections
+ * driven by one nav: a sticky rail on desktop, a horizontally scrollable pill
+ * row on small screens. Only the active section mounts — each one gets the full
+ * content width instead of being squeezed into a sidebar, and the queries behind
+ * the hidden sections don't run until they're opened.
+ *
+ * The active section is mirrored in the URL hash so sections are linkable, and
+ * so the existing in-page anchors keep working: MySubscriptions links to
+ * "#saved-cards", which now lives in another section — HASH_ALIASES maps such an
+ * anchor onto the section that owns it before scrolling to it.
  */
+
+const SECTIONS = [
+  { id: "account", icon: User, labelKey: "profile.nav.account" },
+  { id: "bookings", icon: CalendarCheck, labelKey: "profile.nav.bookings" },
+  { id: "subscriptions", icon: CalendarClock, labelKey: "profile.nav.subscriptions" },
+  { id: "billing", icon: CreditCard, labelKey: "profile.nav.billing" },
+  { id: "security", icon: Lock, labelKey: "profile.nav.security" },
+];
+
+const SECTION_IDS = SECTIONS.map((s) => s.id);
+
+// Anchors that live inside a section rather than being one.
+const HASH_ALIASES = { "saved-cards": "billing" };
+
+const sectionForHash = (hash) => {
+  const raw = hash.replace(/^#/, "");
+  if (!raw) return null;
+  return SECTION_IDS.includes(raw) ? raw : HASH_ALIASES[raw] || null;
+};
+
+/* One nav, two shapes: a scroll-snapping pill row until `lg`, a sticky vertical
+   rail from `lg` up. Same markup, so the active section survives a resize. */
+const SectionNav = ({ sections, active, onSelect, t }) => (
+  /* `min-w-0` is load-bearing, not defensive. The pill row below is a row of
+     `shrink-0`, `whitespace-nowrap` items, so its min-content width is the sum
+     of all five pills (~780px) — and `overflow-x-auto` does NOT reduce that for
+     a block box, it only allows scrolling once the box is narrower. Without
+     `min-w-0` that min-content becomes the grid TRACK's floor, and because the
+     layout is a single-column grid below `lg`, the content column shares the
+     same track: every section card gets stretched to ~740px inside a phone
+     viewport and the whole page scrolls sideways. */
+  <nav aria-label={t("profile.title")} className="min-w-0 lg:sticky lg:top-28">
+    {/* The negative margin must match the Container's gutter at every width it
+        applies to, or the row either clips its first pill or overflows the page. */}
+    <ul
+      className="scrollbar-none -mx-5 flex snap-x snap-mandatory gap-2 overflow-x-auto px-5 pb-2
+                 sm:-mx-6 sm:px-6
+                 lg:mx-0 lg:flex-col lg:gap-1 lg:overflow-visible lg:px-0 lg:pb-0"
+    >
+      {sections.map(({ id, icon: Icon, labelKey, badge }) => {
+        const isActive = id === active;
+        return (
+          <li key={id} className="shrink-0 snap-start lg:shrink lg:snap-align-none">
+            <button
+              type="button"
+              onClick={() => onSelect(id)}
+              aria-current={isActive ? "true" : undefined}
+              className={cn(
+                "flex w-full items-center gap-2.5 rounded-full border px-4 py-2.5 text-body-sm font-semibold transition-colors lg:rounded-2xl",
+                isActive
+                  ? "border-brand-200 bg-brand-50 text-brand-700"
+                  : "border-transparent text-ink-500 hover:bg-ink-100 hover:text-ink-900"
+              )}
+            >
+              <Icon className="size-4.5 shrink-0" aria-hidden="true" />
+              <span className="whitespace-nowrap">{t(labelKey)}</span>
+              {badge ? (
+                <span
+                  className={cn(
+                    "ml-auto hidden rounded-full px-2 py-0.5 text-caption font-semibold lg:inline-block",
+                    isActive ? "bg-brand-100 text-brand-700" : "bg-ink-100 text-ink-500"
+                  )}
+                >
+                  {badge}
+                </span>
+              ) : null}
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  </nav>
+);
 
 const initials = (name = "") =>
   name
@@ -48,19 +149,61 @@ const initials = (name = "") =>
     .join("")
     .toUpperCase() || "U";
 
-const fmtDate = (iso, locale) =>
-  iso
-    ? new Date(iso).toLocaleDateString(locale === "ka" ? "ka-GE" : locale, {
+const fmtDate = (value, locale) => {
+  const calendarDate = localDateFromDateString(value);
+  const isCalendarDate = typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+  const timestamp = !calendarDate && !isCalendarDate && value ? Date.parse(value) : Number.NaN;
+  const date = calendarDate || (!Number.isNaN(timestamp) ? new Date(timestamp) : null);
+
+  return date
+    ? date.toLocaleDateString(locale === "ka" ? "ka-GE" : locale, {
         day: "2-digit",
         month: "long",
         year: "numeric",
       })
     : "—";
+};
 
 const eur = (n) =>
   new Intl.NumberFormat("en-IE", { style: "currency", currency: "EUR" }).format(
     Number(n) || 0
   );
+
+// Cancelling this close to the appointment keeps a fee worth one hour of the
+// booked cleaning (server: utils/cancellation.util.js, CANCELLATION_WINDOW_HOURS
+// — the deployable default, which is also what the FAQ quotes). Used only to
+// warn BEFORE the customer confirms; the server decides the money either way and
+// its response reports exactly what happened.
+const CANCELLATION_WINDOW_HOURS = 24;
+
+const isLateCancellation = ({ booking_date: date, booking_time: time }) => {
+  const startsAt = localDateFromDateString(date);
+  if (!startsAt) return false;
+
+  const [hour, minute] = String(time || "00:00").split(":").map(Number);
+  startsAt.setHours(Number.isFinite(hour) ? hour : 0, Number.isFinite(minute) ? minute : 0, 0, 0);
+  return startsAt.getTime() - Date.now() < CANCELLATION_WINDOW_HOURS * 60 * 60 * 1000;
+};
+
+// A booking can only be cancelled by the customer while it's still upcoming.
+// Completed/cancelled bookings are terminal (matches the server-side guard).
+const isCancellable = (status) => status === "pending" || status === "confirmed";
+
+// Read-only five-star score (filled up to `value`).
+const Stars = ({ value, className }) => (
+  <span className={cn("inline-flex items-center gap-0.5", className)}>
+    {[1, 2, 3, 4, 5].map((n) => (
+      <Star
+        key={n}
+        aria-hidden="true"
+        className={cn(
+          "size-4",
+          n <= value ? "fill-amber-400 text-amber-400" : "fill-none text-ink-300"
+        )}
+      />
+    ))}
+  </span>
+);
 
 const ProfilePage = () => {
   const { t, locale } = useTranslation();
@@ -73,12 +216,96 @@ const ProfilePage = () => {
   const [status, setStatus] = useState("idle"); // idle | saving | saved | error
   const [errorMsg, setErrorMsg] = useState("");
 
+  // Which section is open. Seeded from the hash so a link like /profile#billing
+  // (or an in-page "#saved-cards" anchor) opens the right one on first paint.
+  const [section, setSection] = useState(
+    () => sectionForHash(window.location.hash) || "account"
+  );
+
+  useEffect(() => {
+    // Fragment links are handled by the browser, not the router, so listen to
+    // the DOM event. The target only exists once its section has rendered —
+    // hence the deferred scroll rather than relying on the native jump.
+    const syncFromHash = () => {
+      const raw = window.location.hash.replace(/^#/, "");
+      const next = sectionForHash(raw);
+      if (!next) return;
+      setSection(next);
+      requestAnimationFrame(() => {
+        document.getElementById(raw)?.scrollIntoView({ block: "start", behavior: "smooth" });
+      });
+    };
+    window.addEventListener("hashchange", syncFromHash);
+    return () => window.removeEventListener("hashchange", syncFromHash);
+  }, []);
+
+  // Nav clicks keep the hash in step (replaceState, so no history spam and no
+  // hashchange echo back into the listener above).
+  const openSection = (id) => {
+    setSection(id);
+    window.history.replaceState(null, "", `#${id}`);
+  };
+
   // Booking history for the signed-in user — straight from the database.
   const { data: bookings = [], isLoading: bookingsLoading } = useQuery({
     queryKey: ["my-bookings", user?.email],
     queryFn: getMyBookings,
     enabled: Boolean(user),
   });
+
+  // Self-cancel flow: confirm in a modal, then PATCH /booking/:id/cancel and
+  // refresh the history so the status flips to "cancelled" in place.
+  const queryClient = useQueryClient();
+  const [cancelTarget, setCancelTarget] = useState(null);
+  const cancelMutation = useMutation({
+    mutationFn: (id) => cancelMyBooking(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-bookings"] });
+      setCancelTarget(null);
+    },
+  });
+
+  // The user's own reviews → a bookingId → review map, so each completed
+  // booking shows either its rating or a "Rate" action (one review per booking).
+  const { data: myReviews = [] } = useQuery({
+    queryKey: ["my-reviews", user?.email],
+    queryFn: getMyReviews,
+    enabled: Boolean(user),
+  });
+  const reviewByBooking = useMemo(
+    () => Object.fromEntries(myReviews.map((r) => [String(r.booking_id), r])),
+    [myReviews]
+  );
+
+  // Rate flow: open a modal for a completed booking, pick stars + comment, then
+  // POST /review/booking/:id and refresh so the row shows the new rating.
+  const [rateTarget, setRateTarget] = useState(null);
+  const [rateValue, setRateValue] = useState(0);
+  const [rateHover, setRateHover] = useState(0);
+  const [rateComment, setRateComment] = useState("");
+
+  const resetRate = () => {
+    setRateTarget(null);
+    setRateValue(0);
+    setRateHover(0);
+    setRateComment("");
+  };
+
+  const reviewMutation = useMutation({
+    mutationFn: ({ id, rating, comment }) =>
+      createBookingReview(id, { rating, comment }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-reviews"] });
+      resetRate();
+    },
+  });
+
+  const openRate = (booking) => {
+    setRateTarget(booking);
+    setRateValue(0);
+    setRateHover(0);
+    setRateComment("");
+  };
 
   // Bookings store the service/city id only, so resolve display names from the
   // live catalogues (same source the booking wizard offers).
@@ -102,15 +329,29 @@ const ProfilePage = () => {
     [bookings, serviceNameById, cityNameById]
   );
 
+  // The booking count rides on the nav so the section is worth opening — the
+  // history query runs page-wide, the rest only mount with their section.
+  const navSections = useMemo(
+    () =>
+      SECTIONS.map((s) =>
+        s.id === "bookings" && history.length ? { ...s, badge: history.length } : s
+      ),
+    [history.length]
+  );
+
   if (!user) return null;
 
   const dirty =
     form.fullname !== (user.fullname || "") || form.phone !== (user.phone || "");
 
-  const onChange = (key) => (e) => {
-    setForm((f) => ({ ...f, [key]: e.target.value }));
+  // PhoneInput hands back a value, not an event (it drives two controls), so the
+  // setter is split from the event adapter the plain inputs use.
+  const onChangeValue = (key, value) => {
+    setForm((f) => ({ ...f, [key]: value }));
     if (status !== "idle") setStatus("idle");
   };
+
+  const onChange = (key) => (e) => onChangeValue(key, e.target.value);
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -119,10 +360,13 @@ const ProfilePage = () => {
     try {
       const res = await updateProfile({
         fullname: form.fullname.trim(),
+        // "" is sent deliberately: it clears the stored number.
         phone: form.phone.trim(),
       });
       const updated = res?.user ?? res ?? form;
-      updateUser({ fullname: updated.fullname, phone: updated.phone });
+      // A cleared number comes back absent, so fall back to "" rather than
+      // leaving the previous value in the auth context.
+      updateUser({ fullname: updated.fullname, phone: updated.phone ?? "" });
       setStatus("saved");
     } catch (err) {
       setErrorMsg(err?.message || t("auth.errors.generic"));
@@ -269,9 +513,7 @@ const ProfilePage = () => {
                     to={ROUTES.admin.dashboard}
                     variant="outline"
                     size="sm"
-                    fullWidth
                     leftIcon={LayoutDashboard}
-                    className="mt-6"
                   >
                     {t("profile.adminConsole")}
                   </Button>
@@ -281,8 +523,7 @@ const ProfilePage = () => {
               <Card className="p-2.5 sm:p-6">
                 <Button
                   variant="ghost"
-                  size="md"
-                  fullWidth
+                  size="sm"
                   leftIcon={LogOut}
                   onClick={logout}
                   className="text-red-600 hover:bg-red-500/10 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-500/15 dark:hover:text-red-300"
@@ -308,6 +549,26 @@ const ProfilePage = () => {
                 </p>
               </div>
             </div>
+          </Card>
+
+          {/* Nav + the active section. `minmax(0,1fr)` keeps the content column
+              from being widened past the grid by long, unbreakable strings. */}
+          <div className="mt-8 grid gap-6 lg:grid-cols-[15rem_minmax(0,1fr)] lg:items-start lg:gap-8">
+            <SectionNav
+              sections={navSections}
+              active={section}
+              onSelect={openSection}
+              t={t}
+            />
+
+            <div className="min-w-0">
+              {section === "account" && (
+                <div id="account" className="grid gap-6 xl:grid-cols-2 xl:items-start">
+                  {/* Personal information (editable) */}
+                  <Card className="p-5 sm:p-6">
+                    <h2 className="text-heading-sm text-ink-900">
+                      {t("profile.personalInfo")}
+                    </h2>
 
             <div className="mt-5 sm:mt-6">
               {bookingsLoading ? (
@@ -389,9 +650,143 @@ const ProfilePage = () => {
                 </ul>
               )}
             </div>
-          </Card>
+          </div>
         </Container>
       </section>
+
+      {/* Cancel confirmation */}
+      <Modal
+        open={Boolean(cancelTarget)}
+        onClose={() => !cancelMutation.isPending && setCancelTarget(null)}
+        title={t("profile.cancelTitle")}
+        size="sm"
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              onClick={() => setCancelTarget(null)}
+              disabled={cancelMutation.isPending}
+            >
+              {t("profile.keepBooking")}
+            </Button>
+            <Button
+              onClick={() => cancelMutation.mutate(cancelTarget._id)}
+              loading={cancelMutation.isPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {t("profile.cancelConfirm")}
+            </Button>
+          </>
+        }
+      >
+        {cancelTarget && (
+          <p className="text-body-sm text-ink-600">
+            {t("profile.cancelBody", {
+              service: cancelTarget.service_name,
+              date: fmtDate(cancelTarget.booking_date, locale),
+            })}
+          </p>
+        )}
+        {/* Money is about to be kept — say so before they confirm, not after. */}
+        {cancelTarget && isLateCancellation(cancelTarget) && (
+          <p className="mt-3 text-body-sm text-amber-700">
+            {t("profile.cancelFeeWarning", { hours: CANCELLATION_WINDOW_HOURS })}
+          </p>
+        )}
+        {cancelMutation.isError && (
+          <p className="mt-3 text-body-sm text-red-600">
+            {t("profile.cancelError")}
+          </p>
+        )}
+      </Modal>
+
+      {/* Rate a completed booking */}
+      <Modal
+        open={Boolean(rateTarget)}
+        onClose={() => !reviewMutation.isPending && resetRate()}
+        title={t("profile.rateTitle")}
+        size="md"
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              onClick={resetRate}
+              disabled={reviewMutation.isPending}
+            >
+              {t("admin.form.cancel")}
+            </Button>
+            <Button
+              onClick={() =>
+                reviewMutation.mutate({
+                  id: rateTarget._id,
+                  rating: rateValue,
+                  comment: rateComment.trim(),
+                })
+              }
+              loading={reviewMutation.isPending}
+              disabled={rateValue < 1 || !rateComment.trim()}
+            >
+              {t("profile.submitReview")}
+            </Button>
+          </>
+        }
+      >
+        {rateTarget && (
+          <div className="space-y-5">
+            <p className="text-body-sm text-ink-600">
+              {t("profile.rateSubtitle", {
+                service: rateTarget.service_name,
+                date: fmtDate(rateTarget.booking_date, locale),
+              })}
+            </p>
+
+            <div>
+              <label className="mb-1.5 block text-body-sm font-semibold text-ink-800">
+                {t("profile.ratingLabel")}
+              </label>
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button
+                    type="button"
+                    key={n}
+                    onMouseEnter={() => setRateHover(n)}
+                    onMouseLeave={() => setRateHover(0)}
+                    onClick={() => setRateValue(n)}
+                    aria-label={t("profile.rateStars", { count: n })}
+                    aria-pressed={rateValue === n}
+                    className="rounded-md p-1 transition-transform hover:scale-110"
+                  >
+                    <Star
+                      className={cn(
+                        "size-8 transition-colors",
+                        (rateHover || rateValue) >= n
+                          ? "fill-amber-400 text-amber-400"
+                          : "fill-none text-ink-300"
+                      )}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <Textarea
+              label={t("profile.commentLabel")}
+              rows={4}
+              maxLength={500}
+              value={rateComment}
+              onChange={(e) => setRateComment(e.target.value)}
+              placeholder={t("profile.commentPlaceholder")}
+              required
+            />
+
+            {reviewMutation.isError && (
+              <p className="text-body-sm text-red-600">
+                {reviewMutation.error?.message || t("profile.reviewError")}
+              </p>
+            )}
+          </div>
+        )}
+      </Modal>
     </Page>
   );
 };

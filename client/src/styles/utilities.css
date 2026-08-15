@@ -77,6 +77,16 @@
   overflow: hidden;
 }
 
+/* Scrollable without the bar — for pill rows / carousels that already show
+   their overflow through partially visible items. Not a Tailwind built-in. */
+@utility scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 /* Edge-fade mask for marquees / carousels */
 @utility mask-fade-x {
   mask-image: linear-gradient(

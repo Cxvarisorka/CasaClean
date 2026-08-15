@@ -9,7 +9,7 @@ This document describes everything implemented under the `client/` folder: the m
 The client is a **production-grade marketing and booking application** for **CasaClean** — a premium turnover-cleaning service for vacation rentals (Airbnb hosts, property managers, short-term rental operators). It is not a minimal landing page; it is a full multi-route SPA with:
 
 - A narrative **home page** composed of eleven independent sections
-- **Services**, **pricing**, **about**, **FAQ**, **careers**, and **blog** (list + dynamic post routes)
+- **Services**, **about**, **FAQ**, and **careers**
 - A **multi-step booking wizard** with live quote calculation and API submission
 - **Contact** and **newsletter** lead capture
 - **Sign-in / sign-up** auth UI (wired to backend JWT + httpOnly cookies)
@@ -79,7 +79,7 @@ client/
     ├── seo/                # Seo, MetaTags, SchemaMarkup, structured-data builders
     ├── animations/         # Motion variants + easing tokens
     ├── i18n/               # Provider, locales, useTranslation
-    ├── constants/          # routes, navigation, metadata, pricing, faq
+    ├── constants/          # routes, navigation, metadata
     ├── data/               # Local CMS-style content modules
     ├── utils/              # Pure helpers (formatting, SEO, slugs)
     ├── styles/             # globals, typography, utilities, animations
@@ -130,7 +130,7 @@ ErrorBoundary
 
 ### Single source of truth (`constants/routes.js`)
 
-All path strings are defined once as `ROUTES` (including parameterized helpers `blogPost(slug)`, `serviceDetail(slug)`). Navigation, links, and `routeConfig` import from here — no duplicated path literals.
+All path strings are defined once as `ROUTES` (including the parameterized helper `serviceDetail(slug)`). Navigation, links, and `routeConfig` import from here — no duplicated path literals.
 
 ### Route table (`app/router/routeConfig.js`)
 
@@ -138,7 +138,7 @@ Every page is **`React.lazy` imported** — one async chunk per route. Routes ar
 
 | Group | Layout | Routes |
 |-------|--------|--------|
-| `MAIN_ROUTES` | `MainLayout` (Navbar + Footer) | `/`, `/services`, `/pricing`, `/about`, `/contact`, `/faq`, `/careers`, `/blog`, `/blog/:slug` |
+| `MAIN_ROUTES` | `MainLayout` (Navbar + Footer) | `/`, `/services`, `/services/:slug`, `/about`, `/contact`, `/faq`, `/careers`, `/privacy`, `/terms` |
 | `FOCUSED_ROUTES` | `EmptyLayout` (minimal header) | `/booking` |
 | `BARE_ROUTES` | None (page owns chrome) | `/signin`, `/signup` |
 | `FALLBACK_ROUTE` | `MainLayout` | `*` → NotFound |
@@ -169,13 +169,12 @@ Pages are **thin orchestrators**: they set `<Seo>` / `PAGE_META`, optionally inj
 |------|------|------------|
 | `HomePage` | `/` | 11 sections + `CtaSection`; `localBusinessSchema` + FAQ schema |
 | `ServicesPage` | `/services` | Service catalog from `data/services`; `ServiceCard` feature |
-| `PricingPage` | `/pricing` | Plans from `data/pricing`; `PricingCard` |
+| `ServiceDetailPage` | `/services/:slug` | Full service profile (inclusions, add-ons, coverage) via `useService`; every CTA links to `/booking?service=<id>` so the wizard opens pre-selected. Service + Breadcrumb schema |
 | `AboutPage` | `/about` | Company story from `data/company` |
 | `ContactPage` | `/contact` | `ContactForm`, `NewsletterForm` |
 | `FaqPage` | `/faq` | Full FAQ + accordion; FAQ schema |
 | `CareersPage` | `/careers` | Open roles from `data/careers` |
-| `BlogPage` | `/blog` | Post grid via `useBlogPosts` |
-| `BlogPostPage` | `/blog/:slug` | Single post; Article + Breadcrumb schema |
+| `PrivacyPage` / `TermsPage` | `/privacy`, `/terms` | Two one-line wrappers over the shared `LegalDocument` renderer (see §6.1) |
 | `BookingPage` | `/booking` | Hosts `BookingWizard` inside `EmptyLayout` |
 | `SignInPage` / `SignUpPage` | `/signin`, `/signup` | `AuthShell`, RHF + localized Zod schemas |
 | `NotFoundPage` | `*` | 404 within marketing chrome |
@@ -198,6 +197,18 @@ Composed in narrative order on `HomePage`:
 
 Each section is independently maintainable and can be reordered or A/B tested without touching a monolithic home component.
 
+### 6.1 Legal pages (`pages/Legal/` + `data/legal/`)
+
+The privacy policy and terms of service are **content as data**, rendered by one component:
+
+- `data/legal/en.js` and `data/legal/it.js` hold each document as `{ title, updated, intro, sections[] }`, where a section is `{ id, heading, blocks[] }` and a block is `{ type: "p" | "ul" | "table" }`. Company identity is read from `SITE` rather than retyped, so registered details can't drift from the rest of the site.
+- `pages/Legal/LegalDocument.jsx` renders any of them: hero, a table of contents **derived** from the sections (so it can't fall out of step with the headings), and the blocks. `PrivacyPage`/`TermsPage` are one-liners passing `kind`, which keeps one lazy chunk per route.
+- Section `id`s are identical across languages, so a deep link (`/terms#pricing`) survives a language switch.
+
+**Two languages, not five.** The UI ships in five locales; the legal documents are authored in English and Italian only. An operative document translated loosely is worse than one honestly labelled, so `data/legal/index.js` resolves the reader's locale to a *published* one and returns `isFallback`, which the page uses to show an explicit "published in English and Italian only" notice. This is why the documents don't go through `t()` — the i18n fallback is silent by design, and here the fallback has to be disclosed. The Italian version is the one that prevails (see the Language clause), so substantive edits start there.
+
+`data/legal/legal.test.js` locks the two languages to the same structure (section ids and order, block types, bullet and table-row counts), because the real failure mode is a clause added to one language and forgotten in the other. `pages/Legal/LegalDocument.test.jsx` covers the wiring: right language served, fallback notice shown only when it should be, ToC matching the sections.
+
 ---
 
 ## 7. Feature modules (`src/features/`)
@@ -219,9 +230,13 @@ The most complex front-end domain — a **five-step wizard** (property → prefe
 
 **Per-step validation:** `BOOKING_STEPS[].fields` lists which schema keys to `trigger()` before `next()`. Full schema validates on final submit.
 
+**Step guards:** a rule that spans fields *and* fetched data can't live in the flat schema, so a step may register one with `useStepGuard(stepId, fn)` (BookingContext) and `next()` refuses while it returns false. `ScheduleStep` uses it for the start time: the customer types any minute (12:20), and `utils/timeWindow.js` validates it against the chosen city's opening hours and the booking's duration — the same rules `assertBookingWindow` enforces server-side.
+
+**Duration:** `hours` is a whole or half hour (1.5 = 90 minutes), chosen from `durationChoices()` and always displayed through `utils/duration.js` `formatDuration(t, hours)` — "1 h 30 min", never "1.5". The admin panel imports the same helper from the feature barrel.
+
 **Step components:** `PropertyStep`, `PreferencesStep`, `ScheduleStep`, `ContactStep`, `ReviewStep`, `ConfirmationStep`.
 
-**UI helpers:** `BookingProgress`, `BookingSummary` (live quote sidebar), `ToggleCard`, `OptionGroup`.
+**UI helpers:** `BookingProgress`, `BookingSummary` (live quote sidebar), `ToggleCard`.
 
 **Pricing engine:** `total = rate × hours × cleaners + add-ons` where rate comes from `data/services` by `serviceId`; add-ons from `ADDITIONAL_SERVICES` constant.
 
@@ -247,14 +262,10 @@ The most complex front-end domain — a **five-step wizard** (property → prefe
 
 Password rules on sign-up: min 8 chars, uppercase, digit, confirm match.
 
-### 7.4 Blog (`features/blog/`)
+### 7.4 Services and testimonials
 
-- `BlogCard` presentation component
-- `useBlogPosts`, `useBlogPost` — hooks over local `data/blog` (CMS-ready shape)
-
-### 7.5 Services, pricing, testimonials
-
-- `ServiceCard`, `PricingCard`, `TestimonialsCarousel` — reusable cards/carousels fed by `data/` modules
+- `ServiceCard`, `TestimonialsCarousel` — reusable cards/carousels fed by `data/` modules
+- Prices are surfaced per service on `ServiceCard` and `ServiceDetailPage`, read from the live catalogue via `useServices` — there is no separate pricing page.
 
 ---
 
@@ -279,12 +290,13 @@ Supporting sheets: `typography.css` (type scale utilities), `utilities.css` (lay
 |-----------|-------------|
 | `Button` | Variants, sizes, `loading`, `leftIcon` / `rightIcon` |
 | `Input`, `Textarea`, `Select` | Form controls with error states |
+| `PhoneInput` | Country picker + national number; controlled (`value`/`onChange` with the joined `+39…` string, so react-hook-form drives it through `<Controller>`, not `register`). Country list and parsing live in `lib/phone.js` |
 | `Checkbox`, `Radio`, `Switch` | Boolean / single-choice inputs |
 | `Card`, `Badge`, `Image` | Content containers and media |
 | `Accordion`, `Tabs` | FAQ, settings-style UI |
 | `Modal`, `Drawer` | Overlays |
 | `Tooltip` | Contextual help |
-| `Pagination` | Blog/list paging |
+| `Pagination` | List paging |
 | `Spinner`, `Skeleton`, `EmptyState` | Loading and empty UX |
 | `Container` | Max-width page gutters |
 
@@ -344,14 +356,13 @@ Static content modules act as a **local CMS** until a headless CMS or API drives
 | Module | Content |
 |--------|---------|
 | `services.js` | Cleaning SKUs, rates, descriptions |
-| `pricing.js` | Plan tiers |
 | `faq.js` | Q&A pairs |
 | `testimonials.js` | Reviews for carousel |
-| `blog.js` | Posts with slugs, excerpts, body |
 | `cities.js` | Service areas for booking |
 | `company.js`, `careers.js`, `stats.js`, `process.js` | About, jobs, metrics, timeline |
+| `legal/` | Privacy policy and terms of service, in English and Italian (§6.1) |
 
-`utils/generateSlug.js` supports blog URL consistency. Pages import from `@/data` or specific files — never inline long copy in route components.
+`utils/generateSlug.js` supports service URL consistency. Pages import from `@/data` or specific files — never inline long copy in route components.
 
 ---
 
@@ -366,7 +377,7 @@ Static content modules act as a **local CMS** until a headless CMS or API drives
 
 ### Endpoints map (`endpoints.js`)
 
-Centralized paths for `auth`, `services`, `cities`, `bookings`, `leads`, `contact`, `newsletter`, `blog` — parameterized routes as functions (`detail(id)`).
+Centralized paths for `auth`, `contact` and `newsletter` — parameterized routes as functions (`detail(id)`). Booking, payment and admin features keep their paths in their own `features/<domain>/api/*Api.js`.
 
 ### Interceptors (`interceptors.js`)
 
@@ -402,8 +413,8 @@ Combines `MetaTags` (title, description, canonical, Open Graph, Twitter) and opt
 Pure functions (testable, framework-free):
 
 - `organizationSchema`, `websiteSchema` — global (in `App.jsx`)
-- `localBusinessSchema`, `faqSchema` — home / pricing / FAQ
-- `serviceSchema`, `articleSchema`, `breadcrumbSchema` — services / blog
+- `localBusinessSchema`, `faqSchema` — home / FAQ
+- `serviceSchema`, `breadcrumbSchema` — services
 
 Site constants from `constants/metadata.js` (`SITE`, `PAGE_META`).
 
@@ -486,7 +497,6 @@ npm run lint     # ESLint (React hooks + refresh plugins)
 
 - `DashboardLayout` is scaffolded but **not registered** in `routeConfig`
 - `ROUTES.privacy` and `ROUTES.terms` exist in constants but **no pages** are wired
-- `serviceDetail(slug)` route constant exists; dedicated service detail **page route** may be future work
 - Google OAuth button is UI-ready; full OAuth flow depends on backend configuration
 
 These gaps are useful when planning the next front-end milestones without surprises.

@@ -70,7 +70,7 @@ export function Footer() {
             <Mail className="size-4.5 text-brand-400" /> {SITE.email}
           </a>
           <a
-            href="tel:+390612345678"
+            href={SITE.phoneHref}
             className="flex items-center gap-3 text-body-sm text-ink-400 transition-colors hover:text-white"
           >
             <Phone className="size-4.5 text-brand-400" /> {SITE.phone}

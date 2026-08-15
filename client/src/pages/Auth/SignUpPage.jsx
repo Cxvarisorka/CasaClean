@@ -1,11 +1,12 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertCircle, ArrowRight, CheckCircle2, Lock, Mail, MailCheck, Phone, User } from "lucide-react";
+import { AlertCircle, ArrowRight, CheckCircle2, Lock, Mail, MailCheck, User } from "lucide-react";
 import { motion } from "framer-motion";
 import { Page } from "@/components/shared/Page";
 import { Input } from "@/components/ui/Input";
+import { PhoneInput } from "@/components/ui/PhoneInput";
 import { Button } from "@/components/ui/Button";
 import { AuthShell, GoogleButton, useSignUp, makeSignUpSchema } from "@/features/auth";
 import { Seo } from "@/seo";
@@ -26,6 +27,7 @@ const SignUpPage = () => {
 
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors },
   } = useForm({
@@ -97,13 +99,25 @@ const SignUpPage = () => {
             error={errors.email?.message}
             {...register("email")}
           />
-          <Input
-            label={t("auth.fields.phone")}
-            type="tel"
-            leftIcon={Phone}
-            placeholder={t("auth.placeholders.phone")}
-            error={errors.phone?.message}
-            {...register("phone")}
+          {/* Optional — see makeSignUpSchema. The booking wizard asks for it
+              when it is actually needed, and saves nobody a second visit here. */}
+          <Controller
+            name="phone"
+            control={control}
+            render={({ field }) => (
+              <PhoneInput
+                label={`${t("auth.fields.phone")} (${t("common.optional")})`}
+                hint={t("auth.signup.phoneHint")}
+                countryLabel={t("common.countryCode")}
+                placeholder={t("auth.placeholders.phone")}
+                error={errors.phone?.message}
+                name={field.name}
+                value={field.value}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                ref={field.ref}
+              />
+            )}
           />
           <div className="grid gap-5 sm:grid-cols-2">
             <Input

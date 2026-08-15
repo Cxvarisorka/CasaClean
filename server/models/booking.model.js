@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 
+const { isValidDurationHours } = require('../utils/duration.util');
+
 // Booking
 // -------
 // A single cleaning reservation made by a signed-in user. Field names use
@@ -13,12 +15,16 @@ const mongoose = require('mongoose');
 // must always resolve to a real, enabled service and city (validated in the
 // controller via resolveServiceAndCity before the document is created).
 const bookingSchema = new mongoose.Schema({
-  // Owner of the booking. Bookings now require authentication, so every booking
-  // is tied to the user who created it (used for "my bookings" and auditing).
+  // Owner of the booking. For customer self-service bookings this is always the
+  // signed-in user (set by the controller, used for "my bookings" and auditing).
+  // It is intentionally OPTIONAL: an admin may create a booking on a customer's
+  // behalf without linking it to a registered account (walk-in / phone booking),
+  // in which case the customer identity lives only in the customerName/email/phone
+  // fields below. The controller enforces that customer self-bookings are always
+  // owned by req.user.
   user: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: [true, "User ID is required!"]
+    ref: 'User'
   },
   serviceId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -76,24 +82,69 @@ const bookingSchema = new mongoose.Schema({
     type: String,
     required: [true, "Booking time is required!"]
   },
+  // Whole or half hours — 1.5 is a valid 90-minute booking. The step rule lives
+  // in utils/duration.util.js so the Zod layer and this one can't drift.
   hours: {
     type: Number,
     required: [true, "Working hours is required!"],
-    min: [1, "A booking must be at least 1 hour."]
+    min: [1, "A booking must be at least 1 hour."],
+    validate: {
+      validator: isValidDurationHours,
+      message: "A booking's duration must be a whole or half hour (e.g. 1, 1.5, 2)."
+    }
   },
   cleaners: {
     type: Number,
     required: [true, "Cleaners count is required!"],
     min: [1, "A booking must have at least 1 cleaner."]
   },
+  // What the customer actually owes, after the VAT treatment below has been
+  // applied to the gross catalogue price. For an individual this IS the
+  // catalogue price; for a reverse-charge business it's the net.
   totalAmount: {
     type: Number,
     required: [true, "Total amount is required!"],
     min: [0, "Total amount can't be negative."]
   },
+  // --- VAT treatment (snapshot) -----------------------------------------------
+  // Resolved server-side from the customer's stored, Stripe-verified profile at
+  // pricing time (utils/tax.util.js) and frozen here, so the invoice states what
+  // was actually charged rather than re-deriving it from configuration that may
+  // have changed since. `netAmount + vatAmount === totalAmount` in both
+  // treatments. Absent on bookings made before VAT handling existed — readers
+  // fall back to splitting totalAmount at the configured rate.
+  tax: {
+    // 'standard'       — charged the catalogue price plus VAT on top.
+    // 'reverse-charge' — verified EU business; no VAT added to the charge, and
+    //                    it is accounted for by the customer.
+    treatment: {
+      type: String,
+      enum: ['standard', 'reverse-charge'],
+      default: 'standard'
+    },
+    customerType: {
+      type: String,
+      enum: ['individual', 'business'],
+      default: 'individual'
+    },
+    // The customer's VAT number as it read at booking time (reverse charge only)
+    // — an invoice must print the number the relief was granted against.
+    vatNumber: { type: String, default: '' },
+    // Registered company name at booking time; the invoice is addressed to this
+    // rather than the contact's personal name when it's set.
+    companyName: { type: String, default: '' },
+    // The rate catalogue prices are taxed at, as it stood when this booking was
+    // priced. Kept so a later rate change can't restate a completed transaction.
+    catalogueVatRate: { type: Number, default: 0, min: 0 },
+    // The rate actually charged: catalogueVatRate normally, 0 on reverse charge.
+    vatRate: { type: Number, default: 0, min: 0 },
+    netAmount: { type: Number, min: 0 },
+    vatAmount: { type: Number, min: 0, default: 0 }
+  },
   notes: {
     type: String,
     trim: true,
+    maxlength: [2000, "Notes can't exceed 2000 characters."],
     default: null
   },
   // Add-on requests (e.g. "Fridge Cleaning"). References to SpecialRequest
@@ -103,10 +154,26 @@ const bookingSchema = new mongoose.Schema({
     type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'SpecialRequest' }],
     default: []
   },
+  // Catalogue-backed tools the customer asks the cleaners to bring (e.g. "Mop",
+  // "Vacuum cleaner"). References to CleaningTool documents so each item is a
+  // real, priced entry — resolved fail-closed against the chosen service before
+  // the booking is created (resolveCleaningTools in booking.service.js).
+  cleaningTools: {
+    type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'CleaningTool' }],
+    default: []
+  },
   // Equipment/consumables the customer asks the cleaners to bring. Still a free
   // list of slugs from the UI (no catalogue model needed for these yet).
   supplies: {
     type: [String],
+    default: []
+  },
+  // Cleaning staff assigned to this booking. Admin-managed only — references to
+  // Worker documents so each entry is a real staff member. Customers never set
+  // this; the controller only honours it for admin requests (resolveWorkers
+  // validates the ids before they're stored).
+  workers: {
+    type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Worker' }],
     default: []
   },
   status: {
@@ -114,20 +181,76 @@ const bookingSchema = new mongoose.Schema({
     enum: ['pending', 'confirmed', 'cancelled', 'completed'],
     default: 'confirmed'
   },
-  // --- Payment placeholders ---------------------------------------------------
-  // Payments are NOT implemented yet, so these are optional and server-managed
-  // (never accepted from the public create endpoint). They are kept so a future
-  // payment integration can populate them without another migration. When/if a
-  // payment intent id is set it must be unique (one booking per payment) — see
-  // the sparse unique index below.
-  // No `default: null`: the sparse unique index below only ignores documents
-  // where this field is ABSENT, not where it's null. Defaulting to null would
-  // put every payment-less booking into the index as null and collide on the
-  // second one — so we leave the field unset until a payment id actually exists.
+  // --- Payment fields ---------------------------------------------------------
+  // All server-managed (never accepted from the public create endpoint). For a
+  // customer online booking they're populated when the PaymentIntent succeeds
+  // (promotePendingBooking); for an admin walk-in/phone booking the payment is
+  // recorded as 'manual' with no Stripe involvement.
+  //
+  // No `default: null` on paymentIntentId: the sparse unique index below only
+  // ignores documents where this field is ABSENT, not where it's null.
+  // Defaulting to null would put every manual/payment-less booking into the
+  // index as null and collide on the second one — so the field stays unset until
+  // a real payment id exists.
   paymentIntentId: {
     type: String
-    
   },
+  // Present only for bookings created from a recurring subscription. Like the
+  // payment intent field, leave this absent (rather than defaulting to null)
+  // for one-off/manual bookings.
+  subscriptionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Subscription'
+  },
+  // How the booking was paid for: an online card charge, or a manual/offline
+  // (cash/invoice) booking entered by an admin.
+  paymentMethod: {
+    type: String,
+    enum: ['card', 'manual'],
+    default: 'card'
+  },
+  // Lifecycle of the money: unpaid (no charge yet), paid (captured), refunded
+  // (charge reversed on cancellation), partially-refunded (a late cancellation
+  // that kept the one-hour fee — see utils/cancellation.util.js), or manual
+  // (offline booking, no Stripe).
+  //
+  // 'partially-refunded' is deliberately its own state rather than 'refunded':
+  // money was kept, so an invoice must not be stamped as reversed and the
+  // booking must not read as if the customer got everything back. It also can't
+  // be 'paid', or a support view would show a charge that no longer stands.
+  paymentStatus: {
+    type: String,
+    enum: ['unpaid', 'paid', 'refunded', 'partially-refunded', 'manual'],
+    default: 'unpaid'
+  },
+  // Amount actually captured, in decimal euros (mirrors totalAmount at pay time).
+  amountPaid: {
+    type: Number,
+    min: [0, "Amount paid can't be negative."]
+  },
+  currency: {
+    type: String,
+    default: 'eur'
+  },
+  // Stripe refund id, set when a paid booking is cancelled & refunded.
+  refundId: {
+    type: String
+  },
+  // How much was actually returned, in decimal euros. Equals totalAmount for a
+  // full refund; for a late cancellation it is the charge minus the retained
+  // one-hour fee, so `totalAmount - refundAmount` is what the customer was
+  // billed for cancelling.
+  refundAmount: {
+    type: Number,
+    min: [0, "Refund amount can't be negative."]
+  },
+  paidAt: {
+    type: Date
+  },
+  refundedAt: {
+    type: Date
+  },
+  // Raw Stripe status mirror (e.g. 'succeeded' / 'refunded') for support/debug.
   stripeStatus: {
     type: String,
     default: ''
@@ -135,15 +258,18 @@ const bookingSchema = new mongoose.Schema({
 }, { timestamps: true, collection: 'bookings' });
 
 // --- Indexes ----------------------------------------------------------------
+// Admin booking list — the whole collection sorted newest-first (no filter),
+// so a standalone createdAt index backs the sort instead of an in-memory sort.
+bookingSchema.index({ createdAt: -1 });
 // "My bookings" — list a user's bookings, newest first.
 bookingSchema.index({ user: 1, createdAt: -1 });
 // Admin filtering by status and/or date.
 bookingSchema.index({ status: 1, bookingDate: 1 });
-// Look-ups / support by customer email.
-bookingSchema.index({ customerEmail: 1 });
 // Idempotency guard: a given payment can back at most one booking. `sparse` so
 // the many bookings without a payment id (current state) don't collide on null.
 bookingSchema.index({ paymentIntentId: 1 }, { unique: true, sparse: true });
+// Subscription detail/history queries fetch each cycle newest first.
+bookingSchema.index({ subscriptionId: 1, createdAt: -1 });
 
 const Booking = mongoose.model('Booking', bookingSchema);
 module.exports = Booking;

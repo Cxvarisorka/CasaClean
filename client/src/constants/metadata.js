@@ -5,82 +5,105 @@
  * from here so every page ships complete, consistent meta without duplication.
  */
 
+/*
+ * The real registered details of the company behind the brand. They are stated
+ * once here because they are load-bearing in three different places — the
+ * footer/contact channels, the schema.org Organization block and the legal
+ * documents' identity table — and a phone number that disagrees between them is
+ * worse than no phone number at all.
+ */
+const PHONE = "+39 347 5596318";
+
 export const SITE = {
   name: "CasaClean",
-  legalName: "CasaClean S.r.l.",
-  tagline: "Premium turnover cleaning for vacation rentals",
+  legalName: "VACANZE ROMANE S.R.L.S.",
+  tagline: "Professional cleaning services in Italy",
   description:
-    "CasaClean delivers guest-ready turnovers for Airbnb hosts, vacation rental owners and property managers — cleaning, inspections, linens and restocking, on schedule, every time.",
+    "CasaClean offers professional cleaning services for apartments, holiday homes, Airbnb properties, hotels, offices and commercial spaces — regular, deep, move-in/move-out and emergency cleaning, booked online in about a minute.",
   url: import.meta.env.VITE_SITE_URL || "https://casaclean.com",
   locale: "en_US",
-  email: "hello@casaclean.com",
-  phone: "+39 06 1234 5678",
+  email: "info@casaclean.it",
+  phone: PHONE,
+  // `tel:` needs the dialable form, so it is derived from the displayed number
+  // rather than written out a second time and left to drift.
+  phoneHref: `tel:${PHONE.replace(/[^\d+]/g, "")}`,
   address: {
     street: "Via Giovanni Giorgi 5",
-    city: "Rome",
-    region: "Lazio",
-    postalCode: "00197",
+    city: "Roma",
+    region: "RM",
+    postalCode: "00149",
     country: "IT",
   },
   ogImage: "/og-image.png",
-  twitter: "@casaclean",
   founded: "2021",
+  /*
+   * Only profiles the business actually owns. This list is the single source
+   * for the footer icons and for schema.org `sameAs`, which is a claim of
+   * identity — pointing it at a handle we don't control (or at a network we
+   * aren't on) is a false claim, so a platform is added here only once its
+   * profile exists. There is deliberately no X/Twitter entry, which is also
+   * why no `twitter:site` handle is asserted in the card meta.
+   */
+  social: {
+    instagram: "https://www.instagram.com/casaclean.it",
+    facebook: "https://www.facebook.com/share/187saPSK29/",
+  },
 };
 
 /** Per-page SEO presets keyed by a stable id used in each page component. */
 export const PAGE_META = {
   home: {
-    title: "CasaClean — Premium Turnover Cleaning for Vacation Rentals",
+    title: "CasaClean — Professional Cleaning Services in Italy",
     description: SITE.description,
     path: "/",
   },
   services: {
-    title: "Services — Turnovers, Linens, Restocking & Inspections",
+    title: "Services — Regular, Deep, Office & Holiday Home Cleaning",
     description:
-      "Full-service short-term rental operations: guest-ready turnovers, hotel-grade linen, supply restocking, and 50-point inspections handled by vetted professionals.",
+      "Every kind of clean under one roof: regular cleaning, deep cleaning, move-in/move-out, office & commercial, holiday home / Airbnb / hotel and emergency cleaning — by qualified staff in every city we serve.",
     path: "/services",
   },
-  pricing: {
-    title: "Pricing — Transparent Per-Turnover Plans",
-    description:
-      "Simple, transparent pricing for vacation rental turnovers. No contracts, no surprises — pay per clean or save with a managed plan.",
-    path: "/pricing",
-  },
   about: {
-    title: "About CasaClean — Operations Built for Hosts",
+    title: "About CasaClean — Professional Cleaning in Italy",
     description:
-      "We're a team of hospitality and operations specialists obsessed with five-star guest-ready turnovers for short-term rentals.",
+      "CasaClean provides high-quality cleaning for apartments, holiday homes, Airbnb properties, hotels, offices and commercial spaces. A brand managed by Vacanze Romane S.r.l.s.",
     path: "/about",
   },
   contact: {
     title: "Contact CasaClean — Talk to Our Team",
     description:
-      "Questions about turnovers, coverage areas or pricing? Reach the CasaClean team and we'll respond within one business day.",
+      "Questions about coverage, pricing or cleaning for your office? Reach the CasaClean team and we'll respond within one business day.",
     path: "/contact",
   },
   faq: {
-    title: "FAQ — Answers for Hosts & Property Managers",
+    title: "FAQ — Answers About Booking, Pricing & Quality",
     description:
-      "Everything you need to know about CasaClean turnovers: scheduling, pricing, supplies, linens, damage reporting and guarantees.",
+      "Everything you need to know about CasaClean: booking, supplies, payment, cancellation, vetting and our Spotless Guarantee.",
     path: "/faq",
   },
   careers: {
     title: "Careers — Join the CasaClean Team",
     description:
-      "Build the operating system for short-term rental operations. Explore open roles across cleaning operations, engineering and customer success.",
+      "Fair pay, paid training and real growth paths. Explore open roles across cleaning operations, engineering and customer success.",
     path: "/careers",
   },
   booking: {
-    title: "Book a Turnover — Get a Guest-Ready Clean",
+    title: "Book a Cleaning — Vetted Professionals, Instant Price",
     description:
-      "Schedule a professional vacation rental turnover in minutes. Tell us about your property, pick a time, and we'll handle the rest.",
+      "Schedule a professional cleaning in minutes. Tell us about your place, pick a time, see the exact price and confirm — it's that simple.",
     path: "/booking",
   },
-  blog: {
-    title: "Blog — Short-Term Rental Operations & Insights",
+  privacy: {
+    title: "Privacy Policy — CasaClean",
     description:
-      "Playbooks, checklists and data-driven insights to help hosts and property managers run flawless short-term rental operations.",
-    path: "/blog",
+      "What personal data CasaClean collects when you book a cleaning, why we collect it, who we share it with, how long we keep it and how to exercise your GDPR rights.",
+    path: "/privacy",
+  },
+  terms: {
+    title: "Terms of Service — CasaClean",
+    description:
+      "The terms governing bookings with CasaClean: how a booking is formed, prices and VAT, recurring plans, cancellations and refunds, your right of withdrawal, our guarantee and liability.",
+    path: "/terms",
   },
   notFound: {
     title: "Page Not Found — CasaClean",

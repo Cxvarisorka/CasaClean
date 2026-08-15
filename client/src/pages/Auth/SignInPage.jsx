@@ -92,7 +92,7 @@ const SignInPage = () => {
           <div className="flex items-center justify-between">
             <Checkbox label={t("auth.fields.rememberMe")} {...register("remember")} />
             <Link
-              to={ROUTES.contact}
+              to={ROUTES.forgotPassword}
               className="text-body-sm font-semibold text-brand-600 hover:text-brand-700"
             >
               {t("auth.signin.forgot")}

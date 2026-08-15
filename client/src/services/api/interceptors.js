@@ -19,7 +19,22 @@ export function normalizeError(error) {
     };
   }
 
-  // Request made but no response (network/CORS/timeout).
+  // We gave up waiting, which is not the same thing as an unreachable server:
+  // the request may well have arrived and still be running. Saying "check your
+  // connection" here sends the user hunting for a fault on their end, and for a
+  // non-idempotent call ("send this email") it also implies nothing happened —
+  // which we do not know. Report the uncertainty instead of guessing.
+  if (error.code === "ECONNABORTED" || error.code === "ETIMEDOUT") {
+    return {
+      status: 0,
+      message:
+        "The server took too long to respond, so we stopped waiting. The request may still have gone through — check before retrying.",
+      code: "TIMEOUT",
+      fields: null,
+    };
+  }
+
+  // Request made but no response at all (network down, CORS, DNS).
   if (error.request) {
     return {
       status: 0,
@@ -44,6 +59,23 @@ export function attachInterceptors(client) {
     (config) => {
       // Hook point for correlation ids / auth headers if needed later.
       config.metadata = { startedAt: Date.now() };
+
+      // A FormData payload (the service cover-image upload) must go out as
+      // multipart/form-data with a boundary only the browser can generate.
+      // The instance sets `Content-Type: application/json` as a default, and
+      // axios 1.x takes that literally: transformRequest sees a JSON content
+      // type on a FormData body and serialises it with formDataToJSON, so the
+      // request arrives as JSON with every field flattened to a string and the
+      // file dropped — which the API's strict schema rejects as a validation
+      // error. Clearing the header lets axios/the browser negotiate multipart.
+      if (typeof FormData !== "undefined" && config.data instanceof FormData) {
+        if (typeof config.headers?.delete === "function") {
+          config.headers.delete("Content-Type");
+        } else if (config.headers) {
+          delete config.headers["Content-Type"];
+        }
+      }
+
       return config;
     },
     (error) => Promise.reject(normalizeError(error))

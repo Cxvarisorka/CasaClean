@@ -12,21 +12,21 @@ export const FAQ_CATEGORIES = [
     items: [
       {
         id: "q1",
-        question: "How quickly can you turn over my property?",
+        question: "Do I need to be home during the cleaning?",
         answer:
-          "Most turnovers are completed within 3–4 hours of guest checkout. With a confirmed schedule, we can have your property guest-ready the same day — even for back-to-back bookings.",
+          "It's completely up to you. Many customers hand over keys, use a smart lock or leave them with a concierge. Your cleaner confirms arrival and completion, so you always know where things stand.",
       },
       {
         id: "q2",
-        question: "Which areas do you currently serve?",
+        question: "Which areas do you serve?",
         answer:
-          "We operate across major Italian short-term rental markets including Rome, Florence, Milan, Naples and Venice, and we add new cities every quarter. Enter your address at booking to confirm coverage.",
+          "We cover several cities, for apartments, holiday homes, Airbnb properties, hotels, offices and commercial spaces. Pick your city in the first step of the booking wizard and enter your address to confirm coverage.",
       },
       {
         id: "q3",
-        question: "Do I need to be present for the cleaning?",
+        question: "Does my cleaner bring supplies and equipment?",
         answer:
-          "No. The vast majority of our hosts use smart locks or key handoffs. We document entry and exit with timestamped photos, so you always have a record without lifting a finger.",
+          "Cleaning tools and supplies aren't included in the price. You can add the ones you need while booking — each is listed with its price, so your total updates before you confirm. Prefer your own products? Leave the add-ons out and tell us in your booking notes.",
       },
     ],
   },
@@ -38,19 +38,19 @@ export const FAQ_CATEGORIES = [
         id: "q4",
         question: "How does pricing work?",
         answer:
-          "You can pay per turnover or save with a managed monthly plan. Per-turnover pricing is based on property size and the services you select — there are no contracts and no hidden fees.",
+          "Pricing is hourly and depends on the size of your place and the service you choose. You see the exact price before you confirm — no contracts, no hidden fees, and regular plans save 20%.",
       },
       {
         id: "q5",
-        question: "Are supplies and linens included?",
+        question: "How can I pay?",
         answer:
-          "You choose. We can use your supplies and linens, or provide hotel-grade linens and consumables as an add-on. Restocking is tracked automatically so you never run out.",
+          "You pay securely online by card when you book — all major cards are accepted through Stripe. If you cancel in time, the payment is refunded in full automatically.",
       },
       {
         id: "q6",
-        question: "Is there a cancellation fee?",
+        question: "What is your cancellation policy?",
         answer:
-          "Cancellations made more than 24 hours before a scheduled turnover are free. Inside 24 hours, a 50% fee applies to cover the reserved crew slot.",
+          "Cancel free of charge up to 24 hours before your appointment. Inside 24 hours a 50% fee applies, since your cleaner has reserved that time for you.",
       },
     ],
   },
@@ -60,21 +60,21 @@ export const FAQ_CATEGORIES = [
     items: [
       {
         id: "q7",
-        question: "What if I'm not satisfied with a clean?",
+        question: "What if I'm not happy with my clean?",
         answer:
-          "Every turnover is backed by our Guest-Ready Guarantee. If something isn't right, we'll re-clean within 24 hours at no charge — or refund the visit.",
+          "Every visit is covered by our Spotless Guarantee: get in touch within 48 hours and tell us what went wrong. We'll go through it with you and agree together on how to put it right.",
       },
       {
         id: "q8",
         question: "Are your cleaners vetted and insured?",
         answer:
-          "Yes. Every professional is background-checked, trained on our 50-point standard, and fully insured. We carry liability coverage on every visit for your peace of mind.",
+          "Yes. Every professional is identity-verified, background-checked, trained on our 50-point standard, and covered by liability insurance on every single visit.",
       },
       {
         id: "q9",
-        question: "How do you handle damage or lost items?",
+        question: "Can I have the same cleaner every time?",
         answer:
-          "Our inspection reports flag damage with photos the moment it's found, and lost-and-found items are logged and stored. You'll have documentation before your next guest arrives.",
+          "Yes — with a regular weekly or bi-weekly plan you keep the same trusted cleaner, who learns exactly how you like your home. If they're ever unavailable, we propose a vetted stand-in you can accept or decline.",
       },
     ],
   },

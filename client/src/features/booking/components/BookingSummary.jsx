@@ -3,8 +3,11 @@ import { ShieldCheck } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { useTranslation } from "@/i18n";
 import { useServices } from "@/features/services";
+import { useAuth } from "@/features/admin";
 import { computeQuote } from "../utils/pricing";
+import { formatDuration } from "../utils/duration";
 import { useSpecialRequests } from "../hooks/useSpecialRequests";
+import { useCleaningTools } from "../hooks/useCleaningTools";
 
 /*
  * BookingSummary
@@ -18,8 +21,25 @@ export function BookingSummary() {
   const { control } = useFormContext();
   const values = useWatch({ control });
   const { data: addons = [] } = useSpecialRequests();
+  const { data: tools = [] } = useCleaningTools();
   const { services } = useServices();
-  const quote = computeQuote(values, { addons, services });
+  // How this customer is taxed, as resolved server-side. A verified business is
+  // charged the net, and the total shown here has to be the one they'll pay.
+  const { tax } = useAuth();
+  const formatServiceLabel = ({ name, hours, cleaners }) =>
+    t("booking.units.serviceLine", {
+      name,
+      duration: formatDuration(t, hours),
+      cleaners,
+      unit: t(cleaners > 1 ? "booking.units.cleaners" : "booking.units.cleaner"),
+    });
+  const quote = computeQuote(values, {
+    addons,
+    tools,
+    services,
+    formatServiceLabel,
+    tax,
+  });
 
   return (
     <aside className="rounded-2xl border border-ink-100 bg-surface p-6 shadow-soft lg:sticky lg:top-24">
@@ -45,12 +65,40 @@ export function BookingSummary() {
         )}
       </div>
 
+      {/* Catalogue prices are net, so the total is higher than the lines above
+          it — the VAT that made it higher has to be shown, not implied. A
+          business relieved of it sees the same breakdown reading 0. */}
+      {quote.catalogueVatRate > 0 && (
+        <div className="mt-5 space-y-2 border-t border-ink-100 pt-5">
+          <div className="flex items-center justify-between gap-4 text-body-sm">
+            <span className="text-ink-500">{t("booking.quote.subtotal")}</span>
+            <span className="text-ink-700">{formatCurrency(quote.subtotal)}</span>
+          </div>
+          <div className="flex items-center justify-between gap-4 text-body-sm">
+            <span className="text-ink-500">
+              {quote.reverseCharge
+                ? t("booking.quote.vatReverseCharge", {
+                    rate: quote.catalogueVatRate,
+                  })
+                : t("booking.quote.vat", { rate: quote.vatRate })}
+            </span>
+            <span className="text-ink-700">{formatCurrency(quote.vatAmount)}</span>
+          </div>
+        </div>
+      )}
+
       <div className="mt-5 flex items-center justify-between border-t border-ink-100 pt-5">
         <span className="text-body-md font-semibold text-ink-900">{t("booking.quote.total")}</span>
         <span className="text-heading-sm font-bold text-brand-700">
           {formatCurrency(quote.total)}
         </span>
       </div>
+
+      {quote.reverseCharge && (
+        <p className="mt-2.5 rounded-xl bg-brand-50 px-3.5 py-2.5 text-caption leading-relaxed text-brand-800">
+          {t("booking.quote.reverseChargeNote")}
+        </p>
+      )}
 
       <div className="mt-5 flex items-start gap-2.5 rounded-xl border border-ink-200 bg-white p-3.5 text-body-sm text-black">
         <ShieldCheck className="mt-0.5 size-4.5 shrink-0 text-black" />

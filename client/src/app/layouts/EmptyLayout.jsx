@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom";
 import { Container } from "@/components/ui/Container";
 import { Logo } from "@/components/shared/Logo";
+import { SITE } from "@/constants/metadata";
 
 /*
  * EmptyLayout
@@ -17,10 +18,10 @@ export function EmptyLayout() {
         <Container className="flex items-center justify-between">
           <Logo />
           <a
-            href="tel:+390612345678"
+            href={SITE.phoneHref}
             className="text-body-sm font-medium text-ink-600 transition-colors hover:text-ink-900"
           >
-            Need help? +39 06 1234 5678
+            Need help? {SITE.phone}
           </a>
         </Container>
       </header>

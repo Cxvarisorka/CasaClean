@@ -1,10 +1,17 @@
 const City = require("../models/city.model");
+const Service = require("../models/service.model");
+const Booking = require("../models/booking.model");
+const Subscription = require("../models/subscription.model");
 const AppError = require("../utils/appError.util");
 const catchAsync = require("../utils/catchAsync.util");
+const formatName = require("../utils/formatName.util");
+const { assertNotReferenced } = require("../utils/referentialGuard.util");
+const { TRANSLATABLE_FIELDS, normalizeTranslations } = require("../utils/translations.util");
 
-// "rOme" / "ROME" -> "Rome". Capitalise first letter, lowercase the rest,
-// so the same city can't be stored under different casings.
-const formatName = (name) => name[0].toUpperCase() + name.slice(1).toLowerCase();
+// Blank fields and empty languages are stripped before storing — see
+// utils/translations.util.js for why.
+const cleanTranslations = (translations) =>
+    normalizeTranslations(translations, TRANSLATABLE_FIELDS.city);
 
 // GET /api/v1/city -> paginated list of cities
 const getCities = catchAsync(async (req, res) => {
@@ -13,13 +20,24 @@ const getCities = catchAsync(async (req, res) => {
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 10));
 
-    const cities = await City.find()
-        .sort({ createdAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .lean();
+    // Soft-disabled cities are an admin concern: the public list (booking
+    // wizard) only ever sees enabled records. An admin opts into the full
+    // catalogue with ?includeDisabled=true — honoured only when the live DB
+    // role is admin (req.user comes from the attachUser middleware).
+    const includeDisabled = req.query.includeDisabled === "true" && req.user?.role === "admin";
+    const filter = includeDisabled ? {} : { enabled: true };
 
-    const cityCount = await City.countDocuments();
+    // Run the page query and the total count in parallel (independent reads).
+    // For the unfiltered admin view, estimatedDocumentCount reads collection
+    // metadata (O(1)) instead of scanning every document.
+    const [cities, cityCount] = await Promise.all([
+        City.find(filter)
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit)
+            .lean(),
+        includeDisabled ? City.estimatedDocumentCount() : City.countDocuments(filter)
+    ]);
 
     res.status(200).json({
         status: "success",
@@ -53,7 +71,7 @@ const getCity = catchAsync(async (req, res, next) => {
 
 // POST /api/v1/city -> create a city (admin only)
 const addCity = catchAsync(async (req, res, next) => {
-    const { name, workingHourStarts, workingHourEnds } = req.body;
+    const { name, translations, workingHourStarts, workingHourEnds } = req.body;
 
     // Guard the required fields up-front so we never hit `name[0]` on undefined
     // and so the client gets a clear 400 instead of a generic schema error.
@@ -69,7 +87,12 @@ const addCity = catchAsync(async (req, res, next) => {
         return next(new AppError("City already exists!", 409));
     }
 
-    const city = await City.create({ name: formattedName, workingHourStarts, workingHourEnds });
+    const city = await City.create({
+        name: formattedName,
+        translations: cleanTranslations(translations),
+        workingHourStarts,
+        workingHourEnds
+    });
 
     res.status(201).json({
         status: "success",
@@ -83,6 +106,14 @@ const addCity = catchAsync(async (req, res, next) => {
 // DELETE /api/v1/city/:id -> remove a city (admin only)
 const deleteCity = catchAsync(async (req, res, next) => {
     const { id } = req.params;
+
+    // Refuse to orphan records that point at this city. Disabling is the
+    // supported way to stop offering a city (see referentialGuard.util.js).
+    await assertNotReferenced([
+        { model: Booking, filter: { cityId: id }, noun: "bookings" },
+        { model: Subscription, filter: { cityId: id }, noun: "recurring subscriptions" },
+        { model: Service, filter: { cities: id }, noun: "service coverage areas" }
+    ], "city");
 
     const deletedCity = await City.findByIdAndDelete(id);
 
@@ -98,7 +129,7 @@ const deleteCity = catchAsync(async (req, res, next) => {
 
 // PATCH /api/v1/city/:id -> partial update (admin only)
 const editCity = catchAsync(async (req, res, next) => {
-    const { name, workingHourStarts, workingHourEnds, enabled } = req.body;
+    const { name, translations, workingHourStarts, workingHourEnds, enabled } = req.body;
     const { id } = req.params;
 
     const city = await City.findById(id);
@@ -119,6 +150,12 @@ const editCity = catchAsync(async (req, res, next) => {
 
         city.name = formattedName;
     }
+
+    // Replaced wholesale rather than merged: the panel edits every language in
+    // one dialog and posts the complete set, so a locale missing from the body
+    // is an explicit "remove this translation". A request that omits the field
+    // entirely (e.g. the row-level enable toggle) leaves translations untouched.
+    if (translations !== undefined) city.translations = cleanTranslations(translations);
 
     if (workingHourStarts) city.workingHourStarts = workingHourStarts;
     if (workingHourEnds) city.workingHourEnds = workingHourEnds;

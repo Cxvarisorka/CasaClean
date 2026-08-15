@@ -35,6 +35,17 @@ const SIZES = {
   icon: "h-11 w-11",
 };
 
+// A full-width button can't grow horizontally, so a long label (translations
+// run much longer than English) must wrap instead of overflowing the pill:
+// trade the fixed height for the matching min-height.
+const FULL_WIDTH_SIZES = {
+  sm: "min-h-9",
+  md: "min-h-11",
+  lg: "min-h-13",
+  xl: "min-h-15",
+  icon: "min-h-11",
+};
+
 const BASE =
   "inline-flex items-center justify-center rounded-full font-semibold tracking-tight " +
   "transition-[background-color,box-shadow,color,border-color] duration-200 " +
@@ -64,7 +75,10 @@ export const Button = forwardRef(function Button(
     BASE,
     VARIANTS[variant],
     SIZES[size],
-    fullWidth && "w-full",
+    fullWidth && [
+      "h-auto w-full whitespace-normal py-2 text-center",
+      FULL_WIDTH_SIZES[size],
+    ],
     className
   );
 

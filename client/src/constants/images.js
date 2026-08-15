@@ -44,16 +44,6 @@ export const IMAGES = {
   pageBackdrop: img("photo-1560448204-e02f11c3d0e2", { w: 1600, h: 700 }),
   kitchen: img("photo-1556911220-bff31c812dba", { w: 1200 }),
   bathroom: img("photo-1620626011761-996317b8d101", { w: 1200 }),
-
-  // Blog covers
-  blog: {
-    "back-to-back-turnovers": img("photo-1581578731548-c64695cc6952", { w: 1200, h: 750 }),
-    "linen-par-levels": img("photo-1522771739844-6a9f6d5f14af", { w: 1200, h: 750 }),
-    "guest-ready-checklist": img("photo-1600566753086-00f18fb6b3ea", { w: 1200, h: 750 }),
-    "scaling-to-ten-listings": img("photo-1560448204-e02f11c3d0e2", { w: 1200, h: 750 }),
-    "automated-restocking": img("photo-1584813470613-5b1c1cad3d69", { w: 1200, h: 750 }),
-    "damage-disputes": img("photo-1554995207-c18c203602cb", { w: 1200, h: 750 }),
-  },
 };
 
 // Portrait photos for people (square crops).

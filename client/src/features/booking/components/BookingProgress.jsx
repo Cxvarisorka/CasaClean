@@ -18,8 +18,11 @@ export function BookingProgress() {
   const progress = (step / (steps.length - 1)) * 100;
 
   return (
-    <nav aria-label="Booking progress" className="w-full">
-      <ol className="relative flex items-center justify-between">
+    <nav aria-label={t("booking.progressLabel")} className="w-full">
+      {/* Labels are absolutely positioned below the circles (see the reserved
+          sm:pb-12), so long translations (e.g. Georgian) wrap in place instead
+          of stretching the flex row wider than the wizard column. */}
+      <ol className="relative flex items-center justify-between sm:pb-12">
         {/* Track */}
         <div className="absolute left-0 right-0 top-5 -z-0 mx-5 h-0.5 bg-ink-200" aria-hidden="true">
           <motion.div
@@ -54,7 +57,7 @@ export function BookingProgress() {
               </button>
               <span
                 className={cn(
-                  "mt-2 hidden text-caption font-medium sm:block",
+                  "absolute left-1/2 top-12 hidden w-24 -translate-x-1/2 wrap-break-word text-center text-caption font-medium leading-tight sm:block",
                   isActive ? "text-ink-900" : "text-ink-400"
                 )}
               >

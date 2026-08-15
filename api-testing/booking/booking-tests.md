@@ -43,7 +43,10 @@ Important things to know:
 - **Contact details come from your account.** You do **not** send `customerName`
   or `customerEmail` — the server fills those from your logged-in profile.
 - **Phone:** if your account has a phone number, it is used automatically. If it
-  does not (for example a Google account), you must send `customerPhone` in the body.
+  does not (a Google account, or anyone who skipped the optional field at signup),
+  you must send `customerPhone` in the body. It must carry the country prefix
+  (`+39 331 234 5678`, `+995 555 12 34 56`); spacing and dashes are normalised
+  away, a bare `3312345678` is rejected as ambiguous.
 - **Required fields:** `serviceId`, `cityId`, `streetName`, `houseNumber`,
   `propertySize`, `doorbellName`, `bookingDate`, `bookingTime`, `hours`,
   `cleaners`, `totalAmount`. Missing any of these gives a 400.
@@ -94,6 +97,9 @@ curl -X POST http://localhost:3000/api/v1/booking ^
 | 16 | `specialRequests` has an id that does not exist                 | **400**         | message: "One or more selected special requests do not exist or are unavailable!" |
 | 17 | `specialRequests` points to a **disabled** add-on              | **400**         | message: "One or more selected special requests do not exist or are unavailable!" |
 | 18 | Not logged in                                                   | **401**         | "Authorization is required!"                                        |
+| 19 | Send `hours: 1.5` (a 90-minute visit) inside the city's hours    | **201**         | Created; `data.booking.hours` is `1.5` and the total is priced on 1.5 h |
+| 20 | Send `hours: 1.25`                                              | **400**         | message mentions half-hour steps; `fields` names `hours`             |
+| 21 | Send `bookingTime: "12:20"` inside the city's hours             | **201**         | Created; any minute is a valid start, not just whole hours          |
 
 > **Check #2 carefully:** Even if you send `customerName` or `customerEmail` in
 > the body, the server **ignores** them and uses your account details. This is on
@@ -217,7 +223,55 @@ curl -X PATCH http://localhost:3000/api/v1/booking/PASTE_BOOKING_ID ^
 
 ---
 
-## 6. DELETE `/:id` — Delete a booking (admin only)
+## 6. PATCH `/:id/cancel` — Cancel your own booking (any logged-in user)
+
+Scoped to the caller: a booking that isn't yours is a **404**, with no hint that
+it exists. Only a `pending` or `confirmed` booking can be cancelled.
+
+**How much money comes back** depends on how close the appointment is:
+
+| When you cancel | What happens to the charge |
+|---|---|
+| **At least 24h** before the start | Full refund (`paymentStatus: "refunded"`) |
+| **Inside 24h** | Refund of everything **except one hour of the booked crew** (`paymentStatus: "partially-refunded"`, `refundAmount` = what went back) |
+| Inside 24h, booking is **1 hour or shorter** | The retained hour is the whole charge, so nothing is refunded and the payment is left untouched |
+| Manual / offline / unpaid booking | Cancelled, Stripe never called |
+
+The kept hour is `pricePerHour × cleaners`. Add-ons and cleaning tools are always
+refunded in full — only the blocked hour is charged for. The window is
+configurable via `CANCELLATION_WINDOW_HOURS` (default 24; `0` always refunds in
+full).
+
+**curl:**
+```bash
+curl -X PATCH http://localhost:3000/api/v1/booking/PASTE_BOOKING_ID/cancel ^
+  -H "X-Requested-With: XMLHttpRequest" ^
+  -b cookie.txt
+```
+
+### Tests
+
+| # | What you do | Expected status | Expected answer |
+|---|---|---|---|
+| 1 | Cancel your own paid booking **3 days out** | **200** | "Booking cancelled and refunded successfully!", `paymentStatus: "refunded"` |
+| 2 | Cancel your own paid **2-hour** booking starting **in 2 hours** (€40) | **200** | message names a €20.00 late-cancellation fee; `paymentStatus: "partially-refunded"`, `refundAmount: 20` |
+| 3 | Same, but the booking is **1 hour** long | **200** | message names the fee; no Stripe refund, `paymentStatus` stays `"paid"` |
+| 4 | Cancel a booking that has add-ons, inside the window | **200** | The add-on prices are fully refunded — only `pricePerHour × cleaners` is kept |
+| 5 | Cancel someone else's booking | **404** | "Booking not found!" |
+| 6 | Cancel the same booking twice | **400** | "This booking is already cancelled." |
+| 7 | Cancel a `completed` booking | **400** | "A completed booking can't be cancelled." |
+| 8 | Use a broken id | **400** | message about invalid id |
+| 9 | Not logged in | **401** | "Authorization is required!" |
+
+> **Check #2 carefully:** the customer's email must state both figures — what was
+> refunded and the fee that was kept — and the invoice must stay `issued`, since
+> the money it documents was only partly returned. An **admin** cancelling the
+> same booking (`PATCH /:id` with `{"status":"cancelled"}`) always refunds in
+> full — that is the case-by-case override.
+
+---
+
+## 7. DELETE `/:id` — Delete a booking (admin only)
 
 **curl:**
 ```bash

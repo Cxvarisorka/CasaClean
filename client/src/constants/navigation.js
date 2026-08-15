@@ -6,12 +6,11 @@
  */
 
 import { ROUTES } from "./routes";
+import { SITE } from "./metadata";
 
 export const PRIMARY_NAV = [
   { key: "services", label: "Services", href: ROUTES.services },
-  { key: "pricing", label: "Pricing", href: ROUTES.pricing },
   { key: "about", label: "About", href: ROUTES.about },
-  { key: "blog", label: "Blog", href: ROUTES.blog },
   { key: "faq", label: "FAQ", href: ROUTES.faq },
   { key: "contact", label: "Contact", href: ROUTES.contact },
 ];
@@ -22,25 +21,25 @@ export const FOOTER_NAV = [
     links: [
       { label: "About us", href: ROUTES.about },
       { label: "Careers", href: ROUTES.careers },
-      { label: "Blog", href: ROUTES.blog },
       { label: "Contact", href: ROUTES.contact },
     ],
   },
   {
     title: "Services",
     links: [
-      { label: "Turnover cleaning", href: ROUTES.services },
-      { label: "Linen management", href: ROUTES.services },
-      { label: "Restocking", href: ROUTES.services },
-      { label: "Inspections", href: ROUTES.services },
+      { label: "Regular cleaning", href: ROUTES.services },
+      { label: "Deep cleaning", href: ROUTES.services },
+      { label: "Move-out cleaning", href: ROUTES.services },
+      { label: "Office & commercial cleaning", href: ROUTES.services },
+      { label: "Holiday home & Airbnb cleaning", href: ROUTES.services },
+      { label: "Emergency cleaning", href: ROUTES.services },
     ],
   },
   {
     title: "Resources",
     links: [
-      { label: "Pricing", href: ROUTES.pricing },
       { label: "FAQ", href: ROUTES.faq },
-      { label: "Book a turnover", href: ROUTES.booking },
+      { label: "Book a cleaning", href: ROUTES.booking },
     ],
   },
   {
@@ -52,9 +51,13 @@ export const FOOTER_NAV = [
   },
 ];
 
+/*
+ * The footer's social icons. Derived from `SITE.social` so the footer and the
+ * Organization schema's `sameAs` can never advertise a different set of
+ * accounts: adding a network is one entry there, and a network the business
+ * isn't on simply has no icon rather than a link to an empty profile.
+ */
 export const SOCIAL_LINKS = [
-  { label: "Instagram", href: "https://instagram.com", platform: "instagram" },
-  { label: "LinkedIn", href: "https://linkedin.com", platform: "linkedin" },
-  { label: "Facebook", href: "https://facebook.com", platform: "facebook" },
-  { label: "X", href: "https://x.com", platform: "twitter" },
-];
+  { label: "Instagram", href: SITE.social.instagram, platform: "instagram" },
+  { label: "Facebook", href: SITE.social.facebook, platform: "facebook" },
+].filter((social) => Boolean(social.href));

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { CalendarCheck, Plus, Pencil, Trash2, Eye } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { CalendarCheck, FileText, Plus, Pencil, Trash2, Eye } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Select } from "@/components/ui/Select";
@@ -10,9 +11,16 @@ import {
   ResourceModal,
   ConfirmDialog,
   BOOKING_STATUS_META,
+  PAYMENT_STATUS_META,
   useCollection,
 } from "@/features/admin";
+import { invoiceApi } from "@/features/admin/api/adminApi";
 import { useTranslation } from "@/i18n";
+import {
+  durationChoices,
+  formatDuration,
+  MIN_DURATION_HOURS,
+} from "@/features/booking";
 
 /*
  * Bookings management
@@ -29,6 +37,37 @@ const eur = (n) =>
     n || 0
   );
 
+/*
+ * The edit form seeds every field from the booking, so submitting it would
+ * re-send values the admin never touched. That matters server-side: re-sending
+ * `hours`/`cleaners` makes the API recompute the total against the service's
+ * CURRENT price (silently re-pricing an old booking), and re-sending the date
+ * or time triggers a working-hours re-check. Send only what actually changed.
+ */
+const sameValue = (a, b) => {
+  if (Array.isArray(a) || Array.isArray(b)) {
+    const x = Array.isArray(a) ? a : [];
+    const y = Array.isArray(b) ? b : [];
+    return x.length === y.length && x.every((v, i) => String(v) === String(y[i]));
+  }
+  // The form holds every non-number field as a string; a missing value on the
+  // record reads as "" there, so compare in string space (with null/undefined
+  // normalised) to avoid false "changed" hits.
+  if (typeof a === "number" || typeof b === "number") return Number(a) === Number(b);
+  return String(a ?? "") === String(b ?? "");
+};
+
+const changedOnly = (values, original) =>
+  Object.fromEntries(
+    Object.entries(values).filter(([key, val]) => !sameValue(val, original?.[key]))
+  );
+
+/*
+ * A booking only has an invoice once money has actually moved. 'unpaid' bookings
+ * have nothing to bill, and the API rejects them — so don't offer the button.
+ */
+const INVOICEABLE = ["paid", "refunded", "manual"];
+
 function DetailRow({ label, value }) {
   return (
     <div className="flex justify-between gap-6 border-b border-ink-100 py-2.5 last:border-0">
@@ -42,6 +81,8 @@ export default function BookingsPage() {
   const { items, create, update, remove } = useCollection("bookings");
   const { items: cities } = useCollection("cities");
   const { items: services } = useCollection("services");
+  const { items: users } = useCollection("users");
+  const { items: workers } = useCollection("workers");
   const { t } = useTranslation();
 
   // Bookings store service/city ids; resolve them to names from the catalogues
@@ -55,6 +96,8 @@ export default function BookingsPage() {
     [services]
   );
   const [statusFilter, setStatusFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [editing, setEditing] = useState(undefined);
   const [viewing, setViewing] = useState(null);
   const [deleting, setDeleting] = useState(null);
@@ -85,6 +128,38 @@ export default function BookingsPage() {
     [cities]
   );
 
+  // Optional account link for an admin-created booking. The leading blank option
+  // means "no linked account" — the booking then lives on the typed contact
+  // details alone (walk-in / phone booking).
+  const userOptions = useMemo(
+    () => [
+      { value: "", label: t("admin.bookings.noAccount") },
+      ...users.map((u) => ({ value: u._id, label: `${u.fullname} (${u.email})` })),
+    ],
+    [users, t]
+  );
+
+  // Cleaning staff the admin can assign to a booking. Only enabled workers are
+  // offered; the server validates the ids fail-closed on save.
+  const workerOptions = useMemo(
+    () =>
+      workers
+        .filter((w) => w.enabled)
+        .map((w) => ({ value: w._id, label: w.fullname })),
+    [workers]
+  );
+
+  // Durations are bought by the half hour. The wizard stops at 6 h; an admin
+  // entering a job by hand may go to the API's 12 h ceiling.
+  const durationOptions = useMemo(
+    () =>
+      durationChoices(MIN_DURATION_HOURS, 12).map((hours) => ({
+        value: hours,
+        label: formatDuration(t, hours),
+      })),
+    [t]
+  );
+
   // Edit only exposes the fields the backend's editBooking endpoint accepts;
   // service/city and the customer identity are fixed once a booking is created.
   const editFields = useMemo(
@@ -96,12 +171,14 @@ export default function BookingsPage() {
       { name: "street_name", label: t("admin.bookings.field.street") },
       { name: "house_number", label: t("admin.bookings.field.houseNo") },
       { name: "property_size", label: t("admin.bookings.detail.propertySize") },
-      { name: "hours", label: t("admin.bookings.field.hours"), type: "number" },
+      { name: "hours", label: t("admin.bookings.field.hours"), type: "select", options: durationOptions, required: true },
       { name: "cleaners", label: t("admin.bookings.field.cleaners"), type: "number" },
-      { name: "total_amount", label: t("admin.bookings.field.total"), type: "number", required: true },
+      // total is server-computed (price × hours + add-ons); shown read-only in
+      // the detail view, not editable here.
+      { name: "workers", label: t("admin.bookings.field.workers"), type: "multiselect", options: workerOptions, hint: t("admin.bookings.field.workersHint") },
       { name: "notes", label: t("admin.bookings.field.notes"), type: "textarea", full: true },
     ],
-    [t, statusOptions]
+    [t, statusOptions, workerOptions, durationOptions]
   );
 
   // Create collects the full booking the model needs. service_id/city_id are
@@ -109,9 +186,12 @@ export default function BookingsPage() {
   // server validates existence, enabled state and coverage.
   const createFields = useMemo(
     () => [
-      { name: "customer_name", label: t("admin.bookings.field.customerName"), required: true },
-      { name: "customer_email", label: t("admin.bookings.field.email"), type: "email", required: true },
-      { name: "customer_phone", label: t("admin.bookings.field.phone"), required: true },
+      // Optionally link a registered account. When linked, any contact field left
+      // blank is filled from that account server-side; otherwise type them in.
+      { name: "customer_user_id", label: t("admin.bookings.field.linkAccount"), type: "select", options: userOptions },
+      { name: "customer_name", label: t("admin.bookings.field.customerName") },
+      { name: "customer_email", label: t("admin.bookings.field.email"), type: "email" },
+      { name: "customer_phone", label: t("admin.bookings.field.phone") },
       { name: "service_id", label: t("admin.bookings.field.serviceId"), type: "select", options: serviceOptions, placeholder: t("admin.form.selectOption"), required: true },
       { name: "city_id", label: t("admin.bookings.field.cityId"), type: "select", options: cityOptions, placeholder: t("admin.form.selectOption"), required: true },
       { name: "booking_date", label: t("admin.bookings.field.date"), type: "date", required: true },
@@ -120,30 +200,61 @@ export default function BookingsPage() {
       { name: "house_number", label: t("admin.bookings.field.houseNo"), required: true },
       { name: "property_size", label: t("admin.bookings.detail.propertySize"), required: true },
       { name: "doorbell_name", label: t("admin.bookings.field.doorbell"), required: true },
-      { name: "hours", label: t("admin.bookings.field.hours"), type: "number", required: true },
+      { name: "hours", label: t("admin.bookings.field.hours"), type: "select", options: durationOptions, required: true },
       { name: "cleaners", label: t("admin.bookings.field.cleaners"), type: "number", required: true },
-      { name: "total_amount", label: t("admin.bookings.field.total"), type: "number", required: true },
+      { name: "workers", label: t("admin.bookings.field.workers"), type: "multiselect", options: workerOptions, hint: t("admin.bookings.field.workersHint") },
+      // total is computed server-side from the service price, hours and add-ons.
       { name: "notes", label: t("admin.bookings.field.notes"), type: "textarea", full: true },
     ],
-    [t, serviceOptions, cityOptions]
+    [t, serviceOptions, cityOptions, userOptions, workerOptions, durationOptions]
   );
 
   const data = useMemo(() => {
-    const base = statusFilter
-      ? items.filter((b) => b.status === statusFilter)
-      : items;
+    // booking_date is a "YYYY-MM-DD" string, so lexicographic comparison is
+    // equivalent to a date comparison (same trick the API uses server-side).
+    const base = items.filter(
+      (b) =>
+        (!statusFilter || b.status === statusFilter) &&
+        (!dateFrom || b.booking_date >= dateFrom) &&
+        (!dateTo || b.booking_date <= dateTo)
+    );
     return base.map((b) => ({
       ...b,
       service_name: serviceNameById[String(b.service_id)] || b.service_name,
       city_name: cityNameById[String(b.city_id)] || b.city_name,
     }));
-  }, [items, statusFilter, serviceNameById, cityNameById]);
+  }, [items, statusFilter, dateFrom, dateTo, serviceNameById, cityNameById]);
+
+  /*
+   * Export the booking's invoice as a PDF.
+   *
+   * Issuing is idempotent server-side, so one call covers both cases: a booking
+   * paid through the normal flow already has its invoice and gets it back, while
+   * an offline/manual or pre-invoicing booking has one issued on the spot.
+   * `send: false` because this is an export — the admin is fetching a document,
+   * not (re)mailing the customer. Delivery lives on the Invoices page.
+   */
+  const invoiceMutation = useMutation({
+    mutationFn: async (booking) => {
+      const invoice = await invoiceApi.issueForBooking(booking._id, { send: false });
+      return invoiceApi.downloadPdf(invoice._id, invoice.number);
+    },
+    onError: (err) =>
+      window.alert(err?.message || t("admin.invoices.downloadFailed")),
+  });
 
   const handleSubmit = async (values) => {
-    const ok = editing
-      ? await update(editing._id, values)
-      : await create(values);
-    if (ok) setEditing(undefined);
+    if (!editing) {
+      if (await create(values)) setEditing(undefined);
+      return;
+    }
+    const patch = changedOnly(values, editing);
+    // Nothing edited — close without a pointless round trip.
+    if (Object.keys(patch).length === 0) {
+      setEditing(undefined);
+      return;
+    }
+    if (await update(editing._id, patch)) setEditing(undefined);
   };
 
   const columns = [
@@ -182,6 +293,18 @@ export default function BookingsPage() {
       render: (b) => <span className="font-semibold">{eur(b.total_amount)}</span>,
     },
     {
+      key: "payment_status",
+      header: t("admin.bookings.col.payment"),
+      render: (b) => {
+        const meta = PAYMENT_STATUS_META[b.payment_status] || PAYMENT_STATUS_META.unpaid;
+        return (
+          <Badge variant={meta.variant} size="sm">
+            {t(meta.labelKey)}
+          </Badge>
+        );
+      },
+    },
+    {
       key: "status",
       header: t("admin.bookings.col.status"),
       render: (b) => (
@@ -216,18 +339,52 @@ export default function BookingsPage() {
         emptyTitle={t("admin.bookings.emptyTitle")}
         emptyDescription={t("admin.bookings.emptyDescription")}
         filters={
-          <Select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            options={[{ value: "", label: t("admin.bookings.allStatuses") }, ...statusOptions]}
-            className="h-11 min-w-[10rem]"
-          />
+          <>
+            <Select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              options={[{ value: "", label: t("admin.bookings.allStatuses") }, ...statusOptions]}
+              className="h-11 min-w-[10rem]"
+            />
+            <input
+              type="date"
+              value={dateFrom}
+              max={dateTo || undefined}
+              onChange={(e) => setDateFrom(e.target.value)}
+              aria-label={t("admin.bookings.dateFrom")}
+              title={t("admin.bookings.dateFrom")}
+              className="h-11 rounded-xl border border-ink-200 bg-surface px-3 text-body-sm text-ink-800 focus:border-brand-500 focus:outline-none"
+            />
+            <input
+              type="date"
+              value={dateTo}
+              min={dateFrom || undefined}
+              onChange={(e) => setDateTo(e.target.value)}
+              aria-label={t("admin.bookings.dateTo")}
+              title={t("admin.bookings.dateTo")}
+              className="h-11 rounded-xl border border-ink-200 bg-surface px-3 text-body-sm text-ink-800 focus:border-brand-500 focus:outline-none"
+            />
+          </>
         }
         actions={(b) => (
           <>
             <Button variant="ghost" size="icon" aria-label={t("admin.action.view")} onClick={() => setViewing(b)}>
               <Eye className="size-4.5" />
             </Button>
+            {INVOICEABLE.includes(b.payment_status) && (
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={t("admin.bookings.invoice")}
+                title={t("admin.bookings.invoice")}
+                loading={
+                  invoiceMutation.isPending && invoiceMutation.variables?._id === b._id
+                }
+                onClick={() => invoiceMutation.mutate(b)}
+              >
+                <FileText className="size-4.5" />
+              </Button>
+            )}
             <Button variant="ghost" size="icon" aria-label={t("admin.action.edit")} onClick={() => setEditing(b)}>
               <Pencil className="size-4.5" />
             </Button>
@@ -255,14 +412,38 @@ export default function BookingsPage() {
         {viewing && (
           <div className="space-y-1">
             <div className="mb-4 flex items-center justify-between">
-              <Badge variant={BOOKING_STATUS_META[viewing.status]?.variant}>
-                {BOOKING_STATUS_META[viewing.status] &&
-                  t(BOOKING_STATUS_META[viewing.status].labelKey)}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant={BOOKING_STATUS_META[viewing.status]?.variant}>
+                  {BOOKING_STATUS_META[viewing.status] &&
+                    t(BOOKING_STATUS_META[viewing.status].labelKey)}
+                </Badge>
+                {(() => {
+                  const pm = PAYMENT_STATUS_META[viewing.payment_status] || PAYMENT_STATUS_META.unpaid;
+                  return (
+                    <Badge variant={pm.variant} size="sm">
+                      {t(pm.labelKey)}
+                    </Badge>
+                  );
+                })()}
+              </div>
               <span className="text-heading-sm font-bold text-ink-900">
                 {eur(viewing.total_amount)}
               </span>
             </div>
+            {/* A business booking was charged the NET, so the total above reads
+                lower than the catalogue price. Say why, or it looks like a
+                pricing bug. */}
+            {viewing.tax_treatment === "reverse-charge" && (
+              <DetailRow
+                label={t("admin.bookings.detail.taxTreatment")}
+                value={t("admin.bookings.detail.reverseCharge", {
+                  vat: viewing.vat_number || "—",
+                })}
+              />
+            )}
+            {viewing.company_name && (
+              <DetailRow label={t("admin.bookings.detail.company")} value={viewing.company_name} />
+            )}
             <DetailRow label={t("admin.bookings.detail.customer")} value={viewing.customer_name} />
             <DetailRow label={t("admin.bookings.detail.email")} value={viewing.customer_email} />
             <DetailRow label={t("admin.bookings.detail.phone")} value={viewing.customer_phone} />
@@ -273,8 +454,12 @@ export default function BookingsPage() {
               value={[viewing.street_name, viewing.house_number].filter(Boolean).join(" ")}
             />
             <DetailRow label={t("admin.bookings.detail.dateTime")} value={`${viewing.booking_date} · ${viewing.booking_time}`} />
-            <DetailRow label={t("admin.bookings.detail.hoursCleaners")} value={`${viewing.hours || "—"} h · ${viewing.cleaners || "—"}`} />
+            <DetailRow label={t("admin.bookings.detail.hoursCleaners")} value={`${formatDuration(t, viewing.hours) || "—"} · ${viewing.cleaners || "—"}`} />
             <DetailRow label={t("admin.bookings.detail.propertySize")} value={viewing.property_size ? `${viewing.property_size} m²` : "—"} />
+            <DetailRow
+              label={t("admin.bookings.detail.workers")}
+              value={viewing.worker_names?.length ? viewing.worker_names.join(", ") : "—"}
+            />
             <DetailRow label={t("admin.bookings.detail.notes")} value={viewing.notes} />
           </div>
         )}
@@ -286,7 +471,7 @@ export default function BookingsPage() {
         onSubmit={handleSubmit}
         title={editing ? t("admin.bookings.editTitle") : t("admin.bookings.addTitle")}
         fields={editing ? editFields : createFields}
-        initialValues={editing || { hours: 2, cleaners: 1 }}
+        initialValues={editing || { hours: 2, cleaners: 1, customer_user_id: "" }}
         submitLabel={editing ? t("admin.form.saveChanges") : t("admin.form.create")}
       />
 

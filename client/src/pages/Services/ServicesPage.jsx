@@ -1,8 +1,10 @@
 import { motion } from "framer-motion";
-import { Check } from "lucide-react";
+import { Check, Sparkles } from "lucide-react";
 import { Page } from "@/components/shared/Page";
 import { Container } from "@/components/ui/Container";
 import { Button } from "@/components/ui/Button";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHero, CtaSection } from "@/components/sections";
 import { SectionHeading } from "@/components/shared/SectionHeading";
 import { Icon } from "@/components/shared/Icon";
@@ -26,11 +28,15 @@ import { viewportOnce } from "@/animations/pageTransitions";
 
 const ServicesPage = () => {
   const { t } = useTranslation();
-  const { services } = useServices();
+  const { dbServices, isLoading } = useServices();
+
+  // SEO still emits structured data for the curated static catalogue (a stable
+  // fallback) so the page always ships rich results even before the DB is seeded.
+  const schema = (dbServices.length ? dbServices : SERVICES).map(serviceSchema);
 
   return (
     <Page>
-      <Seo {...PAGE_META.services} schema={SERVICES.map(serviceSchema)} />
+      <Seo {...PAGE_META.services} schema={schema} />
 
       <PageHero
         image={IMAGES.kitchen}
@@ -46,17 +52,36 @@ const ServicesPage = () => {
 
       <section className="py-16 lg:py-24">
         <Container>
-          <motion.div
-            variants={staggerContainer(0.08)}
-            initial="hidden"
-            whileInView="visible"
-            viewport={viewportOnce}
-            className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
-          >
-            {services.map((service) => (
-              <ServiceCard key={service.id} service={service} featured={service.popular} />
-            ))}
-          </motion.div>
+          {isLoading ? (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton.Card key={i} />
+              ))}
+            </div>
+          ) : dbServices.length === 0 ? (
+            <EmptyState
+              icon={Sparkles}
+              title={t("pages.services.emptyTitle")}
+              description={t("pages.services.emptyDescription")}
+              action={
+                <Button to={ROUTES.contact} variant="outline">
+                  {t("pages.services.emptyAction")}
+                </Button>
+              }
+            />
+          ) : (
+            <motion.div
+              variants={staggerContainer(0.08)}
+              initial="hidden"
+              whileInView="visible"
+              viewport={viewportOnce}
+              className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+            >
+              {dbServices.map((service) => (
+                <ServiceCard key={service.id} service={service} featured={service.popular} />
+              ))}
+            </motion.div>
+          )}
         </Container>
       </section>
 

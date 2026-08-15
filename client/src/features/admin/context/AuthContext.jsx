@@ -37,8 +37,22 @@ const DEMO_ADMIN = {
 
 const AuthContext = createContext(null);
 
+// How an unauthenticated (or unknown) visitor is taxed: normally, and with no
+// rate known yet. With catalogueVatRate 0 the price engine is a no-op, so a
+// visitor is never quoted VAT (or relief) the API hasn't resolved for them.
+const STANDARD_TAX = {
+  treatment: "standard",
+  reverseCharge: false,
+  vatRate: 0,
+  catalogueVatRate: 0,
+};
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  // How this customer will be taxed, as resolved SERVER-side (GET /auth/me).
+  // Never computed here: the client must not be able to talk itself into a
+  // reverse charge, and the displayed total has to match what the API charges.
+  const [tax, setTax] = useState(STANDARD_TAX);
   const [status, setStatus] = useState("loading"); // loading | authed | guest
 
   // Resolve the current session. A real user (any role) wins; otherwise we
@@ -49,12 +63,14 @@ export function AuthProvider({ children }) {
       const me = data?.user ?? data;
       if (me && (me._id || me.email)) {
         setUser(me);
+        setTax(data?.tax ?? STANDARD_TAX);
         setStatus("authed");
         return me;
       }
       throw new Error("no-session");
     } catch {
       setUser(DEMO_FALLBACK ? DEMO_ADMIN : null);
+      setTax(STANDARD_TAX);
       setStatus(DEMO_FALLBACK ? "authed" : "guest");
       return null;
     }
@@ -80,12 +96,14 @@ export function AuthProvider({ children }) {
       /* tolerate a missing/unreachable endpoint in front-end-only mode */
     }
     setUser(DEMO_FALLBACK ? DEMO_ADMIN : null);
+    setTax(STANDARD_TAX);
     setStatus(DEMO_FALLBACK ? "authed" : "guest");
   }, []);
 
   const value = useMemo(
     () => ({
       user,
+      tax,
       status,
       isLoading: status === "loading",
       // Real session only — the demo admin is deliberately not "authenticated".
@@ -100,7 +118,7 @@ export function AuthProvider({ children }) {
       updateUser,
       logout,
     }),
-    [user, status, refresh, updateUser, logout]
+    [user, tax, status, refresh, updateUser, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

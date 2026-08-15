@@ -106,7 +106,7 @@ export function TestimonialsCarousel({ items = TESTIMONIALS }) {
         <button
           type="button"
           onClick={() => paginate(-1)}
-          aria-label="Previous testimonial"
+          aria-label={t("testimonialsSection.prevAria")}
           className="grid size-11 place-items-center rounded-full border border-ink-200 bg-surface text-ink-600 transition-colors hover:border-brand-300 hover:text-brand-600"
         >
           <ChevronLeft className="size-5" />
@@ -118,7 +118,7 @@ export function TestimonialsCarousel({ items = TESTIMONIALS }) {
               key={item.id}
               type="button"
               onClick={() => goTo(i)}
-              aria-label={`Go to testimonial ${i + 1}`}
+              aria-label={t("testimonialsSection.goToAria", { index: i + 1 })}
               aria-selected={i === index}
               className={cn(
                 "h-2 rounded-full transition-all duration-300",
@@ -131,7 +131,7 @@ export function TestimonialsCarousel({ items = TESTIMONIALS }) {
         <button
           type="button"
           onClick={() => paginate(1)}
-          aria-label="Next testimonial"
+          aria-label={t("testimonialsSection.nextAria")}
           className="grid size-11 place-items-center rounded-full border border-ink-200 bg-surface text-ink-600 transition-colors hover:border-brand-300 hover:text-brand-600"
         >
           <ChevronRight className="size-5" />

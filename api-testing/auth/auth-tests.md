@@ -47,9 +47,18 @@ curl -X POST http://localhost:3000/api/v1/auth/signup ^
 | 4 | Leave out `password` (or make it < 8 chars)  | **400**         | message about invalid input / password too short                                |
 | 5 | Leave out `email`                            | **400**         | message about email required                                                     |
 | 6 | Leave out `fullname`                         | **400**         | message about fullname required                                                  |
+| 7 | Leave out `phone` (or send `""`)             | **201**         | Created — the phone is **optional** here; the account simply has none            |
+| 8 | Register a **second** account with no phone  | **201**         | Created too (a blank is stored as "no value", so the two don't collide)          |
+| 9 | Send `"phone": "3312345678"` (no country prefix) | **400**     | message asks for the country prefix, e.g. `+39 331 234 5678`                     |
+| 10 | Send `"phone": "0039 331 234-5678"`         | **201**         | Stored as `+393312345678` — spacing, dashes and `00` are normalised              |
 
 > **Note:** After signup the account is **not active yet**. The user cannot log in
 > until the email is verified.
+>
+> **Phone:** optional on the account, **required when booking** — the booking
+> endpoints fall back to the account's number and refuse the booking when there
+> is none (see `booking/booking-tests.md`, tests 12–13). Numbers are stored in
+> international form; `PATCH /me` with `"phone": ""` removes one.
 
 ---
 

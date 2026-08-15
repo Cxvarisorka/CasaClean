@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useScrollLock } from "@/hooks/useScrollLock";
+import { useTranslation } from "@/i18n";
 import { EASE_PREMIUM } from "@/animations/tokens";
 
 /*
@@ -31,6 +32,7 @@ export function Modal({
   children,
   footer,
 }) {
+  const { t } = useTranslation();
   useScrollLock(open);
 
   useEffect(() => {
@@ -71,7 +73,7 @@ export function Modal({
             <button
               type="button"
               onClick={onClose}
-              aria-label="Close dialog"
+              aria-label={t("common.close")}
               className="absolute right-4 top-4 grid size-9 place-items-center rounded-full text-ink-400 transition-colors hover:bg-ink-100 hover:text-ink-700"
             >
               <X className="size-5" />
@@ -93,7 +95,7 @@ export function Modal({
             </div>
 
             {footer && (
-              <div className="flex shrink-0 justify-end gap-3 border-t border-ink-100 px-6 py-4">
+              <div className="flex shrink-0 flex-wrap justify-end gap-3 border-t border-ink-100 px-6 py-4">
                 {footer}
               </div>
             )}

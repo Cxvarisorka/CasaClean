@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { ArrowUpRight, Check } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -18,7 +19,7 @@ import { staggerItemScale } from "@/animations/stagger";
  * Services index. `featured` highlights the popular offering.
  */
 
-export function ServiceCard({ service, featured = false }) {
+function ServiceCardComponent({ service, featured = false }) {
   const { t } = useTranslation();
 
   // Static services have i18n entries keyed by their numeric id; database
@@ -36,13 +37,15 @@ export function ServiceCard({ service, featured = false }) {
   const featureList = Array.isArray(features) ? features : service.features || [];
   const startingAt = service.startingAt ?? service.pricePerHour;
 
-  // Clicking anywhere on the card opens the booking wizard with this service
-  // already selected (the wizard reads the `service` query param).
-  const bookHref = `${ROUTES.booking}?service=${encodeURIComponent(service.id)}`;
+  // Clicking anywhere on the card opens the service's detail page, which carries
+  // the full description, coverage and add-ons plus the booking CTA. Services
+  // loaded before this slug existed fall back to the id, which the detail page
+  // also resolves.
+  const detailHref = ROUTES.serviceDetail(service.slug || service.id);
 
   return (
     <motion.div variants={staggerItemScale} className="h-full">
-      <Link to={bookHref} className="block h-full" aria-label={name}>
+      <Link to={detailHref} className="block h-full" aria-label={name}>
         <Card
           interactive
           variant={featured ? "elevated" : "default"}
@@ -98,7 +101,7 @@ export function ServiceCard({ service, featured = false }) {
               </span>
             </p>
             <span className="inline-flex items-center gap-1 text-body-sm font-semibold text-brand-600 transition-colors group-hover:text-brand-700">
-              {t("servicesSection.bookNow")}
+              {t("servicesSection.viewDetails")}
               <ArrowUpRight className="size-4" />
             </span>
           </div>
@@ -108,5 +111,9 @@ export function ServiceCard({ service, featured = false }) {
     </motion.div>
   );
 }
+
+// Pure, props-driven card rendered in long grids — memoized so a parent state
+// change (e.g. language toggle, hover state elsewhere) doesn't re-render them all.
+export const ServiceCard = memo(ServiceCardComponent);
 
 export default ServiceCard;

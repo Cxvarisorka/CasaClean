@@ -1,0 +1,1 @@
+- [Booking Audit 2026](project_booking_audit_2026.md) — server-managed fields, resolver shape changes, working-hours gate, review status gate established in June 2026 audit

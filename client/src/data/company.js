@@ -1,111 +1,52 @@
 /*
  * Company content
  * ---------------
- * Values, leadership and differentiators used on the About and Home pages.
+ * The official "Why choose CasaClean" reasons, shared by the Home page
+ * differentiators band and the About page. Titles/descriptions here are the
+ * English fallback — the rendered copy comes from `values.*` in the locale
+ * files, which both surfaces read so they can never drift apart.
  */
-
-import { PORTRAITS } from "@/constants/images";
 
 export const WHY_CASACLEAN = [
   {
-    id: "reliability",
-    icon: "ShieldCheck",
-    title: "Reliability you can schedule around",
+    id: "staff",
+    icon: "BadgeCheck",
+    title: "Qualified and experienced staff",
     description:
-      "Vetted crews, calendar sync and a 99.6% on-time rate mean turnovers happen — even on same-day back-to-backs.",
+      "Every clean is carried out by qualified professionals using professional cleaning products, with close attention to every detail.",
+  },
+  {
+    id: "pricing",
+    icon: "Wallet",
+    title: "Transparent pricing",
+    description:
+      "You see the price before you confirm. No contracts, no hidden fees and no surprises after the visit.",
+  },
+  {
+    id: "booking",
+    icon: "CalendarCheck",
+    title: "Easy and fast booking",
+    description:
+      "Book online in about a minute and choose the time that fits your schedule — one-time or recurring.",
+  },
+  {
+    id: "support",
+    icon: "HeartHandshake",
+    title: "Dedicated customer support",
+    description:
+      "A real team you can reach before, during and after your cleaning — outstanding support is part of the service.",
   },
   {
     id: "standards",
-    icon: "ClipboardCheck",
-    title: "A standard you can prove",
-    description:
-      "Every clean follows a 50-point checklist and ends in a photo report, so quality is documented, not assumed.",
-  },
-  {
-    id: "allinone",
-    icon: "Layers",
-    title: "One vendor, every turnover task",
-    description:
-      "Cleaning, linens, restocking and inspections under one roof — and one dashboard across all your listings.",
-  },
-  {
-    id: "guarantee",
-    icon: "BadgeCheck",
-    title: "The Guest-Ready Guarantee",
-    description:
-      "If a turnover isn't right, we re-clean within 24 hours or refund the visit. Your reviews are protected.",
-  },
-];
-
-export const COMPANY_VALUES = [
-  {
-    id: "hospitality",
-    icon: "HeartHandshake",
-    title: "Hospitality first",
-    description:
-      "We treat every property like a five-star stay — because your guests' reviews depend on it.",
-  },
-  {
-    id: "accountability",
-    icon: "ClipboardCheck",
-    title: "Radical accountability",
-    description:
-      "Photo reports on every visit. If we miss something, we own it and make it right, fast.",
-  },
-  {
-    id: "craft",
     icon: "Sparkles",
-    title: "Pride in the craft",
+    title: "High cleaning standards",
     description:
-      "Cleaning is a skill. We train, certify and reward the professionals who do it brilliantly.",
-  },
-  {
-    id: "scale",
-    icon: "TrendingUp",
-    title: "Built to scale with you",
-    description:
-      "From one listing to a hundred, our operations and tooling grow without dropping a turnover.",
+      "Apartments, holiday homes, offices or hotels — every property is cleaned to the same high standard, every time.",
   },
 ];
 
-export const LEADERSHIP = [
-  {
-    id: "founder",
-    name: "Lela Gorelishvili",
-    role: "Co-founder & CEO",
-    avatar: "LG",
-    photo: PORTRAITS.w2,
-    bio: "Former hospitality operations lead who scaled turnover teams across 200+ short-term rentals.",
-  },
-  {
-    id: "ops",
-    name: "Marco Bianchi",
-    role: "Co-founder & COO",
-    avatar: "MB",
-    photo: PORTRAITS.m1,
-    bio: "Built and ran multi-city field operations for an on-demand logistics company.",
-  },
-  {
-    id: "product",
-    name: "Nina Petrova",
-    role: "Head of Product",
-    avatar: "NP",
-    photo: PORTRAITS.w3,
-    bio: "Product leader focused on tools that make complex operations feel effortless.",
-  },
-  {
-    id: "quality",
-    name: "Daniele Conti",
-    role: "Head of Quality",
-    avatar: "DC",
-    photo: PORTRAITS.m3,
-    bio: "Defined the 50-point standard that every CasaClean turnover is measured against.",
-  },
-];
-
-export const COMPANY_MILESTONES = [
-  { id: "m1", year: "2021", title: "Founded in Rome", description: "Started with three crews and a five-star obsession." },
-  { id: "m2", year: "2022", title: "1,000th turnover", description: "Expanded to Florence and Milan within the first year." },
-  { id: "m3", year: "2023", title: "Inspection platform", description: "Launched photo-documented 50-point inspections." },
-  { id: "m4", year: "2024", title: "12 cities, 48k+ cleans", description: "Became the operations partner of choice for managers." },
-];
+/**
+ * The About page renders the same five reasons; kept as a named export so the
+ * page reads by intent rather than reaching for the Home-page constant.
+ */
+export const COMPANY_VALUES = WHY_CASACLEAN;
