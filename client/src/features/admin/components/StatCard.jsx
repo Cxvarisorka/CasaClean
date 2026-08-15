@@ -23,25 +23,32 @@ export function StatCard({ icon: Icon, label, value, hint, accent = "brand" }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <Card className="h-full p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
+      <Card className="h-full p-4 sm:p-5">
+        {/* The icon chip sits ABOVE the metric until the tiles are wide enough
+            (xl) to hold both side by side. Column-reverse keeps label/value
+            first in the DOM while rendering the chip on top, so the number
+            always owns the full tile width — no clipped or side-scrolling
+            figures in the 2-up phone grid or the 4-up laptop grid. */}
+        <div className="flex flex-col-reverse items-start gap-3 xl:flex-row xl:items-start xl:justify-between">
+          <div className="w-full min-w-0 flex-1">
             <p className="text-caption font-semibold uppercase tracking-wide text-ink-400">
               {label}
             </p>
-            <p className="mt-2 overflow-x-auto whitespace-nowrap text-heading-lg font-bold leading-tight text-ink-900 tabular-nums [scrollbar-width:thin]">
+            <p className="mt-1.5 font-display text-[1.5rem] font-bold leading-tight tracking-tight text-ink-900 tabular-nums sm:mt-2 sm:text-[1.75rem] xl:text-[2rem]">
               {value}
             </p>
-            {hint && <p className="mt-1 text-body-sm text-ink-500">{hint}</p>}
+            {hint && (
+              <p className="mt-1 text-caption text-ink-500 sm:text-body-sm">{hint}</p>
+            )}
           </div>
           {Icon && (
             <span
               className={cn(
-                "grid size-11 shrink-0 place-items-center rounded-2xl",
+                "grid size-10 shrink-0 place-items-center rounded-xl sm:size-11 sm:rounded-2xl",
                 ACCENTS[accent]
               )}
             >
-              <Icon className="size-5.5" aria-hidden="true" />
+              <Icon className="size-5 sm:size-5.5" aria-hidden="true" />
             </span>
           )}
         </div>

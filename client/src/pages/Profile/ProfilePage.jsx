@@ -134,26 +134,31 @@ const ProfilePage = () => {
     <Page>
       <Seo title={`${t("profile.title")} · CasaClean`} path={ROUTES.profile} noIndex />
 
-      <section className="bg-sand-50 pb-16 pt-28 lg:pt-32">
+      <section className="bg-sand-50 pb-12 pt-24 sm:pb-16 sm:pt-28 lg:pt-32">
         <Container size="md">
-          {/* Identity header */}
-          <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
+          {/* Identity header — stays a single row on phones so the avatar and
+              name read as one unit instead of eating two stacked blocks. */}
+          <div className="flex items-center gap-4 sm:gap-5">
             {user.avatar ? (
               <img
                 src={user.avatar}
                 alt={user.fullname}
                 referrerPolicy="no-referrer"
-                className="size-20 shrink-0 rounded-3xl object-cover shadow-soft"
+                className="size-16 shrink-0 rounded-2xl object-cover shadow-soft sm:size-20 sm:rounded-3xl"
               />
             ) : (
-              <span className="grid size-20 shrink-0 place-items-center rounded-3xl bg-brand-600 text-heading-md font-bold text-white shadow-soft">
+              <span className="grid size-16 shrink-0 place-items-center rounded-2xl bg-brand-600 text-heading-sm font-bold text-white shadow-soft sm:size-20 sm:rounded-3xl sm:text-heading-md">
                 {initials(user.fullname)}
               </span>
             )}
-            <div className="min-w-0">
-              <h1 className="text-heading-lg text-ink-900">{user.fullname}</h1>
-              <p className="mt-1 truncate text-body-md text-ink-500">{user.email}</p>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-heading-md text-ink-900 sm:text-heading-lg">
+                {user.fullname}
+              </h1>
+              <p className="mt-0.5 truncate text-body-sm text-ink-500 sm:mt-1 sm:text-body-md">
+                {user.email}
+              </p>
+              <div className="mt-2.5 flex flex-wrap items-center gap-1.5 sm:mt-3 sm:gap-2">
                 <Badge variant={isAdmin ? "dark" : "neutral"} size="sm">
                   {user.role}
                 </Badge>
@@ -170,14 +175,14 @@ const ProfilePage = () => {
             </div>
           </div>
 
-          <div className="mt-10 grid gap-6 lg:grid-cols-5">
+          <div className="mt-8 grid gap-5 sm:mt-10 sm:gap-6 lg:grid-cols-5">
             {/* Personal information (editable) */}
-            <Card className="p-6 lg:col-span-3">
+            <Card className="p-5 sm:p-6 lg:col-span-3">
               <h2 className="text-heading-sm text-ink-900">
                 {t("profile.personalInfo")}
               </h2>
 
-              <form onSubmit={onSubmit} className="mt-6 space-y-5">
+              <form onSubmit={onSubmit} className="mt-5 space-y-5 sm:mt-6">
                 <Input
                   label={t("common.fullName")}
                   leftIcon={User}
@@ -219,6 +224,7 @@ const ProfilePage = () => {
                   size="md"
                   loading={status === "saving"}
                   disabled={!dirty}
+                  className="w-full sm:w-auto"
                 >
                   {t("profile.save")}
                 </Button>
@@ -226,30 +232,32 @@ const ProfilePage = () => {
             </Card>
 
             {/* Account meta + actions */}
-            <div className="space-y-6 lg:col-span-2">
-              <Card className="p-6">
+            <div className="space-y-5 sm:space-y-6 lg:col-span-2">
+              <Card className="p-5 sm:p-6">
                 <h2 className="text-heading-sm text-ink-900">
                   {t("profile.account")}
                 </h2>
-                <dl className="mt-5 space-y-4">
+                {/* Two-up on phones/tablets so the meta block stays compact;
+                    back to a single stack inside the narrow desktop column. */}
+                <dl className="mt-5 grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 lg:grid-cols-1">
                   <div className="flex items-center gap-3">
-                    <CalendarDays className="size-5 text-ink-400" />
-                    <div>
+                    <CalendarDays className="size-5 shrink-0 text-ink-400" />
+                    <div className="min-w-0">
                       <dt className="text-caption text-ink-400">
                         {t("profile.memberSince")}
                       </dt>
-                      <dd className="text-body-sm font-medium text-ink-800">
+                      <dd className="truncate text-body-sm font-medium text-ink-800">
                         {fmtDate(user.createdAt, locale)}
                       </dd>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <ShieldCheck className="size-5 text-ink-400" />
-                    <div>
+                    <ShieldCheck className="size-5 shrink-0 text-ink-400" />
+                    <div className="min-w-0">
                       <dt className="text-caption text-ink-400">
                         {t("profile.role")}
                       </dt>
-                      <dd className="text-body-sm font-medium capitalize text-ink-800">
+                      <dd className="truncate text-body-sm font-medium capitalize text-ink-800">
                         {user.role}
                       </dd>
                     </div>
@@ -270,7 +278,7 @@ const ProfilePage = () => {
                 )}
               </Card>
 
-              <Card className="p-6">
+              <Card className="p-2.5 sm:p-6">
                 <Button
                   variant="ghost"
                   size="md"
@@ -286,12 +294,12 @@ const ProfilePage = () => {
           </div>
 
           {/* Booking history */}
-          <Card className="mt-6 p-6">
+          <Card className="mt-5 p-5 sm:mt-6 sm:p-6">
             <div className="flex items-center gap-3">
               <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600">
                 <CalendarCheck className="size-5" />
               </span>
-              <div>
+              <div className="min-w-0">
                 <h2 className="text-heading-sm text-ink-900">
                   {t("profile.bookingHistory")}
                 </h2>
@@ -301,13 +309,13 @@ const ProfilePage = () => {
               </div>
             </div>
 
-            <div className="mt-6">
+            <div className="mt-5 sm:mt-6">
               {bookingsLoading ? (
                 <div className="flex items-center justify-center py-10">
                   <Spinner size="lg" />
                 </div>
               ) : history.length === 0 ? (
-                <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-ink-200 py-12 text-center">
+                <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-ink-200 px-5 py-10 text-center sm:py-12">
                   <span className="grid size-12 place-items-center rounded-2xl bg-ink-50 text-ink-400">
                     <Sparkles className="size-6" />
                   </span>
@@ -324,47 +332,57 @@ const ProfilePage = () => {
                   </Button>
                 </div>
               ) : (
-                <ul className="divide-y divide-ink-100">
+                /* Phones: each booking is a self-contained tile with the price
+                   pinned to the title row. Tablet+: back to the flat, divided
+                   list with the price parked on the right. */
+                <ul className="space-y-3 sm:space-y-0 sm:divide-y sm:divide-ink-100">
                   {history.map((b) => {
                     const meta = BOOKING_STATUS_META[b.status];
                     return (
                       <li
                         key={b._id || b.reference}
-                        className="flex flex-wrap items-center gap-4 py-4 first:pt-0 last:pb-0"
+                        className={
+                          "grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2 " +
+                          "rounded-2xl border border-ink-100 bg-sand-50 p-4 " +
+                          "sm:gap-x-4 sm:gap-y-0 sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0 " +
+                          "sm:py-4 sm:first:pt-0 sm:last:pb-0"
+                        }
                       >
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="truncate font-semibold text-ink-900">
-                              {b.service_name}
-                            </p>
-                            {meta && (
-                              <Badge variant={meta.variant} size="sm">
-                                {t(meta.labelKey)}
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-ink-400">
-                            <span className="inline-flex items-center gap-1">
-                              <CalendarDays className="size-3.5" />
-                              {fmtDate(b.booking_date, locale)}
-                            </span>
-                            {b.booking_time && (
-                              <span className="inline-flex items-center gap-1">
-                                <Clock className="size-3.5" />
-                                {b.booking_time}
-                              </span>
-                            )}
-                            <span>{b.city_name}</span>
-                            {b.reference && (
-                              <span className="font-medium text-ink-500">
-                                {b.reference}
-                              </span>
-                            )}
+                        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                          <p className="max-w-full truncate font-semibold text-ink-900">
+                            {b.service_name}
                           </p>
+                          {meta && (
+                            <Badge variant={meta.variant} size="sm">
+                              {t(meta.labelKey)}
+                            </Badge>
+                          )}
                         </div>
-                        <span className="text-body-md font-bold text-ink-900">
+
+                        {/* Spans both rows on sm+ so it sits centered on the
+                            right of the row, exactly as before. */}
+                        <span className="whitespace-nowrap text-right text-body-md font-bold text-ink-900 tabular-nums sm:row-span-2 sm:self-center">
                           {eur(b.total_amount)}
                         </span>
+
+                        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-ink-400 sm:mt-1">
+                          <span className="inline-flex items-center gap-1">
+                            <CalendarDays className="size-3.5 shrink-0" />
+                            {fmtDate(b.booking_date, locale)}
+                          </span>
+                          {b.booking_time && (
+                            <span className="inline-flex items-center gap-1">
+                              <Clock className="size-3.5 shrink-0" />
+                              {b.booking_time}
+                            </span>
+                          )}
+                          {b.city_name && <span>{b.city_name}</span>}
+                          {b.reference && (
+                            <span className="font-medium text-ink-500">
+                              {b.reference}
+                            </span>
+                          )}
+                        </p>
                       </li>
                     );
                   })}
