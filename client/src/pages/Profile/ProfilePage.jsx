@@ -378,56 +378,136 @@ const ProfilePage = () => {
     <Page>
       <Seo title={`${t("profile.title")} · CasaClean`} path={ROUTES.profile} noIndex />
 
-      <section className="bg-sand-50 pb-16 pt-28 lg:pt-32">
-        <Container size="lg">
-          {/* Identity header — the one thing every section shares, so the
-              account-wide actions (admin console, sign out) live here rather
-              than at the bottom of a column the user has to scroll to. */}
-          <Card className="p-5 sm:p-6">
-            {/* Identity and actions only share a row from `md`: at 640px the two
-                buttons squeeze the name into a two-line wrap. The avatar, though,
-                sits beside the name at every width — stacking it wastes a whole
-                screenful of a phone before any content appears. */}
-            <div className="flex flex-col gap-5 md:flex-row md:items-center">
-              <div className="flex min-w-0 flex-1 items-center gap-4 sm:gap-5">
-                {user.avatar ? (
-                  <img
-                    src={user.avatar}
-                    alt={user.fullname}
-                    referrerPolicy="no-referrer"
-                    className="size-14 shrink-0 rounded-3xl object-cover shadow-soft sm:size-20"
-                  />
+      <section className="bg-sand-50 pb-12 pt-24 sm:pb-16 sm:pt-28 lg:pt-32">
+        <Container size="md">
+          {/* Identity header — stays a single row on phones so the avatar and
+              name read as one unit instead of eating two stacked blocks. */}
+          <div className="flex items-center gap-4 sm:gap-5">
+            {user.avatar ? (
+              <img
+                src={user.avatar}
+                alt={user.fullname}
+                referrerPolicy="no-referrer"
+                className="size-16 shrink-0 rounded-2xl object-cover shadow-soft sm:size-20 sm:rounded-3xl"
+              />
+            ) : (
+              <span className="grid size-16 shrink-0 place-items-center rounded-2xl bg-brand-600 text-heading-sm font-bold text-white shadow-soft sm:size-20 sm:rounded-3xl sm:text-heading-md">
+                {initials(user.fullname)}
+              </span>
+            )}
+            <div className="min-w-0 flex-1">
+              <h1 className="text-heading-md text-ink-900 sm:text-heading-lg">
+                {user.fullname}
+              </h1>
+              <p className="mt-0.5 truncate text-body-sm text-ink-500 sm:mt-1 sm:text-body-md">
+                {user.email}
+              </p>
+              <div className="mt-2.5 flex flex-wrap items-center gap-1.5 sm:mt-3 sm:gap-2">
+                <Badge variant={isAdmin ? "dark" : "neutral"} size="sm">
+                  {user.role}
+                </Badge>
+                {user.isVerified ? (
+                  <Badge variant="success" size="sm" icon={ShieldCheck}>
+                    {t("profile.verified")}
+                  </Badge>
                 ) : (
-                  <span className="grid size-14 shrink-0 place-items-center rounded-3xl bg-brand-600 text-heading-sm font-bold text-white shadow-soft sm:size-20 sm:text-heading-md">
-                    {initials(user.fullname)}
-                  </span>
+                  <Badge variant="outline" size="sm">
+                    {t("profile.unverified")}
+                  </Badge>
                 )}
-                <div className="min-w-0 flex-1">
-                  <h1 className="wrap-break-word text-heading-md text-ink-900 sm:text-heading-lg">
-                    {user.fullname}
-                  </h1>
-                  {/* Wrapped, not truncated: a hidden half of your own address
-                      reads as the wrong account being signed in. */}
-                  <p className="mt-1 wrap-break-word text-body-md text-ink-500">
-                    {user.email}
-                  </p>
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <Badge variant={isAdmin ? "dark" : "neutral"} size="sm">
-                      {user.role}
-                    </Badge>
-                    {user.isVerified ? (
-                      <Badge variant="success" size="sm" icon={ShieldCheck}>
-                        {t("profile.verified")}
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" size="sm">
-                        {t("profile.unverified")}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2 md:shrink-0">
+            </div>
+          </div>
+
+          <div className="mt-8 grid gap-5 sm:mt-10 sm:gap-6 lg:grid-cols-5">
+            {/* Personal information (editable) */}
+            <Card className="p-5 sm:p-6 lg:col-span-3">
+              <h2 className="text-heading-sm text-ink-900">
+                {t("profile.personalInfo")}
+              </h2>
+
+              <form onSubmit={onSubmit} className="mt-5 space-y-5 sm:mt-6">
+                <Input
+                  label={t("common.fullName")}
+                  leftIcon={User}
+                  value={form.fullname}
+                  onChange={onChange("fullname")}
+                  required
+                />
+                <Input
+                  label={t("common.email")}
+                  type="email"
+                  leftIcon={Mail}
+                  value={user.email}
+                  disabled
+                  hint="Email can't be changed here."
+                />
+                <Input
+                  label={t("common.phone")}
+                  leftIcon={Phone}
+                  value={form.phone}
+                  onChange={onChange("phone")}
+                  placeholder="+39 ..."
+                />
+
+                {status === "saved" && (
+                  <div className="flex items-center gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 p-3.5 text-body-sm text-emerald-700">
+                    <CheckCircle2 className="size-4.5 shrink-0" />
+                    {t("profile.saved")}
+                  </div>
+                )}
+                {status === "error" && (
+                  <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3.5 text-body-sm text-red-700">
+                    <AlertCircle className="mt-0.5 size-4.5 shrink-0" />
+                    {errorMsg}
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  size="md"
+                  loading={status === "saving"}
+                  disabled={!dirty}
+                  className="w-full sm:w-auto"
+                >
+                  {t("profile.save")}
+                </Button>
+              </form>
+            </Card>
+
+            {/* Account meta + actions */}
+            <div className="space-y-5 sm:space-y-6 lg:col-span-2">
+              <Card className="p-5 sm:p-6">
+                <h2 className="text-heading-sm text-ink-900">
+                  {t("profile.account")}
+                </h2>
+                {/* Two-up on phones/tablets so the meta block stays compact;
+                    back to a single stack inside the narrow desktop column. */}
+                <dl className="mt-5 grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 lg:grid-cols-1">
+                  <div className="flex items-center gap-3">
+                    <CalendarDays className="size-5 shrink-0 text-ink-400" />
+                    <div className="min-w-0">
+                      <dt className="text-caption text-ink-400">
+                        {t("profile.memberSince")}
+                      </dt>
+                      <dd className="truncate text-body-sm font-medium text-ink-800">
+                        {fmtDate(user.createdAt, locale)}
+                      </dd>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <ShieldCheck className="size-5 shrink-0 text-ink-400" />
+                    <div className="min-w-0">
+                      <dt className="text-caption text-ink-400">
+                        {t("profile.role")}
+                      </dt>
+                      <dd className="truncate text-body-sm font-medium capitalize text-ink-800">
+                        {user.role}
+                      </dd>
+                    </div>
+                  </div>
+                </dl>
+
                 {isAdmin && (
                   <Button
                     to={ROUTES.admin.dashboard}
@@ -438,6 +518,9 @@ const ProfilePage = () => {
                     {t("profile.adminConsole")}
                   </Button>
                 )}
+              </Card>
+
+              <Card className="p-2.5 sm:p-6">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -447,6 +530,23 @@ const ProfilePage = () => {
                 >
                   {t("common.signOut")}
                 </Button>
+              </Card>
+            </div>
+          </div>
+
+          {/* Booking history */}
+          <Card className="mt-5 p-5 sm:mt-6 sm:p-6">
+            <div className="flex items-center gap-3">
+              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600">
+                <CalendarCheck className="size-5" />
+              </span>
+              <div className="min-w-0">
+                <h2 className="text-heading-sm text-ink-900">
+                  {t("profile.bookingHistory")}
+                </h2>
+                <p className="text-body-sm text-ink-500">
+                  {t("profile.bookingHistorySubtitle")}
+                </p>
               </div>
             </div>
           </Card>
@@ -470,247 +570,84 @@ const ProfilePage = () => {
                       {t("profile.personalInfo")}
                     </h2>
 
-                    <form onSubmit={onSubmit} className="mt-6 space-y-5">
-                      <Input
-                        label={t("common.fullName")}
-                        leftIcon={User}
-                        value={form.fullname}
-                        onChange={onChange("fullname")}
-                        required
-                      />
-                      <Input
-                        label={t("common.email")}
-                        type="email"
-                        leftIcon={Mail}
-                        value={user.email}
-                        disabled
-                        hint={t("profile.emailHint")}
-                      />
-                      {/* Optional on the account: an empty value clears the
-                          stored number, and the booking wizard asks for one
-                          when a crew actually has to ring a doorbell. */}
-                      <PhoneInput
-                        label={`${t("common.phone")} (${t("common.optional")})`}
-                        countryLabel={t("common.countryCode")}
-                        value={form.phone}
-                        onChange={(next) => onChangeValue("phone", next)}
-                        placeholder={t("profile.phonePlaceholder")}
-                        hint={t("profile.phoneHint")}
-                      />
-
-                      {status === "saved" && (
-                        <div className="flex items-center gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 p-3.5 text-body-sm text-emerald-700">
-                          <CheckCircle2 className="size-4.5 shrink-0" />
-                          {t("profile.saved")}
-                        </div>
-                      )}
-                      {status === "error" && (
-                        <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3.5 text-body-sm text-red-700">
-                          <AlertCircle className="mt-0.5 size-4.5 shrink-0" />
-                          {errorMsg}
-                        </div>
-                      )}
-
-                      <Button
-                        type="submit"
-                        size="md"
-                        loading={status === "saving"}
-                        disabled={!dirty}
+            <div className="mt-5 sm:mt-6">
+              {bookingsLoading ? (
+                <div className="flex items-center justify-center py-10">
+                  <Spinner size="lg" />
+                </div>
+              ) : history.length === 0 ? (
+                <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-ink-200 px-5 py-10 text-center sm:py-12">
+                  <span className="grid size-12 place-items-center rounded-2xl bg-ink-50 text-ink-400">
+                    <Sparkles className="size-6" />
+                  </span>
+                  <div>
+                    <p className="text-body-md font-semibold text-ink-900">
+                      {t("profile.noBookings")}
+                    </p>
+                    <p className="mt-1 text-body-sm text-ink-500">
+                      {t("profile.noBookingsHint")}
+                    </p>
+                  </div>
+                  <Button to={ROUTES.booking} size="sm" className="mt-1">
+                    {t("profile.bookNow")}
+                  </Button>
+                </div>
+              ) : (
+                /* Phones: each booking is a self-contained tile with the price
+                   pinned to the title row. Tablet+: back to the flat, divided
+                   list with the price parked on the right. */
+                <ul className="space-y-3 sm:space-y-0 sm:divide-y sm:divide-ink-100">
+                  {history.map((b) => {
+                    const meta = BOOKING_STATUS_META[b.status];
+                    return (
+                      <li
+                        key={b._id || b.reference}
+                        className={
+                          "grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2 " +
+                          "rounded-2xl border border-ink-100 bg-sand-50 p-4 " +
+                          "sm:gap-x-4 sm:gap-y-0 sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0 " +
+                          "sm:py-4 sm:first:pt-0 sm:last:pb-0"
+                        }
                       >
-                        {t("profile.save")}
-                      </Button>
-                    </form>
-                  </Card>
-
-                  {/* Account metadata (read-only) */}
-                  <Card className="p-5 sm:p-6">
-                    <h2 className="text-heading-sm text-ink-900">
-                      {t("profile.account")}
-                    </h2>
-                    <dl className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
-                      <div className="flex items-center gap-3">
-                        <CalendarDays className="size-5 shrink-0 text-ink-400" />
-                        <div className="min-w-0">
-                          <dt className="text-caption text-ink-400">
-                            {t("profile.memberSince")}
-                          </dt>
-                          <dd className="text-body-sm font-medium text-ink-800">
-                            {fmtDate(user.createdAt, locale)}
-                          </dd>
+                        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                          <p className="max-w-full truncate font-semibold text-ink-900">
+                            {b.service_name}
+                          </p>
+                          {meta && (
+                            <Badge variant={meta.variant} size="sm">
+                              {t(meta.labelKey)}
+                            </Badge>
+                          )}
                         </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <ShieldCheck className="size-5 shrink-0 text-ink-400" />
-                        <div className="min-w-0">
-                          <dt className="text-caption text-ink-400">
-                            {t("profile.role")}
-                          </dt>
-                          <dd className="text-body-sm font-medium capitalize text-ink-800">
-                            {user.role}
-                          </dd>
-                        </div>
-                      </div>
-                    </dl>
-                  </Card>
-                </div>
-              )}
 
-              {/* Booking history */}
-              {section === "bookings" && (
-                <Card id="bookings" className="p-5 sm:p-6">
-                  <div className="flex items-center gap-3">
-                    <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600">
-                      <CalendarCheck className="size-5" />
-                    </span>
-                    <div className="min-w-0">
-                      <h2 className="text-heading-sm text-ink-900">
-                        {t("profile.bookingHistory")}
-                      </h2>
-                      <p className="text-body-sm text-ink-500">
-                        {t("profile.bookingHistorySubtitle")}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-6">
-                    {bookingsLoading ? (
-                      <div className="flex items-center justify-center py-10">
-                        <Spinner size="lg" />
-                      </div>
-                    ) : history.length === 0 ? (
-                      <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-ink-200 px-4 py-12 text-center">
-                        <span className="grid size-12 place-items-center rounded-2xl bg-ink-50 text-ink-400">
-                          <Sparkles className="size-6" />
+                        {/* Spans both rows on sm+ so it sits centered on the
+                            right of the row, exactly as before. */}
+                        <span className="whitespace-nowrap text-right text-body-md font-bold text-ink-900 tabular-nums sm:row-span-2 sm:self-center">
+                          {eur(b.total_amount)}
                         </span>
-                        <div>
-                          <p className="text-body-md font-semibold text-ink-900">
-                            {t("profile.noBookings")}
-                          </p>
-                          <p className="mt-1 text-body-sm text-ink-500">
-                            {t("profile.noBookingsHint")}
-                          </p>
-                        </div>
-                        <Button to={ROUTES.booking} size="sm" className="mt-1">
-                          {t("profile.bookNow")}
-                        </Button>
-                      </div>
-                    ) : (
-                      <ul className="divide-y divide-ink-100">
-                        {history.map((b) => {
-                          const meta = BOOKING_STATUS_META[b.status];
-                          return (
-                            <li
-                              key={b._id || b.reference}
-                              className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 md:flex-row md:items-center md:gap-4"
-                            >
-                              <div className="min-w-0 flex-1">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <p className="min-w-0 truncate font-semibold text-ink-900">
-                                    {b.service_name}
-                                  </p>
-                                  {meta && (
-                                    <Badge variant={meta.variant} size="sm">
-                                      {t(meta.labelKey)}
-                                    </Badge>
-                                  )}
-                                </div>
-                                <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-ink-400">
-                                  <span className="inline-flex items-center gap-1">
-                                    <CalendarDays className="size-3.5" />
-                                    {fmtDate(b.booking_date, locale)}
-                                  </span>
-                                  {b.booking_time && (
-                                    <span className="inline-flex items-center gap-1">
-                                      <Clock className="size-3.5" />
-                                      {b.booking_time}
-                                    </span>
-                                  )}
-                                  <span>{b.city_name}</span>
-                                  {b.reference && (
-                                    <span className="font-medium text-ink-500">
-                                      {b.reference}
-                                    </span>
-                                  )}
-                                </p>
-                              </div>
-                              {/* Price and actions share a row of their own on
-                                  phones and tablets (spread apart), and rejoin the
-                                  entry once the row is wide enough to hold the
-                                  service name, the meta line and both actions. */}
-                              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 md:shrink-0 md:justify-end">
-                                <span className="text-body-md font-bold text-ink-900">
-                                  {eur(b.total_amount)}
-                                </span>
-                                <span className="flex flex-wrap items-center gap-2">
-                                  {isCancellable(b.status) && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      leftIcon={XCircle}
-                                      onClick={() => setCancelTarget(b)}
-                                      className="text-red-600 hover:bg-red-500/10 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-500/15 dark:hover:text-red-300"
-                                    >
-                                      {t("profile.cancelBooking")}
-                                    </Button>
-                                  )}
-                                  {b.status === "completed" &&
-                                    (reviewByBooking[b._id] ? (
-                                      <span
-                                        className="inline-flex items-center gap-1.5"
-                                        title={reviewByBooking[b._id].comment}
-                                      >
-                                        <Stars value={reviewByBooking[b._id].rating} />
-                                        <span className="text-caption font-medium text-ink-400">
-                                          {t("profile.yourRating")}
-                                        </span>
-                                      </span>
-                                    ) : (
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        leftIcon={Star}
-                                        onClick={() => openRate(b)}
-                                      >
-                                        {t("profile.rate")}
-                                      </Button>
-                                    ))}
-                                </span>
-                              </div>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    )}
-                  </div>
-                </Card>
-              )}
 
-              {/* Recurring services */}
-              {section === "subscriptions" && (
-                <div id="subscriptions">
-                  <MySubscriptions />
-                </div>
-              )}
-
-              {/* Money settings: the cards that get charged, then how the
-                  charge is billed. A paused subscription links straight to
-                  "#saved-cards" above, which opens this section. */}
-              {section === "billing" && (
-                <div id="billing" className="space-y-6">
-                  {/* Hidden when Stripe isn't configured */}
-                  <SavedCards />
-                  {/* Bill as a company: a verified VAT number removes VAT from
-                      the charge. Keyed on the account so its form seeds itself
-                      once the session resolves. */}
-                  <BillingProfile key={user?._id ?? "anon"} />
-                </div>
-              )}
-
-              {/* Change password / delete account */}
-              {section === "security" && (
-                <div id="security">
-                  <AccountSecurity />
-                </div>
+                        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-ink-400 sm:mt-1">
+                          <span className="inline-flex items-center gap-1">
+                            <CalendarDays className="size-3.5 shrink-0" />
+                            {fmtDate(b.booking_date, locale)}
+                          </span>
+                          {b.booking_time && (
+                            <span className="inline-flex items-center gap-1">
+                              <Clock className="size-3.5 shrink-0" />
+                              {b.booking_time}
+                            </span>
+                          )}
+                          {b.city_name && <span>{b.city_name}</span>}
+                          {b.reference && (
+                            <span className="font-medium text-ink-500">
+                              {b.reference}
+                            </span>
+                          )}
+                        </p>
+                      </li>
+                    );
+                  })}
+                </ul>
               )}
             </div>
           </div>

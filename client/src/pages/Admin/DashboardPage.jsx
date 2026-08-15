@@ -44,7 +44,7 @@ export default function DashboardPage() {
   const maxStatus = Math.max(1, ...statusEntries.map(([k]) => stats.byStatus[k] || 0));
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       <PageHeader
         icon={TrendingUp}
         title={t("admin.dashboard.welcome", {
@@ -53,7 +53,7 @@ export default function DashboardPage() {
         description={t("admin.dashboard.subtitle")}
       />
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <StatCard
           icon={CalendarCheck}
           label={t("admin.dashboard.bookings")}
@@ -84,19 +84,23 @@ export default function DashboardPage() {
         />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-5">
+      <div className="grid gap-5 sm:gap-6 lg:grid-cols-5">
         {/* Pipeline */}
-        <Card className="p-6 lg:col-span-2">
+        <Card className="p-5 sm:p-6 lg:col-span-2">
           <h2 className="text-heading-sm text-ink-900">{t("admin.dashboard.pipeline")}</h2>
           <p className="mt-1 text-body-sm text-ink-500">{t("admin.dashboard.pipelineSub")}</p>
-          <ul className="mt-6 space-y-4">
+          <ul className="mt-5 space-y-3.5 sm:mt-6 sm:space-y-4">
             {statusEntries.map(([key, meta]) => {
               const count = stats.byStatus[key] || 0;
               return (
                 <li key={key}>
-                  <div className="mb-1.5 flex items-center justify-between text-body-sm">
-                    <span className="font-medium text-ink-700">{t(meta.labelKey)}</span>
-                    <span className="font-semibold text-ink-900">{count}</span>
+                  <div className="mb-1.5 flex items-center justify-between gap-3 text-body-sm">
+                    <span className="min-w-0 truncate font-medium text-ink-700">
+                      {t(meta.labelKey)}
+                    </span>
+                    <span className="shrink-0 font-semibold text-ink-900 tabular-nums">
+                      {count}
+                    </span>
                   </div>
                   <div className="h-2 overflow-hidden rounded-full bg-ink-100">
                     <div
@@ -111,16 +115,21 @@ export default function DashboardPage() {
         </Card>
 
         {/* Recent bookings */}
-        <Card className="p-6 lg:col-span-3">
-          <div className="flex items-center justify-between">
+        <Card className="p-5 sm:p-6 lg:col-span-3">
+          <div className="flex items-center justify-between gap-3">
             <h2 className="text-heading-sm text-ink-900">{t("admin.dashboard.recent")}</h2>
-            <Users className="size-5 text-ink-300" />
+            <Users className="size-5 shrink-0 text-ink-300" />
           </div>
           <div className="mt-4 divide-y divide-ink-100">
             {recent.map((b) => {
               const meta = BOOKING_STATUS_META[b.status];
               return (
-                <div key={b._id} className="flex items-center justify-between gap-4 py-3">
+                /* Phones: customer + service stack, then amount and status get
+                   their own full-width row. Tablet+: single aligned row. */
+                <div
+                  key={b._id}
+                  className="flex flex-col gap-1.5 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+                >
                   <div className="min-w-0">
                     <p className="truncate text-body-sm font-semibold text-ink-900">
                       {b.customer_name}
@@ -129,8 +138,8 @@ export default function DashboardPage() {
                       {b.service_name} · {b.city_name}
                     </p>
                   </div>
-                  <div className="flex shrink-0 items-center gap-3">
-                    <span className="text-body-sm font-semibold text-ink-700">
+                  <div className="flex items-center justify-between gap-3 sm:shrink-0 sm:justify-end">
+                    <span className="text-body-sm font-semibold text-ink-700 tabular-nums">
                       {eur(b.total_amount)}
                     </span>
                     <Badge variant={meta?.variant} size="sm">
