@@ -45,8 +45,8 @@ export function MetaTags({
       <meta property="og:locale" content={SITE.locale} />
 
       {/* Twitter */}
+      {/* No `twitter:site` — the brand has no X account to attribute the card to. */}
       <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:site" content={SITE.twitter} />
       <meta name="twitter:title" content={fullTitle} />
       <meta name="twitter:description" content={description} />
       <meta name="twitter:image" content={ogImage} />

@@ -7,6 +7,8 @@
 
 import { SITE } from "@/constants/metadata";
 
+const SOCIAL_PROFILES = Object.values(SITE.social || {}).filter(Boolean);
+
 export function organizationSchema() {
   return {
     "@context": "https://schema.org",
@@ -18,11 +20,9 @@ export function organizationSchema() {
     email: SITE.email,
     telephone: SITE.phone,
     foundingDate: SITE.founded,
-    sameAs: [
-      "https://instagram.com/casaclean",
-      "https://linkedin.com/company/casaclean",
-      "https://facebook.com/casaclean",
-    ],
+    // `sameAs` is an identity claim, so it lists only the profiles the business
+    // actually owns (`SITE.social`) and is omitted entirely when there are none.
+    ...(SOCIAL_PROFILES.length ? { sameAs: SOCIAL_PROFILES } : {}),
     address: {
       "@type": "PostalAddress",
       streetAddress: SITE.address.street,

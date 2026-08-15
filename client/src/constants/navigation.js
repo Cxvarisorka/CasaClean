@@ -6,6 +6,7 @@
  */
 
 import { ROUTES } from "./routes";
+import { SITE } from "./metadata";
 
 export const PRIMARY_NAV = [
   { key: "services", label: "Services", href: ROUTES.services },
@@ -50,9 +51,13 @@ export const FOOTER_NAV = [
   },
 ];
 
+/*
+ * The footer's social icons. Derived from `SITE.social` so the footer and the
+ * Organization schema's `sameAs` can never advertise a different set of
+ * accounts: adding a network is one entry there, and a network the business
+ * isn't on simply has no icon rather than a link to an empty profile.
+ */
 export const SOCIAL_LINKS = [
-  { label: "Instagram", href: "https://instagram.com", platform: "instagram" },
-  { label: "LinkedIn", href: "https://linkedin.com", platform: "linkedin" },
-  { label: "Facebook", href: "https://facebook.com", platform: "facebook" },
-  { label: "X", href: "https://x.com", platform: "twitter" },
-];
+  { label: "Instagram", href: SITE.social.instagram, platform: "instagram" },
+  { label: "Facebook", href: SITE.social.facebook, platform: "facebook" },
+].filter((social) => Boolean(social.href));

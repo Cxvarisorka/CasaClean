@@ -35,8 +35,19 @@ export const SITE = {
     country: "IT",
   },
   ogImage: "/og-image.png",
-  twitter: "@casaclean",
   founded: "2021",
+  /*
+   * Only profiles the business actually owns. This list is the single source
+   * for the footer icons and for schema.org `sameAs`, which is a claim of
+   * identity — pointing it at a handle we don't control (or at a network we
+   * aren't on) is a false claim, so a platform is added here only once its
+   * profile exists. There is deliberately no X/Twitter entry, which is also
+   * why no `twitter:site` handle is asserted in the card meta.
+   */
+  social: {
+    instagram: "https://www.instagram.com/casaclean.it",
+    facebook: "https://www.facebook.com/share/187saPSK29/",
+  },
 };
 
 /** Per-page SEO presets keyed by a stable id used in each page component. */
