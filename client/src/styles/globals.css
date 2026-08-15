@@ -63,9 +63,12 @@
   --color-night: #0e1424;
   --color-night-soft: #070b16;
 
-  /* ----- Typography ----- */
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
-    Roboto, Helvetica, Arial, sans-serif;
+  /* ----- Typography -----
+   * "Twemoji Country Flags" leads the sans stack but covers ONE unicode range
+   * (see its @font-face below), so it only ever supplies flag glyphs — every
+   * other character falls straight through to Inter. */
+  --font-sans: "Twemoji Country Flags", "Inter", ui-sans-serif, system-ui,
+    -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-display: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui,
     sans-serif;
 
@@ -101,6 +104,27 @@
 }
 
 /*
+ * Country flags
+ * -------------
+ * Windows ships no glyphs for the regional-indicator pairs that make up flag
+ * emoji, so Chromium there renders "🇮🇹" as the letters "IT" — which is exactly
+ * where the phone field's country picker (components/ui/PhoneInput) shows one.
+ * This is the Twemoji flag subset (via the MIT-licensed
+ * country-flag-emoji-polyfill package; artwork © Twitter, CC-BY 4.0), vendored
+ * like the Georgian face above so nothing is fetched from a CDN at runtime.
+ *
+ * `unicode-range` is what makes it safe to put first in --font-sans: the browser
+ * only downloads the 78kB file when a flag is actually on screen, and the face
+ * can never be asked to render ordinary text.
+ */
+@font-face {
+  font-family: "Twemoji Country Flags";
+  src: url("../assets/fonts/TwemojiCountryFlags.woff2") format("woff2");
+  unicode-range: U+1F1E6-1F1FF;
+  font-display: swap;
+}
+
+/*
  * Georgian typography
  * -------------------
  * The Georgian locale (`ka`) uses BPG Nino Mtavruli Bold. The single TTF covers
@@ -126,7 +150,9 @@
  * spacing. Other locales keep their existing fonts untouched.
  */
 html[lang="ka"] {
-  --font-sans: "BPG Nino Mtavruli", "Inter", ui-sans-serif, system-ui, sans-serif;
+  /* Flags stay first here too — the Georgian face has no flag glyphs either. */
+  --font-sans: "Twemoji Country Flags", "BPG Nino Mtavruli", "Inter",
+    ui-sans-serif, system-ui, sans-serif;
   --font-display: "BPG Nino Mtavruli", "Plus Jakarta Sans", "Inter",
     ui-sans-serif, sans-serif;
 }
