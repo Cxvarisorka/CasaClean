@@ -34,11 +34,15 @@ const eur = (value) =>
     Number(value) || 0
   );
 
+/* Stacks below `xs` so a long value gets the whole dialog width instead of
+   overflowing it — see BookingsPage's twin. */
 function DetailRow({ label, value }) {
   return (
-    <div className="flex justify-between gap-6 border-b border-ink-100 py-2.5 last:border-0">
-      <span className="text-body-sm text-ink-400">{label}</span>
-      <span className="text-right text-body-sm font-medium text-ink-800">{value || "—"}</span>
+    <div className="flex flex-col gap-0.5 border-b border-ink-100 py-2.5 last:border-0 xs:flex-row xs:justify-between xs:gap-4">
+      <span className="shrink-0 text-body-sm text-ink-400">{label}</span>
+      <span className="min-w-0 wrap-break-word text-body-sm font-medium text-ink-800 xs:text-right">
+        {value || "—"}
+      </span>
     </div>
   );
 }

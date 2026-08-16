@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { FormProvider, useForm, useFormContext } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,9 +15,15 @@ import { PreferencesStep } from "./steps/PreferencesStep";
 import { ScheduleStep } from "./steps/ScheduleStep";
 import { ContactStep } from "./steps/ContactStep";
 import { ReviewStep } from "./steps/ReviewStep";
-import { PaymentStep } from "./steps/PaymentStep";
 import { ConfirmationStep } from "./steps/ConfirmationStep";
 import { EASE_PREMIUM } from "@/animations/tokens";
+
+// The payment step carries Stripe Elements and is the one step most visitors
+// never reach in a given session, so it is split out of the wizard chunk and
+// fetched when they actually get to it.
+const PaymentStep = lazy(() =>
+  import("./steps/PaymentStep").then((m) => ({ default: m.PaymentStep }))
+);
 
 /*
  * BookingWizard
@@ -47,10 +53,43 @@ const stepVariants = {
   exit: (dir) => ({ opacity: 0, x: dir > 0 ? -40 : 40, transition: { duration: 0.25 } }),
 };
 
+/** Holds the step's shape while the payment chunk arrives. */
+function StepSkeleton() {
+  return (
+    <div className="space-y-4" aria-hidden="true">
+      <div className="h-11 animate-shimmer rounded-xl bg-ink-100" />
+      <div className="h-11 animate-shimmer rounded-xl bg-ink-100" />
+      <div className="h-24 animate-shimmer rounded-xl bg-ink-100" />
+    </div>
+  );
+}
+
+/*
+ * Warm the payment chunk while the browser is idle. Splitting it out keeps it
+ * off the wizard's own chunk; fetching it early keeps the final step feeling
+ * instant. Only the module is fetched — stripe.js itself still waits for
+ * getStripe(), which the payment step calls when it renders.
+ */
+function usePrefetchPaymentStep() {
+  useEffect(() => {
+    const warm = () => import("./steps/PaymentStep");
+
+    if (typeof window.requestIdleCallback === "function") {
+      const id = window.requestIdleCallback(warm);
+      return () => window.cancelIdleCallback(id);
+    }
+
+    const id = window.setTimeout(warm, 1500);
+    return () => window.clearTimeout(id);
+  }, []);
+}
+
 function WizardBody({ onConfirmed }) {
   const { t } = useTranslation();
   const { step, direction, isFirst, next, prev, steps, runStepGuard } = useBookingNav();
   const { trigger } = useFormContext();
+
+  usePrefetchPaymentStep();
 
   const activeStep = steps[step];
   const isPaymentStep = activeStep.id === "payment";
@@ -95,7 +134,9 @@ function WizardBody({ onConfirmed }) {
                 exit="exit"
               >
                 {isPaymentStep ? (
-                  <PaymentStep onConfirmed={onConfirmed} />
+                  <Suspense fallback={<StepSkeleton />}>
+                    <PaymentStep onConfirmed={onConfirmed} />
+                  </Suspense>
                 ) : (
                   <StepComponent />
                 )}

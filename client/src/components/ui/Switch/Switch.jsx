@@ -23,8 +23,10 @@ export const Switch = forwardRef(function Switch(
         containerClassName
       )}
     >
+      {/* `min-w-0`: the track beside this is `shrink-0`, so without it a long
+          label sets the row's floor and pushes the track off a narrow card. */}
       {(label || description) && (
-        <span className="select-none">
+        <span className="min-w-0 select-none">
           {label && (
             <span className="block text-body-sm font-medium text-ink-800">
               {label}

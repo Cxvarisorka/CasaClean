@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { LanguageSwitcher } from "../LanguageSwitcher";
 import { ThemeToggle } from "../ThemeToggle";
 import { useTranslation } from "@/i18n";
-import { useAuth } from "@/features/admin/context";
+import { useAuth } from "@/features/admin/context/AuthContext";
 import { PRIMARY_NAV } from "@/constants/navigation";
 import { ROUTES } from "@/constants/routes";
 import { staggerContainer, staggerItem } from "@/animations/stagger";

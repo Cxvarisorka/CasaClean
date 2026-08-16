@@ -1,9 +1,10 @@
+import { useCallback, useMemo } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { ShieldCheck } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { useTranslation } from "@/i18n";
 import { useServices } from "@/features/services";
-import { useAuth } from "@/features/admin";
+import { useAuth } from "@/features/admin/context/AuthContext";
 import { computeQuote } from "../utils/pricing";
 import { formatDuration } from "../utils/duration";
 import { useSpecialRequests } from "../hooks/useSpecialRequests";
@@ -14,32 +15,71 @@ import { useCleaningTools } from "../hooks/useCleaningTools";
  * --------------
  * A live order summary that recomputes as the user fills the form (useWatch).
  * Pure derived UI over the pricing engine — it owns no state of its own.
+ *
+ * The watch is scoped to the fields the price actually depends on, and the
+ * quote is memoized. Unscoped, `useWatch({ control })` subscribed this aside to
+ * the entire form, so the pricing engine re-ran on every character typed into
+ * an address or a name — fields that cannot change the total.
  */
+
+// Exactly the inputs computeQuote reads. Keep in sync with utils/pricing.js.
+const PRICING_FIELDS = [
+  "serviceId",
+  "hours",
+  "cleaners",
+  "additionalServices",
+  "cleaningTools",
+];
+
+// Stable identities for the "not loaded yet" case, so a default `= []` doesn't
+// hand the memo below a new array on every render.
+const NO_ADDONS = [];
+const NO_TOOLS = [];
 
 export function BookingSummary() {
   const { t } = useTranslation();
   const { control } = useFormContext();
-  const values = useWatch({ control });
-  const { data: addons = [] } = useSpecialRequests();
-  const { data: tools = [] } = useCleaningTools();
+
+  const [serviceId, hours, cleaners, additionalServices, cleaningTools] =
+    useWatch({ control, name: PRICING_FIELDS });
+
+  const { data: addons = NO_ADDONS } = useSpecialRequests();
+  const { data: tools = NO_TOOLS } = useCleaningTools();
   const { services } = useServices();
   // How this customer is taxed, as resolved server-side. A verified business is
   // charged the net, and the total shown here has to be the one they'll pay.
   const { tax } = useAuth();
-  const formatServiceLabel = ({ name, hours, cleaners }) =>
-    t("booking.units.serviceLine", {
-      name,
-      duration: formatDuration(t, hours),
+
+  const formatServiceLabel = useCallback(
+    ({ name, hours: h, cleaners: c }) =>
+      t("booking.units.serviceLine", {
+        name,
+        duration: formatDuration(t, h),
+        cleaners: c,
+        unit: t(c > 1 ? "booking.units.cleaners" : "booking.units.cleaner"),
+      }),
+    [t]
+  );
+
+  const quote = useMemo(
+    () =>
+      computeQuote(
+        { serviceId, hours, cleaners, additionalServices, cleaningTools },
+        { addons, tools, services, formatServiceLabel, tax }
+      ),
+    [
+      serviceId,
+      hours,
       cleaners,
-      unit: t(cleaners > 1 ? "booking.units.cleaners" : "booking.units.cleaner"),
-    });
-  const quote = computeQuote(values, {
-    addons,
-    tools,
-    services,
-    formatServiceLabel,
-    tax,
-  });
+      additionalServices,
+      cleaningTools,
+      addons,
+      tools,
+      services,
+      formatServiceLabel,
+      tax,
+    ]
+  );
 
   return (
     <aside className="rounded-2xl border border-ink-100 bg-surface p-6 shadow-soft lg:sticky lg:top-24">

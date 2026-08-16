@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { MarkerClusterer } from "@googlemaps/markerclusterer";
 import { MapPin, AlertTriangle } from "lucide-react";
 import { Spinner } from "@/components/ui/Spinner";
 import { useGoogleMaps } from "@/hooks/useGoogleMaps";
@@ -128,6 +129,7 @@ export function BookingsMap({ bookings, labels, formatCurrency }) {
   const mapRef = useRef(null);
   const mapObj = useRef(null);
   const markers = useRef([]);
+  const clusterer = useRef(null);
   const infoWindow = useRef(null);
   const [points, setPoints] = useState([]);
   const [locating, setLocating] = useState(false);
@@ -141,33 +143,58 @@ export function BookingsMap({ bookings, labels, formatCurrency }) {
       const g = window.google.maps;
       const geocoder = new g.Geocoder();
       const cache = readCache();
-      const resolved = [];
-      let needsGeocoder = false;
 
-      for (const b of bookings) {
-        let pos = cache[b.address];
+      // Addresses we have no answer for yet, de-duplicated: several bookings at
+      // the same property should cost one lookup, not one each.
+      const misses = [
+        ...new Set(
+          bookings.map((b) => b.address).filter((a) => cache[a] === undefined)
+        ),
+      ];
 
-        if (pos === undefined) {
-          needsGeocoder = true;
-          if (active) setLocating(true);
-          try {
-            const { results } = await geocoder.geocode({
-              address: b.address,
-              region: "it",
-            });
-            const loc = results?.[0]?.geometry?.location;
-            pos = loc ? { lat: loc.lat(), lng: loc.lng() } : null;
-            cache[b.address] = pos;
-          } catch (err) {
-            pos = null;
-            // Only a definitive "no such address" is cached; quota/network
-            // errors stay uncached so they retry on the next mount.
-            if (String(err?.code || err?.message || "").includes("ZERO_RESULTS")) {
-              cache[b.address] = null;
+      if (misses.length) {
+        setLocating(true);
+
+        /*
+         * Geocoding used to run strictly one-at-a-time, awaiting each round
+         * trip before starting the next — on a first visit with 60 bookings
+         * that is 60 sequential requests before a single marker is drawn.
+         * A small concurrency pool cuts that to roughly a sixth while staying
+         * well inside Google's per-second quota; going wider trips OVER_QUERY_LIMIT.
+         */
+        const POOL_SIZE = 6;
+        let cursor = 0;
+
+        const worker = async () => {
+          while (active) {
+            const address = misses[cursor++];
+            if (address === undefined) return;
+
+            try {
+              const { results } = await geocoder.geocode({ address, region: "it" });
+              const loc = results?.[0]?.geometry?.location;
+              cache[address] = loc ? { lat: loc.lat(), lng: loc.lng() } : null;
+            } catch (err) {
+              // Only a definitive "no such address" is cached; quota/network
+              // errors stay uncached so they retry on the next mount.
+              if (String(err?.code || err?.message || "").includes("ZERO_RESULTS")) {
+                cache[address] = null;
+              }
             }
           }
-          if (!active) return;
-        }
+        };
+
+        await Promise.all(
+          Array.from({ length: Math.min(POOL_SIZE, misses.length) }, worker)
+        );
+
+        if (!active) return;
+        writeCache(cache);
+      }
+
+      const resolved = [];
+      for (const b of bookings) {
+        const pos = cache[b.address];
 
         if (pos) {
           resolved.push({ ...b, lat: pos.lat, lng: pos.lng, approx: false });
@@ -178,7 +205,6 @@ export function BookingsMap({ bookings, labels, formatCurrency }) {
         // plotted (it still shows in the list under the map).
       }
 
-      if (needsGeocoder) writeCache(cache);
       if (active) {
         setPoints(resolved);
         setLocating(false);
@@ -208,7 +234,13 @@ export function BookingsMap({ bookings, labels, formatCurrency }) {
       infoWindow.current = new g.InfoWindow();
     }
 
-    // Clear previous markers, then plot the current set.
+    /*
+     * Clear previous markers, then plot the current set. Markers are handed to
+     * a clusterer rather than straight to the map: at national zoom every
+     * booking used to be an individual pin, so a busy month rendered hundreds
+     * of overlapping DOM-backed markers and the map crawled while panning.
+     */
+    clusterer.current?.clearMarkers();
     markers.current.forEach((m) => m.setMap(null));
     markers.current = [];
 
@@ -227,9 +259,9 @@ export function BookingsMap({ bookings, labels, formatCurrency }) {
         lng: p.lng + (dupes ? 0.00014 * Math.cos(angle) : 0),
       };
 
+      // No `map` here — the clusterer below owns when each marker is shown.
       const marker = new g.Marker({
         position,
-        map: mapObj.current,
         title: `${p.customerName} — ${p.addressLabel}`,
         icon: markerIcon(p.status),
       });
@@ -242,6 +274,11 @@ export function BookingsMap({ bookings, labels, formatCurrency }) {
       markers.current.push(marker);
       bounds.extend(position);
     });
+
+    if (!clusterer.current) {
+      clusterer.current = new MarkerClusterer({ map: mapObj.current });
+    }
+    clusterer.current.addMarkers(markers.current);
 
     // Frame all markers (guard against a single-point zoom blow-out).
     if (points.length > 1) {

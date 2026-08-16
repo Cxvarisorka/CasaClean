@@ -32,13 +32,19 @@ export function Pagination({ page, total, onChange, className }) {
   if (total <= 1) return null;
   const range = getPageRange(page, total);
 
+  /*
+   * A windowed range peaks at eleven controls (two arrows, seven numbers, two
+   * ellipses). At the full 40px that is ~400px of nav, which is wider than a
+   * small phone's whole content column — so the tap targets step down to 36px
+   * below `xs` and the row wraps rather than pushing the page sideways.
+   */
   const btn =
-    "grid size-10 place-items-center rounded-xl text-body-sm font-semibold transition-colors";
+    "grid size-9 place-items-center rounded-xl text-body-sm font-semibold transition-colors xs:size-10";
 
   return (
     <nav
       aria-label={t("common.pagination")}
-      className={cn("flex items-center justify-center gap-1.5", className)}
+      className={cn("flex flex-wrap items-center justify-center gap-1 xs:gap-1.5", className)}
     >
       <button
         type="button"

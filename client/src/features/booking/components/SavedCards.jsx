@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Spinner } from "@/components/ui/Spinner";
 import { useTranslation } from "@/i18n";
-import { stripePromise, isStripeConfigured } from "@/services/stripe";
+import { getStripe, isStripeConfigured } from "@/services/stripe";
 import { listSavedCards, createSetupIntent, deleteSavedCard, setDefaultCard } from "../api/paymentApi";
 
 /*
@@ -117,7 +117,7 @@ export function SavedCards() {
   if (!isStripeConfigured) return null;
 
   return (
-    <Card id="saved-cards" className="p-5 sm:p-6">
+    <Card id="saved-cards" className="p-4 xs:p-5 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-heading-sm text-ink-900">{t("profile.payments.title")}</h2>
         <Button
@@ -197,7 +197,7 @@ export function SavedCards() {
       >
         {setupClientSecret && (
           <Elements
-            stripe={stripePromise}
+            stripe={getStripe()}
             options={{ clientSecret: setupClientSecret, appearance: { theme: "stripe" } }}
           >
             <AddCardForm onAdded={onAdded} onCancel={closeAddCard} />

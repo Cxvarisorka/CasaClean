@@ -46,7 +46,7 @@ export function AdminTopbar({ onOpenSidebar }) {
   }, [open]);
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-ink-100 bg-surface/90 px-4 backdrop-blur sm:px-6">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-2 border-b border-ink-100 bg-surface/90 px-3 backdrop-blur xs:gap-3 xs:px-4 sm:px-6">
       <button
         type="button"
         onClick={onOpenSidebar}

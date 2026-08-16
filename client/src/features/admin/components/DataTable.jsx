@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Pagination } from "@/components/ui/Pagination";
@@ -40,19 +40,35 @@ export function DataTable({
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
 
-  const keys = searchKeys || columns.map((c) => c.key);
+  /*
+   * The filter re-scans the whole collection, and admin tables are fed the full
+   * unpaginated result set (bookings and users run to hundreds of rows). Two
+   * things keep typing smooth: the scan is deferred, so React keeps the input
+   * responsive and drops intermediate keystrokes rather than filtering on each
+   * one; and it is memoized on a STRING signature of the search keys, because
+   * the consumer pages rebuild their `columns` array every render — a raw
+   * `columns` dependency would invalidate the memo immediately.
+   */
+  const deferredQuery = useDeferredValue(query);
+  const keysKey = (searchKeys || columns.map((c) => c.key)).join("|");
 
-  // Cheap enough to derive each render (admin tables are small + paginated).
-  const q = query.trim().toLowerCase();
-  const filtered = q
-    ? data.filter((row) =>
-        keys.some((k) => String(row[k] ?? "").toLowerCase().includes(q))
-      )
-    : data;
+  const filtered = useMemo(() => {
+    const q = deferredQuery.trim().toLowerCase();
+    if (!q) return data;
+
+    const keys = keysKey.split("|");
+    return data.filter((row) =>
+      keys.some((k) => String(row[k] ?? "").toLowerCase().includes(q))
+    );
+  }, [data, deferredQuery, keysKey]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, totalPages);
-  const pageRows = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+  const pageRows = useMemo(
+    () => filtered.slice((safePage - 1) * pageSize, safePage * pageSize),
+    [filtered, safePage, pageSize]
+  );
 
   const colCount = columns.length + (actions ? 1 : 0);
 
@@ -74,7 +90,21 @@ export function DataTable({
           ) : (
             <span />
           )}
-          {filters && <div className="flex items-center gap-2">{filters}</div>}
+          {/* The filter slot takes whatever a page hands it — Bookings alone
+              passes a status select and two date fields, ~440px of controls.
+              That never fit a phone, and an unwrapped row pushed the whole
+              admin page sideways instead of the filters folding onto a second
+              line. Wrapping is the fix; `flex-1` on the children (below `sm`,
+              where the bar owns the full width) lets whichever ones fit share a
+              line and the rest stretch across their own. Deliberately no
+              `min-w-0`: each control keeps its min-content floor, which is what
+              the flex line-breaking reads to decide where to wrap — zero it and
+              the row silently shrinks past the controls instead. */}
+          {filters && (
+            <div className="flex flex-wrap items-center gap-2 *:flex-1 sm:*:flex-none">
+              {filters}
+            </div>
+          )}
         </div>
       )}
 

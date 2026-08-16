@@ -76,7 +76,7 @@ function normalizeDbService(s, index, locale) {
   };
 }
 
-async function fetchDbServices() {
+export async function fetchDbServices() {
   const data = await request({ method: "GET", url: "/service?limit=100" });
   const list = data?.services ?? [];
   // Every enabled service the admin created — these are what the marketing pages

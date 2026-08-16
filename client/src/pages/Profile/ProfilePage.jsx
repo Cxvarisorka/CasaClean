@@ -26,9 +26,10 @@ import { Input } from "@/components/ui/Input";
 import { PhoneInput } from "@/components/ui/PhoneInput";
 import { Textarea } from "@/components/ui/Textarea";
 import { Badge } from "@/components/ui/Badge";
+import { Pagination } from "@/components/ui/Pagination";
 import { Spinner } from "@/components/ui/Spinner";
 import { Modal } from "@/components/ui/Modal";
-import { useAuth } from "@/features/admin/context";
+import { useAuth } from "@/features/admin/context/AuthContext";
 import { BOOKING_STATUS_META } from "@/features/admin/constants";
 import { updateProfile } from "@/features/auth/api/authApi";
 import { AccountSecurity, BillingProfile } from "@/features/auth";
@@ -79,6 +80,9 @@ const SECTION_IDS = SECTIONS.map((s) => s.id);
 
 // Anchors that live inside a section rather than being one.
 const HASH_ALIASES = { "saved-cards": "billing" };
+
+// Booking history pages rather than rendering a customer's whole record at once.
+const HISTORY_PAGE_SIZE = 10;
 
 const sectionForHash = (hash) => {
   const raw = hash.replace(/^#/, "");
@@ -329,6 +333,25 @@ const ProfilePage = () => {
     [bookings, serviceNameById, cityNameById]
   );
 
+  /*
+   * A long-standing customer's history runs to hundreds of bookings, and every
+   * row carries a badge, a date and two buttons. Rendering all of it built a
+   * very large subtree for a section most visits scroll past, so it pages —
+   * `historyPage` resets whenever the underlying list changes so a cancellation
+   * can't strand the reader on a page that no longer exists.
+   */
+  const [historyPage, setHistoryPage] = useState(1);
+  const historyPages = Math.max(1, Math.ceil(history.length / HISTORY_PAGE_SIZE));
+  const safeHistoryPage = Math.min(historyPage, historyPages);
+  const historyRows = useMemo(
+    () =>
+      history.slice(
+        (safeHistoryPage - 1) * HISTORY_PAGE_SIZE,
+        safeHistoryPage * HISTORY_PAGE_SIZE
+      ),
+    [history, safeHistoryPage]
+  );
+
   // The booking count rides on the nav so the section is worth opening — the
   // history query runs page-wide, the rest only mount with their section.
   const navSections = useMemo(
@@ -383,7 +406,7 @@ const ProfilePage = () => {
           {/* Identity header — the one thing every section shares, so the
               account-wide actions (admin console, sign out) live here rather
               than at the bottom of a column the user has to scroll to. */}
-          <Card className="p-5 sm:p-6">
+          <Card className="p-4 xs:p-5 sm:p-6">
             {/* Identity and actions only share a row from `md`: at 640px the two
                 buttons squeeze the name into a two-line wrap. The avatar, though,
                 sits beside the name at every width — stacking it wastes a whole
@@ -465,7 +488,7 @@ const ProfilePage = () => {
               {section === "account" && (
                 <div id="account" className="grid gap-6 xl:grid-cols-2 xl:items-start">
                   {/* Personal information (editable) */}
-                  <Card className="p-5 sm:p-6">
+                  <Card className="p-4 xs:p-5 sm:p-6">
                     <h2 className="text-heading-sm text-ink-900">
                       {t("profile.personalInfo")}
                     </h2>
@@ -523,7 +546,7 @@ const ProfilePage = () => {
                   </Card>
 
                   {/* Account metadata (read-only) */}
-                  <Card className="p-5 sm:p-6">
+                  <Card className="p-4 xs:p-5 sm:p-6">
                     <h2 className="text-heading-sm text-ink-900">
                       {t("profile.account")}
                     </h2>
@@ -557,7 +580,7 @@ const ProfilePage = () => {
 
               {/* Booking history */}
               {section === "bookings" && (
-                <Card id="bookings" className="p-5 sm:p-6">
+                <Card id="bookings" className="p-4 xs:p-5 sm:p-6">
                   <div className="flex items-center gap-3">
                     <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600">
                       <CalendarCheck className="size-5" />
@@ -595,8 +618,9 @@ const ProfilePage = () => {
                         </Button>
                       </div>
                     ) : (
+                      <>
                       <ul className="divide-y divide-ink-100">
-                        {history.map((b) => {
+                        {historyRows.map((b) => {
                           const meta = BOOKING_STATUS_META[b.status];
                           return (
                             <li
@@ -680,6 +704,13 @@ const ProfilePage = () => {
                           );
                         })}
                       </ul>
+                      <Pagination
+                        page={safeHistoryPage}
+                        total={historyPages}
+                        onChange={setHistoryPage}
+                        className="mt-5"
+                      />
+                      </>
                     )}
                   </div>
                 </Card>

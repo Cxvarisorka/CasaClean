@@ -2,7 +2,8 @@ import { Link } from "react-router-dom";
 import { cn } from "@/lib/cn";
 import { ROUTES } from "@/constants/routes";
 import { SITE } from "@/constants/metadata";
-import logoMark from "@/assets/logo.png";
+import logoMark from "@/assets/logo-72.webp";
+import logoMark2x from "@/assets/logo-144.webp";
 
 /*
  * Logo
@@ -16,6 +17,9 @@ function Mark({ className }) {
   return (
     <img
       src={logoMark}
+      srcSet={`${logoMark} 1x, ${logoMark2x} 2x`}
+      width={36}
+      height={36}
       alt=""
       aria-hidden="true"
       className={cn(

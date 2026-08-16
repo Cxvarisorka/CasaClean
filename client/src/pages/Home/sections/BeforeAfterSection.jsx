@@ -5,7 +5,7 @@ import { Container } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/shared/SectionHeading";
 import { Badge } from "@/components/ui/Badge";
 import { Image } from "@/components/ui/Image";
-import { IMAGES } from "@/constants/images";
+import { IMAGES, LOCAL_SRCSETS } from "@/constants/images";
 import { useTranslation } from "@/i18n";
 import { viewportOnce } from "@/animations/pageTransitions";
 
@@ -77,6 +77,8 @@ function ComparisonSlider() {
       >
         <Image
           src={IMAGES.beforeRoom}
+          srcSet={LOCAL_SRCSETS.beforeRoom}
+          sizes="(min-width: 1024px) 960px, 100vw"
           alt={t("beforeAfter.beforeAlt")}
           rounded="rounded-none"
           className="absolute inset-0 size-full"

@@ -281,6 +281,15 @@ Tailwind v4 `@theme` defines the entire brand language:
 - **sand** — section backgrounds
 - **Fonts** — Inter (body), Plus Jakarta Sans (display)
 - **Radius**, **shadow** ladder (soft → premium), **ease-premium** / **ease-spring**
+- **Breakpoints** — Tailwind's defaults plus two of our own: `3xl` (112rem) at the
+  top, and **`xs` (25rem / 400px)** at the bottom. `sm` is Tailwind's smallest
+  stop at 640px, so a 320px phone and a 430px one otherwise share one set of base
+  styles; `xs:` marks what needs the extra 40-odd pixels, leaving the base
+  declaration as the one the smallest screen gets. It exists for the dense
+  surfaces — the admin panel's KPI grids, filter bars and detail rows, the
+  profile's cards, and the `Modal` / `Pagination` primitives every page shares —
+  where side-by-side layouts stop fitting below 400px. Write the narrow case as
+  the base and opt back in at `xs`, never the reverse.
 
 Supporting sheets: `typography.css` (type scale utilities), `utilities.css` (layout helpers like `sr-only-focusable`), `animations.css` (CSS-level motion; respects `prefers-reduced-motion`).
 

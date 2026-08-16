@@ -7,7 +7,7 @@ import { Page } from "@/components/shared/Page";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { AuthShell, useResetPassword, makeResetPasswordSchema } from "@/features/auth";
-import { useAuth } from "@/features/admin/context";
+import { useAuth } from "@/features/admin/context/AuthContext";
 import { Seo } from "@/seo";
 import { useTranslation } from "@/i18n";
 import { ROUTES } from "@/constants/routes";

@@ -221,7 +221,7 @@ export function MySubscriptions() {
     actionMutation.isPending && actionMutation.variables?.id === id;
 
   return (
-    <Card className="p-5 sm:p-6">
+    <Card className="p-4 xs:p-5 sm:p-6">
       <div className="flex items-center gap-3">
         <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600">
           <CalendarClock className="size-5" aria-hidden="true" />

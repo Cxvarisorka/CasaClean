@@ -19,7 +19,7 @@ import { useTranslation, localizedField } from "@/i18n";
  * i18n/localizeRecord.js.
  */
 
-async function fetchSpecialRequests() {
+export async function fetchSpecialRequests() {
   const data = await request({
     method: "GET",
     url: "/special-request?limit=100",

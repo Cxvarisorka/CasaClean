@@ -1,11 +1,12 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Map as MapIcon, MapPin, CalendarCheck, Euro } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { Pagination } from "@/components/ui/Pagination";
 import {
   PageHeader,
   StatCard,
-  useAdminData,
+  useCollection,
   BOOKING_STATUS_META,
   STATUS_COLORS,
 } from "@/features/admin";
@@ -24,15 +25,27 @@ import { useTranslation } from "@/i18n";
  * bookings and doubles as the fallback when the map can't render (no API key).
  */
 
-const eur = (n) =>
-  new Intl.NumberFormat("en-IE", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 0,
-  }).format(Number(n) || 0);
+// Constructed once, not per call: this runs for every booking row and again
+// inside every map InfoWindow, and Intl.NumberFormat is expensive to build.
+const EUR_FORMAT = new Intl.NumberFormat("en-IE", {
+  style: "currency",
+  currency: "EUR",
+  maximumFractionDigits: 0,
+});
+
+const eur = (n) => EUR_FORMAT.format(Number(n) || 0);
+
+// The roll-up lists every booking there has ever been. Past a few hundred rows
+// that is a lot of DOM for a summary, so it pages like the admin tables do.
+const LIST_PAGE_SIZE = 25;
 
 export default function CoverageMapPage() {
-  const { bookings, cities: cityList, services } = useAdminData();
+  // Scoped to the three collections this page reads, rather than useAdminData()
+  // — it needs no cross-collection `stats`, so it shouldn't pull users,
+  // workers, reviews and messages down with it.
+  const { items: bookings } = useCollection("bookings");
+  const { items: cityList } = useCollection("cities");
+  const { items: services } = useCollection("services");
   const { t } = useTranslation();
 
   // Bookings store only the city/service ids, so resolve real names from the
@@ -76,6 +89,14 @@ export default function CoverageMapPage() {
         };
       }),
     [bookings, cityNameById, serviceNameById, t]
+  );
+
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(points.length / LIST_PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pageRows = useMemo(
+    () => points.slice((safePage - 1) * LIST_PAGE_SIZE, safePage * LIST_PAGE_SIZE),
+    [points, safePage]
   );
 
   const totals = useMemo(
@@ -152,18 +173,25 @@ export default function CoverageMapPage() {
       </Card>
 
       {/* Per-booking roll-up — also the graceful fallback when the map can't render. */}
-      <Card className="p-6">
+      <Card className="p-4 xs:p-6">
         <h2 className="text-heading-sm text-ink-900">{t("admin.coverage.listTitle")}</h2>
         {points.length === 0 ? (
           <p className="mt-4 text-body-sm text-ink-500">{t("admin.coverage.empty")}</p>
         ) : (
+          <>
           <ul className="mt-5 divide-y divide-ink-100">
-            {points.map((p) => (
-              <li key={p.id} className="flex items-center gap-4 py-3 first:pt-0 last:pb-0">
+            {pageRows.map((p) => (
+              /* The amount and the slot want ~120px of the row. Below `xs` that
+                 left the address a truncated fragment, so they move under it
+                 and read left-aligned on their own line. */
+              <li
+                key={p.id}
+                className="flex flex-wrap items-center gap-x-4 gap-y-1 py-3 first:pt-0 last:pb-0"
+              >
                 <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-ink-50 text-ink-400">
                   <MapPin className="size-5" />
                 </span>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 basis-40">
                   <p className="flex flex-wrap items-center gap-2">
                     <span className="font-semibold text-ink-900">{p.customerName}</span>
                     <Badge
@@ -177,13 +205,20 @@ export default function CoverageMapPage() {
                     {p.addressLabel} · {p.serviceName}
                   </p>
                 </div>
-                <div className="shrink-0 text-right">
+                <div className="shrink-0 xs:text-right">
                   <p className="text-body-sm font-bold text-ink-900">{eur(p.totalAmount)}</p>
                   <p className="text-caption text-ink-400">{p.schedule}</p>
                 </div>
               </li>
             ))}
           </ul>
+          <Pagination
+            page={safePage}
+            total={totalPages}
+            onChange={setPage}
+            className="mt-5"
+          />
+          </>
         )}
       </Card>
     </div>

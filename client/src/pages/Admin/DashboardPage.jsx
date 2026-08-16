@@ -53,7 +53,10 @@ export default function DashboardPage() {
         description={t("admin.dashboard.subtitle")}
       />
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      {/* Two-up costs a tile ~156px on a 360px screen, of which the padding and
+          the icon chip take 84 — leaving the revenue figure a 60px gutter to
+          scroll inside. One column below `xs`; the pairs resume at 400. */}
+      <div className="grid grid-cols-1 gap-4 xs:grid-cols-2 lg:grid-cols-4">
         <StatCard
           icon={CalendarCheck}
           label={t("admin.dashboard.bookings")}
@@ -86,7 +89,7 @@ export default function DashboardPage() {
 
       <div className="grid gap-6 lg:grid-cols-5">
         {/* Pipeline */}
-        <Card className="p-6 lg:col-span-2">
+        <Card className="p-4 xs:p-6 lg:col-span-2">
           <h2 className="text-heading-sm text-ink-900">{t("admin.dashboard.pipeline")}</h2>
           <p className="mt-1 text-body-sm text-ink-500">{t("admin.dashboard.pipelineSub")}</p>
           <ul className="mt-6 space-y-4">
@@ -111,7 +114,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Recent bookings */}
-        <Card className="p-6 lg:col-span-3">
+        <Card className="p-4 xs:p-6 lg:col-span-3">
           <div className="flex items-center justify-between">
             <h2 className="text-heading-sm text-ink-900">{t("admin.dashboard.recent")}</h2>
             <Users className="size-5 text-ink-300" />
@@ -120,7 +123,13 @@ export default function DashboardPage() {
             {recent.map((b) => {
               const meta = BOOKING_STATUS_META[b.status];
               return (
-                <div key={b._id} className="flex items-center justify-between gap-4 py-3">
+                /* The amount and the status badge want ~130px, which on a small
+                   phone leaves the customer's name a truncated stub. Below `xs`
+                   they drop under the name and keep their full width. */
+                <div
+                  key={b._id}
+                  className="flex flex-col gap-1 py-3 xs:flex-row xs:items-center xs:justify-between xs:gap-4"
+                >
                   <div className="min-w-0">
                     <p className="truncate text-body-sm font-semibold text-ink-900">
                       {b.customer_name}

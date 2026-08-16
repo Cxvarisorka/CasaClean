@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/cn";
+import { deriveSrcSet } from "@/constants/images";
 import { EASE_PREMIUM } from "@/animations/tokens";
 
 /*
@@ -14,6 +15,8 @@ import { EASE_PREMIUM } from "@/animations/tokens";
 
 export function Image({
   src,
+  srcSet,
+  sizes,
   alt = "",
   aspect,
   gradient = "from-brand-500 to-brand-700",
@@ -26,6 +29,14 @@ export function Image({
   ...props
 }) {
   const [status, setStatus] = useState("loading"); // loading | loaded | error
+
+  // Callers pass a single fixed-width URL. For sources we recognize we can work
+  // the smaller widths out ourselves, so a phone stops downloading desktop-sized
+  // photographs without every call site having to spell out a set.
+  const resolvedSrcSet = useMemo(
+    () => srcSet ?? deriveSrcSet(src),
+    [srcSet, src]
+  );
 
   return (
     <div
@@ -54,9 +65,12 @@ export function Image({
       {status !== "error" && (
         <motion.img
           src={src}
+          srcSet={resolvedSrcSet}
+          sizes={sizes}
           alt={alt}
           loading={priority ? "eager" : "lazy"}
           decoding="async"
+          fetchPriority={priority ? "high" : undefined}
           onLoad={() => setStatus("loaded")}
           onError={() => setStatus("error")}
           initial={{ opacity: 0, scale: 1.05 }}

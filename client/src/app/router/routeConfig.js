@@ -11,24 +11,49 @@ import { ROUTES } from "@/constants/routes";
  * Every page is code-split via React.lazy → each route is its own chunk.
  */
 
-// --- Lazy page imports (one chunk per page) --------------------------------
-const HomePage = lazy(() => import("@/pages/Home/HomePage"));
-const ServicesPage = lazy(() => import("@/pages/Services/ServicesPage"));
-const ServiceDetailPage = lazy(() => import("@/pages/Services/ServiceDetailPage"));
-const AboutPage = lazy(() => import("@/pages/About/AboutPage"));
-const ContactPage = lazy(() => import("@/pages/Contact/ContactPage"));
-const FaqPage = lazy(() => import("@/pages/FAQ/FaqPage"));
-const CareersPage = lazy(() => import("@/pages/Careers/CareersPage"));
-const PrivacyPage = lazy(() => import("@/pages/Legal/PrivacyPage"));
-const TermsPage = lazy(() => import("@/pages/Legal/TermsPage"));
-const BookingPage = lazy(() => import("@/pages/Booking/BookingPage"));
-const SignInPage = lazy(() => import("@/pages/Auth/SignInPage"));
-const SignUpPage = lazy(() => import("@/pages/Auth/SignUpPage"));
-const ForgotPasswordPage = lazy(() => import("@/pages/Auth/ForgotPasswordPage"));
-const ResetPasswordPage = lazy(() => import("@/pages/Auth/ResetPasswordPage"));
-const AdminLoginPage = lazy(() => import("@/pages/Auth/AdminLoginPage"));
-const ProfilePage = lazy(() => import("@/pages/Profile/ProfilePage"));
-const NotFoundPage = lazy(() => import("@/pages/NotFound/NotFoundPage"));
+/*
+ * --- Lazy page imports (one chunk per page) --------------------------------
+ * The importers are named rather than inlined into lazy() so the same function
+ * can serve both purposes: React.lazy renders it, and PREFETCH_BY_PATH below
+ * lets the navigation warm a chunk on hover, before the click.
+ */
+const load = {
+  home: () => import("@/pages/Home/HomePage"),
+  services: () => import("@/pages/Services/ServicesPage"),
+  serviceDetail: () => import("@/pages/Services/ServiceDetailPage"),
+  about: () => import("@/pages/About/AboutPage"),
+  contact: () => import("@/pages/Contact/ContactPage"),
+  faq: () => import("@/pages/FAQ/FaqPage"),
+  careers: () => import("@/pages/Careers/CareersPage"),
+  privacy: () => import("@/pages/Legal/PrivacyPage"),
+  terms: () => import("@/pages/Legal/TermsPage"),
+  booking: () => import("@/pages/Booking/BookingPage"),
+  signin: () => import("@/pages/Auth/SignInPage"),
+  signup: () => import("@/pages/Auth/SignUpPage"),
+  forgotPassword: () => import("@/pages/Auth/ForgotPasswordPage"),
+  resetPassword: () => import("@/pages/Auth/ResetPasswordPage"),
+  adminLogin: () => import("@/pages/Auth/AdminLoginPage"),
+  profile: () => import("@/pages/Profile/ProfilePage"),
+  notFound: () => import("@/pages/NotFound/NotFoundPage"),
+};
+
+const HomePage = lazy(load.home);
+const ServicesPage = lazy(load.services);
+const ServiceDetailPage = lazy(load.serviceDetail);
+const AboutPage = lazy(load.about);
+const ContactPage = lazy(load.contact);
+const FaqPage = lazy(load.faq);
+const CareersPage = lazy(load.careers);
+const PrivacyPage = lazy(load.privacy);
+const TermsPage = lazy(load.terms);
+const BookingPage = lazy(load.booking);
+const SignInPage = lazy(load.signin);
+const SignUpPage = lazy(load.signup);
+const ForgotPasswordPage = lazy(load.forgotPassword);
+const ResetPasswordPage = lazy(load.resetPassword);
+const AdminLoginPage = lazy(load.adminLogin);
+const ProfilePage = lazy(load.profile);
+const NotFoundPage = lazy(load.notFound);
 
 // Admin console — its own bundle, only loaded when /admin is visited.
 const AdminLayout = lazy(() =>
@@ -49,6 +74,48 @@ const AdminWorkersPage = lazy(() => import("@/pages/Admin/WorkersPage"));
 const AdminQualityPage = lazy(() => import("@/pages/Admin/QualityPage"));
 const AdminMessagesPage = lazy(() => import("@/pages/Admin/MessagesPage"));
 
+/*
+ * Route warm-up
+ * -------------
+ * A protected route can't render until `GET /auth/me` resolves, which also
+ * delays its page chunk and every request that chunk would make. `warm` runs as
+ * soon as the guard mounts, so the parts that don't depend on the session — the
+ * chunk itself and the public catalogue — travel alongside it instead of after.
+ * Both imports are dynamic so none of this lands in the entry bundle.
+ */
+const warmBooking = (queryClient) => {
+  load.booking();
+  import("@/features/booking/prefetchCatalogue").then((m) =>
+    m.prefetchBookingCatalogue(queryClient)
+  );
+};
+
+/*
+ * Path → chunk loader, for warming a route before it is navigated to. A hover
+ * or keyboard focus is a strong signal and buys the ~200-300 ms the chunk would
+ * otherwise cost after the click. Dynamic imports are cached by the browser and
+ * the bundler runtime, so calling these repeatedly is free.
+ */
+const PREFETCH_BY_PATH = {
+  [ROUTES.home]: load.home,
+  [ROUTES.services]: load.services,
+  [ROUTES.about]: load.about,
+  [ROUTES.contact]: load.contact,
+  [ROUTES.faq]: load.faq,
+  [ROUTES.careers]: load.careers,
+  [ROUTES.privacy]: load.privacy,
+  [ROUTES.terms]: load.terms,
+  [ROUTES.booking]: load.booking,
+  [ROUTES.signin]: load.signin,
+  [ROUTES.signup]: load.signup,
+  [ROUTES.profile]: load.profile,
+};
+
+/** Warm the chunk behind a path. Unknown paths (e.g. /services/:slug) no-op. */
+export function prefetchRoute(path) {
+  PREFETCH_BY_PATH[path]?.();
+}
+
 /** Routes hosted by the marketing MainLayout (Navbar + Footer). */
 export const MAIN_ROUTES = [
   { path: ROUTES.home, element: HomePage, index: true },
@@ -67,7 +134,7 @@ export const MAIN_ROUTES = [
 /** Routes hosted by the focused EmptyLayout (minimal branded header). */
 export const FOCUSED_ROUTES = [
   // Booking requires a registered, signed-in user.
-  { path: ROUTES.booking, element: BookingPage, protected: true },
+  { path: ROUTES.booking, element: BookingPage, protected: true, warm: warmBooking },
 ];
 
 /** Standalone routes that own their full-screen chrome (auth split-screen). */

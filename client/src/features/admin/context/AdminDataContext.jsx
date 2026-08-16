@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { RESOURCES } from "../api/adminApi";
@@ -13,12 +14,19 @@ import { RESOURCES } from "../api/adminApi";
  * ----------------
  * The single source of truth for every admin-managed collection (services,
  * cities, special requests, bookings). Everything is read from and written to
- * the real backend (MongoDB) — there is no seed or localStorage. On mount the
- * panel loads each collection; create/update/remove call the matching API
- * endpoint and then patch local state from the server's response.
+ * the real backend (MongoDB) — there is no seed or localStorage.
+ * create/update/remove call the matching API endpoint and then patch local
+ * state from the server's response.
  *
  * The API is deliberately generic — `create/update/remove(collection, …)` — so
  * pages stay declarative and every collection is wired the same way.
+ *
+ * Loading is DEMAND-DRIVEN. Opening any admin page used to fetch all nine
+ * collections — every booking, user, worker, review and message in the
+ * database, paged 100 at a time — when the Cities page needs exactly one of
+ * them. Each consumer now declares what it reads (`useCollection` knows its own
+ * name; `useAdminData` exposes `stats`, which spans everything, so it asks for
+ * all of them), and a collection is fetched at most once per session.
  */
 
 const AdminDataContext = createContext(null);
@@ -43,41 +51,64 @@ const EMPTY_DB = {
   contactMessages: [],
 };
 
+const ALL_COLLECTIONS = Object.keys(EMPTY_DB);
+
 export function AdminDataProvider({ children }) {
   const [db, setDb] = useState(EMPTY_DB);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // Collections that have finished at least one fetch. A collection nobody has
+  // asked for is never "settled", so a page reads `loading` until its own data
+  // has actually arrived rather than until some unrelated request finished.
+  const [settled, setSettled] = useState(() => new Set());
+  // Requested-at-least-once, in a ref so `ensure` can dedupe without re-running.
+  const requested = useRef(new Set());
 
-  // Load every collection in parallel. `allSettled` so one failing resource
-  // (e.g. bookings, which needs the admin role) doesn't blank the whole panel.
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    const names = ["cities", "services", "specialRequests", "cleaningTools", "bookings", "users", "workers", "reviews", "contactMessages"];
+  // `allSettled` so one failing resource (e.g. bookings, which needs the admin
+  // role) doesn't blank the whole panel.
+  const load = useCallback(async (names) => {
+    if (!names.length) return;
+
     const results = await Promise.allSettled(
       names.map((name) => RESOURCES[name].list())
     );
 
     setDb((prev) => {
       const next = { ...prev };
+      let changed = false;
       results.forEach((res, i) => {
-        if (res.status === "fulfilled") next[names[i]] = res.value;
+        if (res.status === "fulfilled") {
+          next[names[i]] = res.value;
+          changed = true;
+        }
       });
-      return next;
+      return changed ? next : prev;
     });
 
     const failed = results.find((r) => r.status === "rejected");
     setError(failed ? failed.reason : null);
-    setLoading(false);
+    setSettled((prev) => {
+      const next = new Set(prev);
+      names.forEach((n) => next.add(n));
+      return next;
+    });
   }, []);
 
-  useEffect(() => {
-    // Defer the initial async load one task so React does not receive a
-    // synchronous state update while this effect is being committed.
-    const initialLoad = setTimeout(() => {
-      void refresh();
-    }, 0);
-    return () => clearTimeout(initialLoad);
-  }, [refresh]);
+  /** Declare that a mounted consumer reads these collections. */
+  const ensure = useCallback(
+    (names) => {
+      const missing = names.filter((n) => !requested.current.has(n));
+      if (!missing.length) return;
+      missing.forEach((n) => requested.current.add(n));
+      void load(missing);
+    },
+    [load]
+  );
+
+  // Re-sync everything already in play (after a failed write, or on demand).
+  const refresh = useCallback(
+    () => load([...requested.current]),
+    [load]
+  );
 
   // Run a mutation against the backend. On failure we surface the server's
   // message and re-sync from the source of truth, then report failure so the
@@ -200,8 +231,8 @@ export function AdminDataProvider({ children }) {
   }, [db]);
 
   const value = useMemo(
-    () => ({ ...db, stats, loading, error, create, update, remove, refresh }),
-    [db, stats, loading, error, create, update, remove, refresh]
+    () => ({ ...db, stats, settled, error, ensure, create, update, remove, refresh }),
+    [db, stats, settled, error, ensure, create, update, remove, refresh]
   );
 
   return (
@@ -212,21 +243,47 @@ export function AdminDataProvider({ children }) {
 }
 
 // Provider + consumer hooks are co-located (standard context pattern).
-// eslint-disable-next-line react-refresh/only-export-components
-export function useAdminData() {
+function useAdminContext() {
   const ctx = useContext(AdminDataContext);
   if (!ctx)
     throw new Error("useAdminData must be used within <AdminDataProvider>");
   return ctx;
 }
 
+/**
+ * The whole admin dataset. `stats` is derived from every collection, so asking
+ * for this asks for all of them — prefer `useCollection` when a page only needs
+ * one or two, so it doesn't pull the entire database down with it.
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export function useAdminData() {
+  const ctx = useAdminContext();
+  const { ensure, settled } = ctx;
+
+  useEffect(() => {
+    ensure(ALL_COLLECTIONS);
+  }, [ensure]);
+
+  return {
+    ...ctx,
+    loading: ALL_COLLECTIONS.some((n) => !settled.has(n)),
+  };
+}
+
 /** Convenience selector for a single collection + its scoped CRUD ops. */
 // eslint-disable-next-line react-refresh/only-export-components
 export function useCollection(name) {
-  const { create, update, remove, loading, refresh, ...rest } = useAdminData();
+  const { create, update, remove, refresh, ensure, settled, ...rest } =
+    useAdminContext();
+
+  useEffect(() => {
+    ensure([name]);
+  }, [ensure, name]);
+
   return {
     items: rest[name] ?? [],
-    loading,
+    // Only this collection's arrival matters here.
+    loading: !settled.has(name),
     refresh,
     create: (item) => create(name, item),
     update: (id, patch) => update(name, id, patch),

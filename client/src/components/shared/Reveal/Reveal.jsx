@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { fadeInUp } from "@/animations/fade";
 import { viewportOnce } from "@/animations/pageTransitions";
@@ -8,6 +9,11 @@ import { viewportOnce } from "@/animations/pageTransitions";
  * The workhorse scroll-reveal wrapper. Animates children into view once, with
  * a configurable distance/delay. Built on whileInView so it composes with the
  * global reduced-motion handling and never blocks SSR/first paint.
+ *
+ * It wraps most sections of most marketing pages, so the per-render work here
+ * is multiplied across the page: both the variants object and the viewport
+ * config are memoized. As fresh objects each render they made Framer
+ * re-evaluate the animation config on every parent render.
  */
 
 export function Reveal({
@@ -22,13 +28,23 @@ export function Reveal({
 }) {
   const MotionTag = motion[as] || motion.div;
 
+  const variants = useMemo(
+    () => fadeInUp(distance, duration, delay),
+    [distance, duration, delay]
+  );
+
+  const viewport = useMemo(
+    () => (amount ? { ...viewportOnce, amount } : viewportOnce),
+    [amount]
+  );
+
   return (
     <MotionTag
       className={className}
-      variants={fadeInUp(distance, duration, delay)}
+      variants={variants}
       initial="hidden"
       whileInView="visible"
-      viewport={amount ? { ...viewportOnce, amount } : viewportOnce}
+      viewport={viewport}
       {...props}
     >
       {children}

@@ -21,7 +21,7 @@ import { useTranslation, localizedField } from "@/i18n";
  * i18n/localizeRecord.js.
  */
 
-async function fetchCleaningTools() {
+export async function fetchCleaningTools() {
   const data = await request({
     method: "GET",
     url: "/cleaning-tool?limit=100",

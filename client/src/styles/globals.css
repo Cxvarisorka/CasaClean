@@ -1,5 +1,20 @@
 @import "tailwindcss";
 
+/*
+ * Brand typefaces, self-hosted.
+ * -----------------------------
+ * These used to come from fonts.googleapis.com, which cost a render-blocking
+ * stylesheet on a third-party origin before a single glyph could be requested,
+ * and pulled eight separate static faces (Inter 400/500/600/700 + Plus Jakarta
+ * 500/600/700/800). Each package below is ONE variable file per subset covering
+ * the whole 100-900 range, served from our own origin under the immutable cache
+ * rule in vercel.json, and `unicode-range`-split so a Latin reader never fetches
+ * the Cyrillic or Greek cuts. The families are named "… Variable" — see the
+ * --font-sans / --font-display tokens below.
+ */
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/plus-jakarta-sans";
+
 @import "./typography.css";
 @import "./utilities.css";
 @import "./animations.css";
@@ -67,10 +82,10 @@
    * "Twemoji Country Flags" leads the sans stack but covers ONE unicode range
    * (see its @font-face below), so it only ever supplies flag glyphs — every
    * other character falls straight through to Inter. */
-  --font-sans: "Twemoji Country Flags", "Inter", ui-sans-serif, system-ui,
-    -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-display: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui,
-    sans-serif;
+  --font-sans: "Twemoji Country Flags", "Inter Variable", ui-sans-serif,
+    system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-display: "Plus Jakarta Sans Variable", "Inter Variable", ui-sans-serif,
+    system-ui, sans-serif;
 
   /* ----- Border radius scale ----- */
   --radius-sm: 0.375rem;
@@ -93,6 +108,16 @@
   /* ----- Motion easing tokens ----- */
   --ease-premium: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ----- Breakpoints -----
+   * `xs` (400px) is the small-phone band. Tailwind's smallest built-in stop is
+   * `sm` at 640px, so everything below it — a 360px Android, a 375px iPhone SE,
+   * a folded foldable — shares one set of base styles tuned for ~390px. That is
+   * where the dense surfaces (the admin panel, the profile's cards and modals)
+   * run out of room: two-up KPI tiles, label/value rows and filter bars all fit
+   * at 400 and overflow below it. `xs:` marks the styles that need those 40-ish
+   * pixels, leaving the base declaration as the one a 320px screen gets. */
+  --breakpoint-xs: 25rem;
 
   /* ----- Container width ----- */
   --breakpoint-3xl: 112rem;
@@ -127,13 +152,14 @@
 /*
  * Georgian typography
  * -------------------
- * The Georgian locale (`ka`) uses BPG Nino Mtavruli Bold. The single TTF covers
+ * The Georgian locale (`ka`) uses BPG Nino Mtavruli Bold. The single file covers
  * the whole weight range (100–900) so every requested weight maps to it without
  * faux-bolding — we change the family, never the weight the components declare.
+ * Shipped as woff2: the original TTF was uncompressed and 74% larger.
  */
 @font-face {
   font-family: "BPG Nino Mtavruli";
-  src: url("../assets/fonts/bpg_nino_mtavruli_bold.ttf") format("truetype");
+  src: url("../assets/fonts/bpg_nino_mtavruli_bold.woff2") format("woff2");
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
@@ -151,10 +177,10 @@
  */
 html[lang="ka"] {
   /* Flags stay first here too — the Georgian face has no flag glyphs either. */
-  --font-sans: "Twemoji Country Flags", "BPG Nino Mtavruli", "Inter",
+  --font-sans: "Twemoji Country Flags", "BPG Nino Mtavruli", "Inter Variable",
     ui-sans-serif, system-ui, sans-serif;
-  --font-display: "BPG Nino Mtavruli", "Plus Jakarta Sans", "Inter",
-    ui-sans-serif, sans-serif;
+  --font-display: "BPG Nino Mtavruli", "Plus Jakarta Sans Variable",
+    "Inter Variable", ui-sans-serif, sans-serif;
 }
 
 /*

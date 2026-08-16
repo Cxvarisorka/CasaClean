@@ -298,7 +298,7 @@ export default function MessagesPage() {
             </dl>
 
             {/* whitespace-pre-line so the sender's own line breaks survive. */}
-            <div className="rounded-2xl border border-ink-100 bg-ink-50/50 p-5">
+            <div className="rounded-2xl border border-ink-100 bg-ink-50/50 p-4 xs:p-5">
               <p className="whitespace-pre-line text-body-sm text-ink-800">
                 {current.message}
               </p>
@@ -328,7 +328,7 @@ export default function MessagesPage() {
             )}
 
             {/* Composer. Sending also marks the message handled, server-side. */}
-            <div className="rounded-2xl border border-ink-100 p-5">
+            <div className="rounded-2xl border border-ink-100 p-4 xs:p-5">
               <Textarea
                 label={t("admin.messages.replyLabel")}
                 hint={t("admin.messages.replyHint", { email: current.email })}
@@ -365,7 +365,7 @@ export default function MessagesPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-ink-100 p-5">
+            <div className="rounded-2xl border border-ink-100 p-4 xs:p-5">
               <Switch
                 containerClassName="w-full"
                 checked={isHandled(current)}
@@ -405,9 +405,11 @@ function DetailRow({ icon: Icon, label, value }) {
       <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg bg-ink-100 text-ink-500">
         <Icon className="size-4" aria-hidden="true" />
       </span>
+      {/* An email is one unbreakable token; without `wrap-break-word` it runs
+          straight out of the dialog on a small phone. */}
       <div className="min-w-0">
         <dt className="text-caption text-ink-400">{label}</dt>
-        <dd className="text-body-sm font-medium text-ink-800">{value}</dd>
+        <dd className="wrap-break-word text-body-sm font-medium text-ink-800">{value}</dd>
       </div>
     </div>
   );

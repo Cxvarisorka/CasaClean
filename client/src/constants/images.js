@@ -7,7 +7,8 @@
  * primitive, which gracefully falls back to a brand gradient if a URL fails.
  */
 
-import beforeRoomImg from "@/assets/before-room.png";
+import beforeRoom1200 from "@/assets/before-room-1200.webp";
+import beforeRoom800 from "@/assets/before-room-800.webp";
 
 const CDN = "https://images.unsplash.com";
 
@@ -20,6 +21,42 @@ const CDN = "https://images.unsplash.com";
 export const img = (id, { w = 1200, h, q = 80 } = {}) =>
   `${CDN}/${id}?auto=format&fit=crop&q=${q}&w=${w}${h ? `&h=${h}` : ""}`;
 
+/*
+ * Every URL above is a single fixed width, so a phone downloads the same 1600px
+ * backdrop as a desktop. Rather than restate each entry as a set, we re-derive
+ * the smaller widths from a built URL — the <Image> primitive calls this for any
+ * src it recognizes, which makes the whole registry responsive in one place.
+ * `h` is scaled with `w` so the crop ratio Unsplash applies stays identical.
+ */
+const SRCSET_SCALES = [0.5, 0.75, 1];
+
+export function deriveSrcSet(src) {
+  if (typeof src !== "string" || !src.startsWith(CDN)) return undefined;
+
+  let url;
+  try {
+    url = new URL(src);
+  } catch {
+    return undefined;
+  }
+
+  const w = Number(url.searchParams.get("w"));
+  if (!Number.isFinite(w) || w <= 0) return undefined;
+
+  const h = Number(url.searchParams.get("h")) || undefined;
+  const ratio = h ? h / w : undefined;
+
+  const widths = [...new Set(SRCSET_SCALES.map((s) => Math.round(w * s)))];
+  return widths
+    .map((width) => {
+      const next = new URL(url);
+      next.searchParams.set("w", String(width));
+      if (ratio) next.searchParams.set("h", String(Math.round(width * ratio)));
+      return `${next.toString()} ${width}w`;
+    })
+    .join(", ");
+}
+
 export const IMAGES = {
   // Hero & marketing interiors
   heroInterior: img("photo-1522708323590-d24dbb6b0267", { w: 1100, h: 1300 }),
@@ -28,7 +65,7 @@ export const IMAGES = {
   dining: img("photo-1600607687939-ce8a6c25118c", { w: 1200 }),
 
   // Before / after showcase — "before" is a locally-stored messy room (pre-turnover)
-  beforeRoom: beforeRoomImg,
+  beforeRoom: beforeRoom1200,
   afterRoom: img("photo-1505693416388-ac5ce068fe85", { w: 1200, h: 800 }),
 
   // Service-specific
@@ -44,6 +81,14 @@ export const IMAGES = {
   pageBackdrop: img("photo-1560448204-e02f11c3d0e2", { w: 1600, h: 700 }),
   kitchen: img("photo-1556911220-bff31c812dba", { w: 1200 }),
   bathroom: img("photo-1620626011761-996317b8d101", { w: 1200 }),
+};
+
+/*
+ * Locally-bundled images can't be re-derived from a URL the way the CDN ones
+ * can, so the few that ship in more than one size declare their set here.
+ */
+export const LOCAL_SRCSETS = {
+  beforeRoom: `${beforeRoom800} 800w, ${beforeRoom1200} 1200w`,
 };
 
 // Portrait photos for people (square crops).

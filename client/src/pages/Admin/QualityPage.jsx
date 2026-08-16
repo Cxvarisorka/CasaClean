@@ -241,7 +241,7 @@ export default function QualityPage() {
         />
       </div>
 
-      <Card className="p-6">
+      <Card className="p-4 xs:p-6">
         <h2 className="text-heading-sm text-ink-900">
           {t("admin.quality.distribution")}
         </h2>
@@ -322,7 +322,7 @@ export default function QualityPage() {
         {current && (
           <div className="space-y-6">
             {/* The review */}
-            <div className="rounded-2xl border border-ink-100 bg-ink-50/50 p-5">
+            <div className="rounded-2xl border border-ink-100 bg-ink-50/50 p-4 xs:p-5">
               <div className="flex items-center justify-between gap-3">
                 <Stars value={current.rating} />
                 <span className="text-caption text-ink-400">
@@ -339,7 +339,7 @@ export default function QualityPage() {
             </div>
 
             {/* Moderation — read the comment above, then decide. */}
-            <div className="rounded-2xl border border-ink-100 p-5">
+            <div className="rounded-2xl border border-ink-100 p-4 xs:p-5">
               <Switch
                 containerClassName="w-full"
                 checked={Boolean(current.is_published)}
@@ -359,7 +359,9 @@ export default function QualityPage() {
 
             {/* The rated booking */}
             <div>
-              <div className="mb-3 flex items-center justify-between gap-3">
+              {/* Heading, reference and status badge come to ~290px — one pixel
+                  more than a dialog has on a 360px screen, so they wrap. */}
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
                 <h3 className="text-body-md font-semibold text-ink-900">
                   {t("admin.quality.detail.booking")}
                 </h3>
@@ -458,9 +460,11 @@ function DetailRow({ icon: Icon, label, value }) {
       <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg bg-ink-100 text-ink-500">
         <Icon className="size-4" aria-hidden="true" />
       </span>
+      {/* An email is one unbreakable token; without `wrap-break-word` it runs
+          straight out of the dialog on a small phone. */}
       <div className="min-w-0">
         <dt className="text-caption text-ink-400">{label}</dt>
-        <dd className="text-body-sm font-medium text-ink-800">{value}</dd>
+        <dd className="wrap-break-word text-body-sm font-medium text-ink-800">{value}</dd>
       </div>
     </div>
   );

@@ -23,7 +23,7 @@ import { useTranslation, localizedField } from "@/i18n";
  * values rather than a hardcoded list.
  */
 
-async function fetchCities() {
+export async function fetchCities() {
   const data = await request({ method: "GET", url: "/city?limit=100" });
   const cities = data?.cities ?? [];
   // Kept raw (translations included) so switching language costs no request.

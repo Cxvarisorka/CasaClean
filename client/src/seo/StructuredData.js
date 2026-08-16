@@ -16,7 +16,7 @@ export function organizationSchema() {
     name: SITE.name,
     legalName: SITE.legalName,
     url: SITE.url,
-    logo: `${SITE.url}/logo.png`,
+    logo: `${SITE.url}/apple-touch-icon.png`,
     email: SITE.email,
     telephone: SITE.phone,
     foundingDate: SITE.founded,

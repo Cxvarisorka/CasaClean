@@ -68,11 +68,20 @@ const changedOnly = (values, original) =>
  */
 const INVOICEABLE = ["paid", "refunded", "manual"];
 
+/*
+ * A label and its value. They only share a line from `xs`: inside a dialog on a
+ * 360px screen the row has ~290px, and an address or an email eats all of it —
+ * a side-by-side layout then either overflows (an email has no break point a
+ * browser will use) or squeezes the value into a one-word-per-line column.
+ * Stacked, the value gets the full width; `wrap-break-word` handles the rest.
+ */
 function DetailRow({ label, value }) {
   return (
-    <div className="flex justify-between gap-6 border-b border-ink-100 py-2.5 last:border-0">
-      <span className="text-body-sm text-ink-400">{label}</span>
-      <span className="text-right text-body-sm font-medium text-ink-800">{value || "—"}</span>
+    <div className="flex flex-col gap-0.5 border-b border-ink-100 py-2.5 last:border-0 xs:flex-row xs:justify-between xs:gap-4">
+      <span className="shrink-0 text-body-sm text-ink-400">{label}</span>
+      <span className="min-w-0 wrap-break-word text-body-sm font-medium text-ink-800 xs:text-right">
+        {value || "—"}
+      </span>
     </div>
   );
 }

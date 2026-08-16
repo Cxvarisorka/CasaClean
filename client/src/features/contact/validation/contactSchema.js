@@ -33,9 +33,11 @@ export const contactSchema = z.object({
   website: z.string().optional(),
 });
 
-export const newsletterSchema = z.object({
-  email: z.string().trim().email("Enter a valid email address"),
-});
+/*
+ * The newsletter's single email field validates inline in NewsletterForm rather
+ * than here: the Footer renders on every page, so importing zod for it dragged
+ * the whole validation stack onto the marketing critical path.
+ */
 
 export const CONTACT_TOPICS = [
   { value: "general", label: "General enquiry" },

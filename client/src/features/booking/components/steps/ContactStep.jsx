@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/Input";
 import { PhoneInput } from "@/components/ui/PhoneInput";
 import { Textarea } from "@/components/ui/Textarea";
 import { useTranslation } from "@/i18n";
-import { useAuth } from "@/features/admin/context";
+import { useAuth } from "@/features/admin/context/AuthContext";
 
 /*
  * ContactStep

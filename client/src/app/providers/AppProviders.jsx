@@ -4,7 +4,7 @@ import { QueryProvider } from "./QueryProvider";
 import { ThemeProvider } from "./ThemeProvider";
 import { MotionProvider } from "./MotionProvider";
 import { I18nProvider } from "@/i18n";
-import { AuthProvider } from "@/features/admin/context";
+import { AuthProvider } from "@/features/admin/context/AuthContext";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 
 /*

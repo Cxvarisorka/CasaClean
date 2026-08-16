@@ -13,7 +13,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
-import { useAuth } from "@/features/admin/context";
+import { useAuth } from "@/features/admin/context/AuthContext";
 import { useTranslation } from "@/i18n";
 import { refreshTaxStatus, updateTaxProfile } from "../api/authApi";
 
@@ -107,7 +107,7 @@ export function BillingProfile() {
   const status = user?.vatStatus && user.vatStatus !== "none" ? user.vatStatus : null;
 
   return (
-    <Card className="p-5 sm:p-6">
+    <Card className="p-4 xs:p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
         <div className="min-w-0">
           <h3 className="text-heading-sm text-ink-900">{t("profile.billing.title")}</h3>

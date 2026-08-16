@@ -47,7 +47,7 @@ export function Modal({
   return createPortal(
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 xs:p-4">
           <motion.div
             className="absolute inset-0 bg-night-soft/50 backdrop-blur-sm"
             initial={{ opacity: 0 }}
@@ -65,7 +65,7 @@ export function Modal({
             exit={{ opacity: 0, scale: 0.97, y: 8 }}
             transition={{ duration: 0.25, ease: EASE_PREMIUM }}
             className={cn(
-              "relative z-10 flex max-h-[calc(100dvh-2rem)] w-full flex-col",
+              "relative z-10 flex max-h-[calc(100dvh-1.5rem)] w-full flex-col xs:max-h-[calc(100dvh-2rem)]",
               "rounded-2xl bg-surface shadow-premium",
               SIZES[size]
             )}
@@ -74,13 +74,16 @@ export function Modal({
               type="button"
               onClick={onClose}
               aria-label={t("common.close")}
-              className="absolute right-4 top-4 grid size-9 place-items-center rounded-full text-ink-400 transition-colors hover:bg-ink-100 hover:text-ink-700"
+              className="absolute right-3 top-3 grid size-9 place-items-center rounded-full text-ink-400 transition-colors hover:bg-ink-100 hover:text-ink-700 xs:right-4 xs:top-4"
             >
               <X className="size-5" />
             </button>
 
+            {/* The gutters shrink on a small phone: at 360px the dialog is only
+                330px wide, and 24px of padding a side spends a seventh of it on
+                nothing. The right one keeps clear of the close button. */}
             {(title || description) && (
-              <div className="shrink-0 px-6 pt-6 pr-14">
+              <div className="shrink-0 px-4 pt-5 pr-13 xs:px-6 xs:pt-6 xs:pr-14">
                 {title && (
                   <h2 className="text-heading-sm text-ink-900">{title}</h2>
                 )}
@@ -90,12 +93,12 @@ export function Modal({
               </div>
             )}
 
-            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 xs:px-6">
               {children}
             </div>
 
             {footer && (
-              <div className="flex shrink-0 flex-wrap justify-end gap-3 border-t border-ink-100 px-6 py-4">
+              <div className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-ink-100 px-4 py-4 xs:gap-3 xs:px-6">
                 {footer}
               </div>
             )}

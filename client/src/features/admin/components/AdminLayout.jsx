@@ -69,7 +69,7 @@ export function AdminLayout() {
           {/* Main column */}
           <div className="flex min-w-0 flex-1 flex-col">
             <AdminTopbar onOpenSidebar={() => setDrawerOpen(true)} />
-            <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+            <main className="flex-1 px-3 py-6 xs:px-4 sm:px-6 lg:px-8 lg:py-8">
               <div className="mx-auto max-w-6xl">
                 <Outlet />
               </div>

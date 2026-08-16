@@ -38,20 +38,26 @@ describe("LegalDocument", () => {
     expect(screen.queryByRole("note")).not.toBeInTheDocument();
   });
 
-  it("renders the Italian document for an Italian reader", () => {
+  /*
+   * The non-English cases await the heading: only the fallback locale is
+   * bundled eagerly, so every other language resolves its messages through a
+   * dynamic import and the provider holds the first render until it lands
+   * (see src/i18n/context.js). English stays synchronous.
+   */
+  it("renders the Italian document for an Italian reader", async () => {
     renderIn("it", "terms");
 
     expect(
-      screen.getByRole("heading", { level: 1, name: itDoc.terms.title })
+      await screen.findByRole("heading", { level: 1, name: itDoc.terms.title })
     ).toBeInTheDocument();
     expect(screen.queryByRole("note")).not.toBeInTheDocument();
   });
 
-  it("serves English to a locale the documents aren't published in, and says so", () => {
+  it("serves English to a locale the documents aren't published in, and says so", async () => {
     renderIn("ru", "terms");
 
     expect(
-      screen.getByRole("heading", { level: 1, name: en.terms.title })
+      await screen.findByRole("heading", { level: 1, name: en.terms.title })
     ).toBeInTheDocument();
     expect(screen.getByRole("note")).toHaveTextContent(/English and Italian only/i);
   });

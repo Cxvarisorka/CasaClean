@@ -10,9 +10,10 @@ import { LanguageSwitcher } from "../LanguageSwitcher";
 import { ThemeToggle } from "../ThemeToggle";
 import { useScrollPosition } from "@/hooks/useScrollPosition";
 import { useTranslation } from "@/i18n";
-import { useAuth } from "@/features/admin/context";
+import { useAuth } from "@/features/admin/context/AuthContext";
 import { PRIMARY_NAV } from "@/constants/navigation";
 import { ROUTES } from "@/constants/routes";
+import { prefetchRoute } from "@/app/router/routeConfig";
 import { MobileMenu } from "../MobileMenu";
 
 /*
@@ -22,7 +23,16 @@ import { MobileMenu } from "../MobileMenu";
  * frosted-glass surface on scroll, localizes all labels via the i18n context,
  * hosts the language switcher and auth entry points, and delegates the mobile
  * experience to a Drawer-based MobileMenu.
+ *
+ * Every destination warms its route chunk on hover/focus, so the click lands on
+ * an already-downloaded page instead of waiting on the network.
  */
+
+/** Hover/focus handlers that warm the chunk behind a destination. */
+const warmOn = (path) => ({
+  onMouseEnter: () => prefetchRoute(path),
+  onFocus: () => prefetchRoute(path),
+});
 
 export function Navbar() {
   const { scrolled } = useScrollPosition();
@@ -57,6 +67,7 @@ export function Navbar() {
                 <li key={item.href}>
                   <NavLink
                     to={item.href}
+                    {...warmOn(item.href)}
                     className={({ isActive }) =>
                       cn(
                         "whitespace-nowrap rounded-full px-4 py-2 text-body-sm font-medium transition-colors",
@@ -76,15 +87,26 @@ export function Navbar() {
               <ThemeToggle />
               <LanguageSwitcher />
               {isAuthenticated ? (
-                <Button variant="ghost" size="sm" to={ROUTES.profile} leftIcon={User}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  to={ROUTES.profile}
+                  leftIcon={User}
+                  {...warmOn(ROUTES.profile)}
+                >
                   {firstName}
                 </Button>
               ) : (
-                <Button variant="ghost" size="sm" to={ROUTES.signin}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  to={ROUTES.signin}
+                  {...warmOn(ROUTES.signin)}
+                >
                   {t("common.signIn")}
                 </Button>
               )}
-              <Button to={ROUTES.booking} size="sm">
+              <Button to={ROUTES.booking} size="sm" {...warmOn(ROUTES.booking)}>
                 {t("common.bookTurnover")}
               </Button>
             </div>

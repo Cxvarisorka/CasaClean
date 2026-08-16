@@ -6,9 +6,9 @@ import { AlertCircle, CreditCard, Lock } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useTranslation } from "@/i18n";
 import { formatCurrency } from "@/utils/formatCurrency";
-import { stripePromise, isStripeConfigured } from "@/services/stripe";
+import { getStripe, isStripeConfigured } from "@/services/stripe";
 import { useServices } from "@/features/services";
-import { useAuth } from "@/features/admin";
+import { useAuth } from "@/features/admin/context/AuthContext";
 import { useSpecialRequests } from "../../hooks/useSpecialRequests";
 import { useCleaningTools } from "../../hooks/useCleaningTools";
 import { computeQuote } from "../../utils/pricing";
@@ -167,7 +167,7 @@ export function PaymentStep({ onConfirmed }) {
           return;
         }
         if (res.paymentStatus === "requires_action") {
-          const stripe = await stripePromise;
+          const stripe = await getStripe();
           const { error: actionError, paymentIntent } = await stripe.handleNextAction({
             clientSecret: res.clientSecret,
           });
@@ -214,7 +214,7 @@ export function PaymentStep({ onConfirmed }) {
   if (intent) {
     return (
       <Elements
-        stripe={stripePromise}
+        stripe={getStripe()}
         options={{ clientSecret: intent.clientSecret, appearance: { theme: "stripe" } }}
       >
         <CardCheckoutForm amount={intent.amount ?? quote.total} onFinalize={finalizeAndConfirm} />

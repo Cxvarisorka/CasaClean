@@ -37,14 +37,14 @@ export function AppRoutes() {
         <Routes location={location} key={location.pathname}>
           {/* Marketing surfaces */}
           <Route element={<MainLayout />}>
-            {MAIN_ROUTES.map(({ path, element: Element, index, protected: isProtected }) => (
+            {MAIN_ROUTES.map(({ path, element: Element, index, protected: isProtected, warm }) => (
               <Route
                 key={path}
                 path={index ? undefined : path}
                 index={index || undefined}
                 element={
                   isProtected ? (
-                    <RequireAuth>
+                    <RequireAuth warm={warm}>
                       <Element />
                     </RequireAuth>
                   ) : (
@@ -57,13 +57,13 @@ export function AppRoutes() {
 
           {/* Focused flows with a minimal branded header */}
           <Route element={<EmptyLayout />}>
-            {FOCUSED_ROUTES.map(({ path, element: Element, protected: isProtected }) => (
+            {FOCUSED_ROUTES.map(({ path, element: Element, protected: isProtected, warm }) => (
               <Route
                 key={path}
                 path={path}
                 element={
                   isProtected ? (
-                    <RequireAuth>
+                    <RequireAuth warm={warm}>
                       <Element />
                     </RequireAuth>
                   ) : (

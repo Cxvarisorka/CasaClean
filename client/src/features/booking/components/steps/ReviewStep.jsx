@@ -3,7 +3,7 @@ import { AlertCircle } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { useTranslation } from "@/i18n";
 import { useServices } from "@/features/services";
-import { useAuth } from "@/features/admin";
+import { useAuth } from "@/features/admin/context/AuthContext";
 import { useBookingNav } from "../../store/BookingContext";
 import { useCities } from "../../hooks/useCities";
 import { useSpecialRequests } from "../../hooks/useSpecialRequests";
