@@ -33,8 +33,11 @@ export const Input = forwardRef(function Input(
     ? `${inputId}-hint`
     : undefined;
 
+  /* `min-w-0`: a bare <input> carries an intrinsic width of ~20 characters, so
+     dropping one into a flex row (ListField, a filter bar) otherwise floors that
+     row at ~180px whatever the viewport is. Same on Select/Textarea/PhoneInput. */
   return (
-    <div className={cn("w-full", containerClassName)}>
+    <div className={cn("w-full min-w-0", containerClassName)}>
       {label && (
         <label
           htmlFor={inputId}

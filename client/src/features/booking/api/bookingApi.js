@@ -1,4 +1,5 @@
 import { request } from "@/services/api";
+import { durationMinutesOf } from "../validation/bookingSchema";
 
 /*
  * Booking API
@@ -26,10 +27,12 @@ export function toBookingPayload(values) {
     doorbellName: values.doorbellName,
     bookingDate: values.date,
     bookingTime: values.time,
-    hours: Number(values.hours),
+    // The wizard collects an Hours and a Minutes field; the API takes the one
+    // canonical total (1 h 25 m -> 85). See utils/duration.js.
+    durationMinutes: durationMinutesOf(values),
     cleaners: Number(values.cleaners),
     // totalAmount is computed and stored server-side from the service price,
-    // hours and selected add-ons — never trusted from the client.
+    // the booked minutes and the selected add-ons — never trusted from the client.
     notes: values.notes || null,
     // Add-ons are SpecialRequest ids (validated server-side against enabled items).
     specialRequests: values.additionalServices || [],

@@ -93,6 +93,20 @@ const serviceSchema = new mongoose.Schema({
         }
     ],
 
+    // Same-day ("instant") booking. Every service is normally bookable only
+    // ADVANCE_BOOKING_HOURS ahead (utils/leadTime.util.js) so the visit can be
+    // staffed; a service the business can genuinely turn around today opts out
+    // of that wait here. Default false — fail-closed, and the value every
+    // service written before this feature reads as.
+    //
+    // It removes ONLY the notice period. The city's working hours, the duration
+    // fitting inside them and "not already past" still apply, so an instant
+    // service still can't be booked for a time this morning.
+    allowInstantBooking: {
+        type: Boolean,
+        default: false
+    },
+
     // Recurrence model: not every service makes sense on a repeating schedule
     // (a one-off deep clean doesn't), so it is opt-in per service.
     //   - recurringEnabled: false -> the service can only be booked once;

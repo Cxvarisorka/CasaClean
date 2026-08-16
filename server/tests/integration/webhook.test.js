@@ -66,7 +66,7 @@ const seedPendingBooking = async (paymentIntentId) => {
             doorbellName: "Rossi",
             bookingDate: dateStr(2),
             bookingTime: "10:00",
-            hours: 2,
+            durationMinutes: 120,
             cleaners: 1,
             totalAmount: 40
         }

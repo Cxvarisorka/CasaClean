@@ -27,7 +27,16 @@ export const BOOKING_STEPS = [
     id: "preferences",
     title: "Cleaning preferences",
     subtitle: "Tailor the turnover",
-    fields: ["hours", "cleaners", "additionalServices", "cleaningTools"],
+    // Duration is collected as two numeric fields, an Hours and a Minutes, and
+    // combined into total minutes at submission (utils/duration.js). Both are
+    // listed so a per-step validation surfaces an error on either one.
+    fields: [
+      "durationHours",
+      "durationMins",
+      "cleaners",
+      "additionalServices",
+      "cleaningTools",
+    ],
   },
   {
     id: "schedule",
@@ -63,33 +72,29 @@ export const BOOKING_STEPS = [
 // Add-ons and cleaning tools come from the live catalogue via
 // useSpecialRequests / useCleaningTools; there is no static fallback list.
 
-// Selectable durations, in hours. A booking is bought by the half hour, so 1.5
-// is a valid 90-minute visit; the step and bounds mirror the server's
-// utils/duration.util.js and the `hours` rule in validation/bookingSchema.js.
-// The 6h ceiling is this wizard's, and stricter than the server's 12h — an
-// admin can book a longer job by hand.
-export const DURATION_STEP_HOURS = 0.5;
-export const MIN_DURATION_HOURS = 1;
-export const MAX_DURATION_HOURS = 6;
+// Duration bounds, in TOTAL MINUTES. There is deliberately no list of
+// selectable durations: the customer types an Hours and a Minutes value and any
+// whole minute between these bounds is bookable, because a 1 h 25 min visit is
+// an ordinary request that a dropdown of round numbers silently refuses.
+//
+// MIN mirrors the server's MIN_DURATION_MINUTES exactly. The 6-hour ceiling is
+// this wizard's and is stricter than the server's 12 — an admin can book a
+// longer job by hand.
+export const MIN_DURATION_MINUTES = 60;
+export const MAX_DURATION_MINUTES = 360;
 
-/**
- * Every bookable duration, from the minimum to the maximum in half-hour steps:
- * [1, 1.5, 2, … 6]. Built rather than listed so the three constants above stay
- * the only thing to change.
- */
-export function durationChoices(
-  min = MIN_DURATION_HOURS,
-  max = MAX_DURATION_HOURS,
-  step = DURATION_STEP_HOURS
-) {
-  const choices = [];
-  for (let hours = min; hours <= max + 1e-9; hours += step) {
-    // Steps are halves, which are exact in binary floating point; the rounding
-    // is here so a future step like 0.25 can't accumulate drift either.
-    choices.push(Math.round(hours * 100) / 100);
-  }
-  return choices;
-}
+// The minutes half of the pair. Sixty minutes is one more hour, not a valid
+// minutes value, so the pair has exactly one spelling of every duration.
+export const MAX_MINUTES_PART = 59;
+
+// The largest whole hour the Hours input accepts — the minutes field can add up
+// to 59 more, which the total bound above then catches.
+export const MAX_DURATION_HOURS_PART = Math.floor(MAX_DURATION_MINUTES / 60);
+
+// How far ahead a booking must be placed, unless its service allows instant
+// (same-day) booking. Mirrors ADVANCE_BOOKING_HOURS in the server's
+// utils/leadTime.util.js, which is the authority and re-checks every booking.
+export const ADVANCE_BOOKING_HOURS = 48;
 
 // Selectable cleaner counts, mirrored by the `cleaners` bound in
 // validation/bookingSchema.js and by the max on the PreferencesStep input.

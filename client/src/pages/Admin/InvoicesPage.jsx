@@ -115,7 +115,7 @@ function InvoiceLines({ invoice, t }) {
             />
           </>
         ) : null}
-        <div className="flex items-center justify-between gap-6 pt-2">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 pt-2">
           <span className="text-body-sm font-semibold text-ink-600">
             {invoice.status === "refunded"
               ? t("admin.invoices.detail.totalRefunded")
@@ -297,7 +297,7 @@ export default function InvoicesPage() {
                 { value: "", label: t("admin.invoices.allStatuses") },
                 ...statusOptions,
               ]}
-              className="h-11 min-w-[10rem]"
+              className="h-11 xs:min-w-40"
             />
           }
           onRowClick={setViewing}
@@ -366,7 +366,7 @@ export default function InvoicesPage() {
       >
         {viewing && (
           <div className="space-y-1">
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
               <Badge variant={(STATUS_META[viewing.status] || STATUS_META.issued).variant}>
                 {t((STATUS_META[viewing.status] || STATUS_META.issued).labelKey)}
               </Badge>
@@ -399,7 +399,7 @@ export default function InvoicesPage() {
             />
             <DetailRow
               label={t("admin.invoices.detail.hoursCleaners")}
-              value={`${formatDuration(t, viewing.hours) || "—"} · ${viewing.cleaners ?? "—"}`}
+              value={`${formatDuration(t, viewing.duration_minutes) || "—"} · ${viewing.cleaners ?? "—"}`}
             />
             <DetailRow
               label={t("admin.invoices.detail.payment")}

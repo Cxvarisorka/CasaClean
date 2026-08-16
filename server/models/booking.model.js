@@ -1,6 +1,10 @@
 const mongoose = require('mongoose');
 
-const { isValidDurationHours } = require('../utils/duration.util');
+const {
+  isValidDurationMinutes,
+  MIN_DURATION_MINUTES,
+  MAX_DURATION_MINUTES
+} = require('../utils/duration.util');
 
 // Booking
 // -------
@@ -82,16 +86,25 @@ const bookingSchema = new mongoose.Schema({
     type: String,
     required: [true, "Booking time is required!"]
   },
-  // Whole or half hours — 1.5 is a valid 90-minute booking. The step rule lives
-  // in utils/duration.util.js so the Zod layer and this one can't drift.
+  // How long the visit lasts, in TOTAL MINUTES — 85 is a 1 h 25 min booking.
+  // The bounds live in utils/duration.util.js so the Zod layer and this one
+  // can't drift, and minutes are what every downstream calculation reads
+  // (pricing, the working-hours window, the cancellation fee, the invoice).
+  durationMinutes: {
+    type: Number,
+    required: [true, "Booking duration is required!"],
+    validate: {
+      validator: isValidDurationMinutes,
+      message: `A booking's duration must be a whole number of minutes between ${MIN_DURATION_MINUTES} and ${MAX_DURATION_MINUTES}.`
+    }
+  },
+  // LEGACY. Durations used to be stored as whole/half hours; records written
+  // before minutes existed still carry this and no `durationMinutes`. Nothing
+  // writes it any more — read a duration with `durationInMinutes(booking)`,
+  // which understands both shapes.
   hours: {
     type: Number,
-    required: [true, "Working hours is required!"],
-    min: [1, "A booking must be at least 1 hour."],
-    validate: {
-      validator: isValidDurationHours,
-      message: "A booking's duration must be a whole or half hour (e.g. 1, 1.5, 2)."
-    }
+    min: [0, "Duration can't be negative."]
   },
   cleaners: {
     type: Number,

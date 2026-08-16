@@ -170,6 +170,9 @@ const notifyAdminsOfNewBooking = async ({ booking, serviceName = '', recurring =
       customerPhone: booking.customerPhone,
       bookingDate: booking.bookingDate,
       bookingTime: booking.bookingTime,
+      durationMinutes: booking.durationMinutes,
+      // Passed through so a legacy booking (hours, no durationMinutes) still
+      // states its length; the template resolves whichever one is present.
       hours: booking.hours,
       cleaners: booking.cleaners,
       streetName: booking.streetName,

@@ -228,7 +228,7 @@ const getServiceById = catchAsync(async (req, res, next) => {
 
 // POST /api/v1/service -> create a service (admin only)
 const createService = catchAsync(async (req, res, next) => {
-    const { name, subtitle, description, includes, translations, pricePerHour, allCities, cities, allSpecialRequests, specialRequests, recurringEnabled, recurringIntervalDays } = req.body;
+    const { name, subtitle, description, includes, translations, pricePerHour, allCities, cities, allSpecialRequests, specialRequests, recurringEnabled, recurringIntervalDays, allowInstantBooking } = req.body;
 
     // An uploaded file (multipart) takes precedence over an `image` URL in the
     // body. Any failure below leaves the file orphaned on disk — the service
@@ -267,7 +267,11 @@ const createService = catchAsync(async (req, res, next) => {
         pricePerHour,
         ...coverage,
         ...specialRequest,
-        ...recurrence
+        ...recurrence,
+        // Absent means the service waits out the normal advance notice, which
+        // is the schema default too — stated explicitly so the fail-closed
+        // reading is visible at the create site.
+        allowInstantBooking: allowInstantBooking === true
     });
 
     res.status(201).json({
@@ -282,7 +286,7 @@ const createService = catchAsync(async (req, res, next) => {
 // PATCH /api/v1/service/:id -> partial update (admin only)
 const editService = catchAsync(async (req, res, next) => {
     const { id } = req.params;
-    const { name, subtitle, description, includes, translations, pricePerHour, enabled, allCities, cities, allSpecialRequests, specialRequests, recurringEnabled, recurringIntervalDays } = req.body;
+    const { name, subtitle, description, includes, translations, pricePerHour, enabled, allCities, cities, allSpecialRequests, specialRequests, recurringEnabled, recurringIntervalDays, allowInstantBooking } = req.body;
 
     const image = await resolveImage(req);
 
@@ -363,6 +367,12 @@ const editService = catchAsync(async (req, res, next) => {
 
         service.recurringEnabled = recurrence.recurringEnabled;
         service.recurringIntervalDays = recurrence.recurringIntervalDays;
+    }
+
+    // Same-day booking is a plain flag, so an omitted field leaves it alone
+    // (a rename must not quietly put a service back on the 48-hour wait).
+    if (allowInstantBooking !== undefined) {
+        service.allowInstantBooking = allowInstantBooking === true;
     }
 
     await service.save();

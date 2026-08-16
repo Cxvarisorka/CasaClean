@@ -41,7 +41,16 @@ const subscriptionSchema = new mongoose.Schema({
   propertySize: { type: String, required: true, trim: true },
   doorbellName: { type: String, required: true, trim: true },
   bookingTime: { type: String, required: true },
-  hours: { type: Number, required: true, min: 1 },
+  // Total minutes per visit. `hours` is the legacy field on plans created
+  // before durations went to the minute; read via durationInMinutes().
+  durationMinutes: {
+    type: Number,
+    min: 1,
+    // Required for anything written now; a legacy plan that carries `hours`
+    // instead is still a valid document, so it isn't required outright.
+    required: [function () { return this.hours === undefined; }, 'Duration is required!']
+  },
+  hours: { type: Number, min: 0 },
   cleaners: { type: Number, required: true, min: 1 },
   notes: { type: String, trim: true, maxlength: 2000, default: null },
   specialRequests: {

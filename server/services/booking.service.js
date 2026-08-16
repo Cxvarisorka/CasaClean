@@ -18,19 +18,62 @@ const {
   MAX_INTERVAL_DAYS,
   isValidIntervalDays
 } = require('../utils/date.util');
-// Durations are whole or half hours; formatDuration keeps 1.5 out of customer text.
-const { formatDuration } = require('../utils/duration.util');
+// Durations are total minutes; formatDuration keeps raw minute counts out of
+// customer text ("1 h 25 min", never "85").
+const { formatDuration, durationInMinutes } = require('../utils/duration.util');
+// Every booking waits out the advance notice unless its service opts out.
+const {
+  ADVANCE_BOOKING_HOURS,
+  allowsInstantBooking,
+  earliestBookableStart,
+  meetsAdvanceNotice
+} = require('../utils/leadTime.util');
+// Pricing crosses to integer cents so an exact-minute duration lands on a real
+// amount of money rather than a float that later rounds twice.
+const { toMinorUnits, fromMinorUnits } = require('../utils/money.util');
 // Catalogue prices are VAT-exclusive; VAT is added on top for whoever owes it,
 // which depends on their (verified) tax status. See utils/tax.util.js.
 const { priceForCustomer } = require('../utils/tax.util');
 // The refund email states the window a late cancellation fell inside.
 const { CANCELLATION_WINDOW_HOURS } = require('../utils/cancellation.util');
 
-// Single source of truth for booking price. Cleaners multiply labour only.
-const computeBookingTotal = ({ service, hours, cleaners, specialRequests = [], cleaningTools = [] }) =>
-  service.pricePerHour * hours * cleaners +
-  specialRequests.reduce((sum, specialRequest) => sum + specialRequest.price, 0) +
-  cleaningTools.reduce((sum, cleaningTool) => sum + cleaningTool.price, 0);
+/**
+ * Single source of truth for booking price. Cleaners multiply labour only.
+ *
+ * A duration is an exact number of MINUTES, so the labour is a per-hour rate
+ * pro-rated over the minutes booked: €20/h × 85 min × 1 cleaner = €28.33. The
+ * whole calculation runs in integer cents and rounds exactly once, at the end of
+ * the labour term — pro-rating in euros and rounding later lets the usual float
+ * artefacts (85/60 × 20 = 28.333333333333336) reach a charged amount.
+ *
+ * Add-on and tool prices are flat catalogue amounts; they are converted to cents
+ * and summed rather than added as floats, so the total is cent-exact whatever
+ * the catalogue holds.
+ *
+ * @returns {number} the NET (VAT-exclusive) catalogue total, in decimal euros
+ */
+const computeBookingTotal = ({
+  service,
+  durationMinutes,
+  cleaners,
+  specialRequests = [],
+  cleaningTools = []
+}) => {
+  const minutes = Number(durationMinutes);
+  const crew = Number(cleaners);
+  const rateCents = toMinorUnits(service.pricePerHour);
+
+  // One rounding, on the whole labour term. Multiplying first keeps every digit
+  // of the minute fraction in play before it is resolved to a cent.
+  const labourCents = Math.round((rateCents * minutes * crew) / 60);
+
+  const extrasCents = [...specialRequests, ...cleaningTools].reduce(
+    (sum, item) => sum + toMinorUnits(item.price),
+    0
+  );
+
+  return fromMinorUnits(labourCents + extrasCents);
+};
 
 /**
  * Validate the service/city pair selected for a booking.
@@ -40,7 +83,9 @@ const computeBookingTotal = ({ service, hours, cleaners, specialRequests = [], c
  * cities (allCities === false), the chosen city must be one of them.
  *
  * Returns { service, city } so callers can use service.pricePerHour for pricing
- * and city.workingHour* for the time-window check.
+ * and city.workingHour* for the time-window check. `allowInstantBooking` comes
+ * along for the same reason: whether the 48-hour notice applies is a property of
+ * the SERVICE, and must be read from the stored document rather than the request.
  */
 const resolveServiceAndCity = async (serviceId, cityId) => {
   if (
@@ -52,7 +97,7 @@ const resolveServiceAndCity = async (serviceId, cityId) => {
 
   const [service, city] = await Promise.all([
     Service.findById(serviceId)
-      .select("name enabled allCities cities allSpecialRequests specialRequests pricePerHour recurringEnabled recurringIntervalDays")
+      .select("name enabled allCities cities allSpecialRequests specialRequests pricePerHour recurringEnabled recurringIntervalDays allowInstantBooking")
       .lean(),
     City.findById(cityId)
       .select("enabled workingHourStarts workingHourEnds")
@@ -129,46 +174,92 @@ const toMinutes = (hhmm) => {
   return h * 60 + m;
 };
 
+// "YYYY-MM-DD" for a Date, in local time (the same calendar the stored booking
+// date strings are written in).
+const toDateStr = (date) => [
+  date.getFullYear(),
+  String(date.getMonth() + 1).padStart(2, "0"),
+  String(date.getDate()).padStart(2, "0")
+].join("-");
+
 /**
- * Validate a booking's time window against the city's working hours.
+ * Validate a booking's slot: the advance notice, the city's working hours, and
+ * the duration fitting inside them.
  *
- * Fail-closed rules (shared by create, edit and the online-payment draft):
- *   1. The START must fall inside the city's working hours.
- *   2. The END (start + duration) must not run past closing time — checking
- *      only the start would let a 16:30 booking for 8 hours through a
- *      09:00–17:30 window.
- *   3. A same-day booking can't start at a time that has already passed (the
- *      Zod layer only validates the DATE is today-or-later, not the clock).
+ * This is THE authority on when a booking may start — the wizard mirrors it
+ * (client/src/features/booking/utils/timeWindow.js) so the customer hears about
+ * a bad slot early, but every path that can create or move a booking comes
+ * through here. Fail-closed rules, in the order a customer would hit them:
  *
- * @param {Object} city         city doc with workingHourStarts/workingHourEnds
- * @param {string} bookingDate  "YYYY-MM-DD"
- * @param {string} bookingTime  "HH:MM"
- * @param {number} hours        duration in hours (whole or half)
+ *   1. ADVANCE NOTICE — the start must be at least ADVANCE_BOOKING_HOURS away,
+ *      measured to the minute (16 Aug 15:00 → 18 Aug 15:00 at the earliest), so
+ *      the visit can be staffed. A service with `allowInstantBooking` skips
+ *      this rule and ONLY this rule.
+ *   2. Not already past. Only reachable for an instant service, since rule 1
+ *      otherwise puts the start two days out; it is what stops "today at 08:00"
+ *      being bookable at 15:00.
+ *   3. The START falls inside the chosen city's working hours.
+ *   4. The END (start + duration) does not run past closing — checking only the
+ *      start would let 16:30 × 8 h through a 09:00–17:30 window. Ending exactly
+ *      at closing is fine; one minute later is not.
+ *
+ * The city carries a single daily schedule (models/city.model.js has no per-day
+ * hours), so the same window applies to every date. If per-day schedules are
+ * ever added, resolving them for `bookingDate` belongs right here.
+ *
+ * @param {Object} city             city doc with workingHourStarts/workingHourEnds
+ * @param {string} bookingDate      "YYYY-MM-DD"
+ * @param {string} bookingTime      "HH:MM"
+ * @param {number} durationMinutes  visit length in total minutes
+ * @param {Object} [options]
+ * @param {Object} [options.service] the resolved service, for allowInstantBooking
+ * @param {Date}   [options.now]     injectable clock (tests)
  */
-const assertBookingWindow = (city, bookingDate, bookingTime, hours) => {
+const assertBookingWindow = (
+  city,
+  bookingDate,
+  bookingTime,
+  durationMinutes,
+  { service = null, now = new Date() } = {}
+) => {
   const start = toMinutes(bookingTime);
   const opens = toMinutes(city.workingHourStarts);
   const closes = toMinutes(city.workingHourEnds);
+  const minutes = Number(durationMinutes);
 
-  if (start < opens || start >= closes) {
-    throw new AppError("Booking time is outside city working hours", 400);
-  }
+  const instant = allowsInstantBooking(service);
 
-  if (start + Number(hours) * 60 > closes) {
+  // Rule 1 — the notice period, unless this service sells same-day slots.
+  if (!instant && !meetsAdvanceNotice(bookingDate, bookingTime, now)) {
+    const earliest = earliestBookableStart(now);
     throw new AppError(
-      `A ${formatDuration(hours)} booking starting at ${bookingTime} would run past the city's closing time (${city.workingHourEnds}).`,
+      `Bookings must be made at least ${ADVANCE_BOOKING_HOURS} hours in advance — ` +
+      `the earliest slot for this service is ${toDateStr(earliest)} at ` +
+      `${String(earliest.getHours()).padStart(2, "0")}:${String(earliest.getMinutes()).padStart(2, "0")}.`,
       400
     );
   }
 
-  const now = new Date();
-  const todayStr = [
-    now.getFullYear(),
-    String(now.getMonth() + 1).padStart(2, "0"),
-    String(now.getDate()).padStart(2, "0")
-  ].join("-");
-  if (bookingDate === todayStr && start <= now.getHours() * 60 + now.getMinutes()) {
+  // Rule 2 — a start that has already gone. Same-day only; `<=` because the
+  // current minute is already being lived through.
+  if (
+    bookingDate === toDateStr(now) &&
+    start <= now.getHours() * 60 + now.getMinutes()
+  ) {
     throw new AppError("Booking time for today must be in the future!", 400);
+  }
+
+  // Rule 3 — inside the working day at all.
+  if (start < opens || start >= closes) {
+    throw new AppError("Booking time is outside city working hours", 400);
+  }
+
+  // Rule 4 — long enough before closing to actually finish.
+  if (start + minutes > closes) {
+    throw new AppError(
+      `A ${formatDuration(minutes)} booking starting at ${bookingTime} would run past the city's closing time (${city.workingHourEnds}).`,
+      400
+    );
   }
 };
 
@@ -285,16 +376,16 @@ const resolveCleaningTools = async (ids, service = null) => {
 const buildValidatedBookingDraft = async (payload, user) => {
   const {
     serviceId, cityId, streetName, houseNumber, propertySize,
-    doorbellName, bookingDate, bookingTime, hours, cleaners,
+    doorbellName, bookingDate, bookingTime, durationMinutes, cleaners,
     notes, specialRequests, cleaningTools, supplies
   } = payload;
 
   // Required-field guard (numeric fields checked against undefined so a legit 0
-  // wouldn't be rejected — the Zod min:1 rules already reject 0 upstream).
+  // wouldn't be rejected — the Zod min rules already reject 0 upstream).
   if (
     serviceId === undefined || cityId === undefined || !streetName ||
     !houseNumber || !propertySize || !doorbellName || !bookingDate ||
-    !bookingTime || hours === undefined || cleaners === undefined
+    !bookingTime || durationMinutes === undefined || cleaners === undefined
   ) {
     throw new AppError("Please provide all required fields for booking!", 400);
   }
@@ -319,18 +410,19 @@ const buildValidatedBookingDraft = async (payload, user) => {
     assertRecurrenceAllowed(service, payload.intervalDays);
   }
 
-  // Start inside working hours, end before closing, and not in the past today.
-  assertBookingWindow(city, bookingDate, bookingTime, hours);
+  // 48 hours' notice (unless the service sells same-day), a start inside the
+  // city's working hours, an end before closing, and nothing in the past.
+  assertBookingWindow(city, bookingDate, bookingTime, durationMinutes, { service });
 
   const resolvedSpecialRequests = await resolveSpecialRequests(specialRequests, service);
   const resolvedCleaningTools = await resolveCleaningTools(cleaningTools, service);
 
-  // Server-side price: pricePerHour * hours + sum(add-on prices) + sum(tool
-  // surcharges). Never trusted from the client. This is the NET catalogue
-  // total — VAT-exclusive, exactly what the site advertises.
+  // Server-side price: pricePerHour pro-rated over the booked minutes + the
+  // add-on and tool prices. Never trusted from the client. This is the NET
+  // catalogue total — VAT-exclusive, exactly what the site advertises.
   const netTotal = computeBookingTotal({
     service,
-    hours,
+    durationMinutes,
     cleaners,
     specialRequests: resolvedSpecialRequests,
     cleaningTools: resolvedCleaningTools
@@ -357,7 +449,7 @@ const buildValidatedBookingDraft = async (payload, user) => {
     doorbellName,
     bookingDate,
     bookingTime,
-    hours,
+    durationMinutes,
     cleaners,
     totalAmount,
     tax,
@@ -392,10 +484,14 @@ const formatEuro = (n) =>
  */
 const renderBookingConfirmationEmail = ({
   customerName, serviceName, bookingDate, bookingTime,
-  hours, cleaners, streetName, houseNumber, totalAmount, recurring = false
+  durationMinutes, hours, cleaners, streetName, houseNumber, totalAmount,
+  recurring = false
 }) => {
   const subject = "CasaClean — Your booking is confirmed 🎉";
   const name = escapeHtml(customerName);
+  // Callers pass minutes; `hours` is tolerated for a legacy record being
+  // re-rendered (see durationInMinutes).
+  const minutes = durationInMinutes({ durationMinutes, hours });
   const total = formatEuro(totalAmount);
   const address =
     [streetName, houseNumber ? `No. ${houseNumber}` : ""].filter(Boolean).join(", ");
@@ -404,7 +500,7 @@ const renderBookingConfirmationEmail = ({
     ["Service", serviceName || "Cleaning service"],
     ["Date", bookingDate],
     ["Time", bookingTime],
-    ["Duration", `${formatDuration(hours)} · ${cleaners} cleaner(s)`],
+    ["Duration", `${formatDuration(minutes)} · ${cleaners} cleaner(s)`],
     ["Address", address || "—"],
     ...(recurring ? [["Plan", "Recurring service"]] : []),
     ["Payment", `${total} — paid`],
@@ -482,7 +578,7 @@ const renderBookingConfirmationEmail = ({
     `Service:  ${serviceName || "Cleaning service"}\n` +
     `Date:     ${bookingDate}\n` +
     `Time:     ${bookingTime}\n` +
-    `Duration: ${formatDuration(hours)} (${cleaners} cleaner(s))\n` +
+    `Duration: ${formatDuration(minutes)} (${cleaners} cleaner(s))\n` +
     `Address:  ${address || "—"}\n` +
     `${recurring ? "Plan:     Recurring service\n" : ""}` +
     `Paid:     ${total}\n\n` +

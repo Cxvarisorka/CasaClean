@@ -9,12 +9,17 @@ export {
   updateSubscriptionCard,
 } from "./api/subscriptionApi";
 export { MySubscriptions } from "./components/MySubscriptions";
-// Durations are whole or half hours, and the admin panel states them the same
-// way the wizard, the emails and the invoices do.
-export { formatDuration } from "./utils/duration";
+// Durations are total minutes, and the admin panel states them the same way the
+// wizard, the emails and the invoices do.
 export {
-  DURATION_STEP_HOURS,
-  MIN_DURATION_HOURS,
-  MAX_DURATION_HOURS,
-  durationChoices,
+  combineDuration,
+  splitDuration,
+  durationInMinutes,
+  formatDuration,
+} from "./utils/duration";
+export {
+  MIN_DURATION_MINUTES,
+  MAX_DURATION_MINUTES,
+  MAX_MINUTES_PART,
+  ADVANCE_BOOKING_HOURS,
 } from "./constants";

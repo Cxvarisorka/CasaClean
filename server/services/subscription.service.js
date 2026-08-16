@@ -33,6 +33,9 @@ const { notifyAdminsOfNewBooking } = require('./bookingAlert.service');
 // Catalogue prices are VAT-exclusive; VAT is added on top unless the customer is
 // a verified business.
 const { priceForCustomer } = require('../utils/tax.util');
+// A plan's visit length is total minutes; durationInMinutes also reads the
+// legacy `hours` field on plans created before that change.
+const { durationInMinutes } = require('../utils/duration.util');
 
 const CURRENCY = 'eur';
 
@@ -198,7 +201,7 @@ const sendCycleReceipt = ({ subscription, booking, serviceName, serviceDate, amo
           doorbellName: subscription.doorbellName,
           bookingDate: serviceDate,
           bookingTime: subscription.bookingTime,
-          hours: subscription.hours,
+          durationMinutes: durationInMinutes(subscription),
           cleaners: subscription.cleaners,
           totalAmount: amount,
           notes: subscription.notes,
@@ -215,7 +218,7 @@ const sendCycleReceipt = ({ subscription, booking, serviceName, serviceDate, amo
     serviceName,
     bookingDate: serviceDate,
     bookingTime: subscription.bookingTime,
-    hours: subscription.hours,
+    durationMinutes: durationInMinutes(subscription),
     cleaners: subscription.cleaners,
     streetName: subscription.streetName,
     houseNumber: subscription.houseNumber,
@@ -278,7 +281,7 @@ const createSubscriptionFromFirstBooking = async ({ pending, booking, paymentInt
       propertySize: draft.propertySize,
       doorbellName: draft.doorbellName,
       bookingTime: draft.bookingTime,
-      hours: draft.hours,
+      durationMinutes: draft.durationMinutes,
       cleaners: draft.cleaners,
       notes: draft.notes ?? null,
       specialRequests: draft.specialRequests || [],
@@ -330,7 +333,9 @@ const priceSubscriptionCycle = async (subscription) => {
 
   const netTotal = computeBookingTotal({
     service,
-    hours: subscription.hours,
+    // Re-priced every cycle from the plan's own duration, so an exact-minute
+    // visit charges the same pro-rated amount each time.
+    durationMinutes: durationInMinutes(subscription),
     cleaners: subscription.cleaners,
     specialRequests,
     cleaningTools
@@ -381,7 +386,7 @@ const createBookingFromSubscription = async ({
       doorbellName: subscription.doorbellName,
       bookingDate: serviceDate,
       bookingTime: subscription.bookingTime,
-      hours: subscription.hours,
+      durationMinutes: durationInMinutes(subscription),
       cleaners: subscription.cleaners,
       totalAmount,
       // The treatment this cycle was priced under. Undefined on the webhook

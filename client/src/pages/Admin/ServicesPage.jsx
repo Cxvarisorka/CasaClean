@@ -157,6 +157,13 @@ export default function ServicesPage() {
         show: (v) => !v.all_special_requests,
       },
       {
+        name: "allow_instant_booking",
+        label: t("admin.services.field.allowInstantBooking"),
+        hint: t("admin.services.field.allowInstantBookingHint"),
+        type: "switch",
+        full: true,
+      },
+      {
         name: "recurring_enabled",
         label: t("admin.services.field.recurringEnabled"),
         hint: t("admin.services.field.recurringEnabledHint"),
@@ -341,6 +348,9 @@ export default function ServicesPage() {
                 special_requests: [],
                 recurring_enabled: false,
                 recurring_interval_days: [],
+                // Fail-closed, like the server's default: a new service waits
+                // out the 48-hour notice until an admin says otherwise.
+                allow_instant_booking: false,
                 enabled: true,
               }
         }

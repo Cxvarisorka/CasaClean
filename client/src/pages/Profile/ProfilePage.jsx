@@ -105,7 +105,8 @@ const SectionNav = ({ sections, active, onSelect, t }) => (
     {/* The negative margin must match the Container's gutter at every width it
         applies to, or the row either clips its first pill or overflows the page. */}
     <ul
-      className="scrollbar-none -mx-5 flex snap-x snap-mandatory gap-2 overflow-x-auto px-5 pb-2
+      className="scrollbar-none -mx-4 flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 pb-2
+                 xs:-mx-5 xs:px-5
                  sm:-mx-6 sm:px-6
                  lg:mx-0 lg:flex-col lg:gap-1 lg:overflow-visible lg:px-0 lg:pb-0"
     >
@@ -408,11 +409,18 @@ const ProfilePage = () => {
               than at the bottom of a column the user has to scroll to. */}
           <Card className="p-4 xs:p-5 sm:p-6">
             {/* Identity and actions only share a row from `md`: at 640px the two
-                buttons squeeze the name into a two-line wrap. The avatar, though,
-                sits beside the name at every width — stacking it wastes a whole
-                screenful of a phone before any content appears. */}
+                buttons squeeze the name into a two-line wrap. */}
             <div className="flex flex-col gap-5 md:flex-row md:items-center">
-              <div className="flex min-w-0 flex-1 items-center gap-4 sm:gap-5">
+              {/*
+               * The avatar comes straight off the name's column, and it is the
+               * name and the email that have to stay readable — an address
+               * broken into four fragments reads as the wrong account being
+               * signed in. Beside the name wherever the card can carry both
+               * (from 320px, which covers every mainstream phone); on anything
+               * narrower it moves above and the block centres, giving the text
+               * the card's full width instead of 60% of it.
+               */}
+              <div className="flex min-w-0 flex-1 flex-col items-center gap-3 text-center 2xs:flex-row 2xs:gap-4 2xs:text-left sm:gap-5">
                 {user.avatar ? (
                   <img
                     src={user.avatar}
@@ -434,7 +442,7 @@ const ProfilePage = () => {
                   <p className="mt-1 wrap-break-word text-body-md text-ink-500">
                     {user.email}
                   </p>
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <div className="mt-3 flex flex-wrap items-center justify-center gap-2 2xs:justify-start">
                     <Badge variant={isAdmin ? "dark" : "neutral"} size="sm">
                       {user.role}
                     </Badge>
@@ -450,13 +458,17 @@ const ProfilePage = () => {
                   </div>
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2 md:shrink-0">
+              {/* Full width and stacked on a phone — side by side they either
+                  wrap their labels or leave a ragged half-row, and a full-width
+                  target is the better tap anyway. Natural widths from `xs`. */}
+              <div className="flex flex-col gap-2 xs:flex-row xs:flex-wrap xs:items-center md:shrink-0">
                 {isAdmin && (
                   <Button
                     to={ROUTES.admin.dashboard}
                     variant="outline"
                     size="sm"
                     leftIcon={LayoutDashboard}
+                    className="w-full xs:w-auto"
                   >
                     {t("profile.adminConsole")}
                   </Button>
@@ -466,7 +478,7 @@ const ProfilePage = () => {
                   size="sm"
                   leftIcon={LogOut}
                   onClick={logout}
-                  className="text-red-600 hover:bg-red-500/10 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-500/15 dark:hover:text-red-300"
+                  className="w-full text-red-600 hover:bg-red-500/10 hover:text-red-700 xs:w-auto dark:text-red-400 dark:hover:bg-red-500/15 dark:hover:text-red-300"
                 >
                   {t("common.signOut")}
                 </Button>
@@ -838,6 +850,11 @@ const ProfilePage = () => {
               <label className="mb-1.5 block text-body-sm font-semibold text-ink-800">
                 {t("profile.ratingLabel")}
               </label>
+              {/* Five 32px stars plus their padding come to 216px — wider than
+                  this dialog on a 200px screen, and a rating control that has to
+                  be scrolled to reach the fifth star is not a rating control. A
+                  size down below `xs` keeps all five reachable and each of them
+                  still a 40px tap target. */}
               <div className="flex items-center gap-1">
                 {[1, 2, 3, 4, 5].map((n) => (
                   <button
@@ -852,7 +869,7 @@ const ProfilePage = () => {
                   >
                     <Star
                       className={cn(
-                        "size-8 transition-colors",
+                        "size-6 transition-colors xs:size-8",
                         (rateHover || rateValue) >= n
                           ? "fill-amber-400 text-amber-400"
                           : "fill-none text-ink-300"

@@ -37,8 +37,9 @@ const {
   formatDateLong
 } = require('../utils/invoice.util');
 const { renderInvoicePdf, invoiceFileName } = require('../utils/invoicePdf.util');
-// Durations are whole or half hours; formatDuration keeps 1.5 out of the document.
-const { formatDuration } = require('../utils/duration.util');
+// Durations are total minutes; formatDuration keeps raw minute counts out of
+// the document, and durationInMinutes reads legacy `hours` records too.
+const { formatDuration, durationInMinutes } = require('../utils/duration.util');
 const { renderBookingConfirmationEmail } = require('./booking.service');
 
 // Escape user-provided values before interpolating them into the HTML email so
@@ -139,9 +140,9 @@ const buildLineItems = (booking, figures = invoiceTaxFigures(booking)) => {
 
   const addOnTotal = roundMoney(addOns.reduce((sum, item) => sum + item.amount, 0));
   const base = roundMoney(total - addOnTotal);
-  const units = Number(booking.hours) * Number(booking.cleaners);
+  const minutes = durationInMinutes(booking);
 
-  if (!(base >= 0) || !(units > 0)) {
+  if (!(base >= 0) || !(minutes > 0)) {
     return [
       {
         description: booking.serviceId?.name || 'Cleaning service',
@@ -157,11 +158,15 @@ const buildLineItems = (booking, figures = invoiceTaxFigures(booking)) => {
   return [
     {
       description: booking.serviceId?.name || 'Cleaning service',
-      detail: `${formatDuration(booking.hours)} × ${cleaners} cleaner${cleaners === 1 ? '' : 's'}`,
-      // Priced per cleaner-hour, which is exactly how the booking total is
-      // computed (see computeBookingTotal in booking.service.js).
-      quantity: units,
-      unitPrice: roundMoney(base / units),
+      detail: `${formatDuration(minutes)} × ${cleaners} cleaner${cleaners === 1 ? '' : 's'}`,
+      // One unit, priced at the whole labour charge. A duration is an exact
+      // number of minutes, so cleaner-HOURS is no longer a whole quantity (1 h
+      // 25 min × 1 cleaner is 1.4166…) and a qty/unit-price pair built from it
+      // would print a rounded unit that doesn't multiply back to the amount.
+      // The length and crew that produced the figure are stated in `detail`
+      // instead, where they can be exact.
+      quantity: 1,
+      unitPrice: base,
       amount: base
     },
     ...addOns
@@ -218,7 +223,7 @@ const buildInvoiceSnapshot = (booking, { number, series, sequence, issuedAt }) =
       city: booking.cityId?.name || '',
       date: booking.bookingDate || '',
       time: booking.bookingTime || '',
-      hours: booking.hours,
+      durationMinutes: durationInMinutes(booking),
       cleaners: booking.cleaners
     },
     lineItems,
@@ -325,7 +330,7 @@ const renderInvoiceEmail = (invoice) => {
     ['Service', service.name || 'Cleaning service'],
     ['Date', service.date ? formatDateLong(service.date) : '—'],
     ['Time', service.time || '—'],
-    ['Duration', `${service.hours ? formatDuration(service.hours) : '—'} · ${service.cleaners ?? '—'} cleaner(s)`],
+    ['Duration', `${formatDuration(durationInMinutes(service))} · ${service.cleaners ?? '—'} cleaner(s)`],
     ['Address', address || '—'],
     ...(recurring ? [['Plan', 'Recurring service']] : [])
   ];
@@ -533,6 +538,7 @@ const issueAndDeliverInvoice = async (booking, fallback = null) => {
         serviceName: source.serviceName,
         bookingDate: source.bookingDate,
         bookingTime: source.bookingTime,
+        durationMinutes: source.durationMinutes,
         hours: source.hours,
         cleaners: source.cleaners,
         streetName: source.streetName,

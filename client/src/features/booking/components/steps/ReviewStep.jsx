@@ -12,6 +12,7 @@ import { computeQuote } from "../../utils/pricing";
 import { formatDuration } from "../../utils/duration";
 import { formatLocalDateString, intervalLabel } from "../../utils/recurrence";
 import { useTimeIssue } from "../../hooks/useTimeIssue";
+import { durationMinutesOf } from "../../validation/bookingSchema";
 
 /*
  * ReviewStep
@@ -59,17 +60,21 @@ export function ReviewStep({ submitError }) {
   const { data: addons = [] } = useSpecialRequests();
   const { data: tools = [] } = useCleaningTools();
   const { services } = useServices();
-  const formatServiceLabel = ({ name, hours, cleaners }) =>
+  const durationMinutes = durationMinutesOf(v);
+  const formatServiceLabel = ({ name, durationMinutes: minutes, cleaners }) =>
     t("booking.units.serviceLine", {
       name,
-      duration: formatDuration(t, hours),
+      duration: formatDuration(t, minutes),
       cleaners,
       unit: t(cleaners > 1 ? "booking.units.cleaners" : "booking.units.cleaner"),
     });
   // The quote must be priced under the customer's VAT treatment, or the review
   // step would restate the catalogue price while the API charges the net.
   const { tax } = useAuth();
-  const quote = computeQuote(v, { addons, tools, services, formatServiceLabel, tax });
+  const quote = computeQuote(
+    { ...v, durationMinutes },
+    { addons, tools, services, formatServiceLabel, tax }
+  );
 
   const cityRecord = cities.find((c) => String(c.id) === String(v.cityId));
   const city = cityRecord?.name;
@@ -93,7 +98,8 @@ export function ReviewStep({ submitError }) {
   // letting the API be the one to explain it.
   const { message: timeIssueMessage } = useTimeIssue({
     city: cityRecord,
-    hours: v.hours,
+    service: quote.service,
+    durationMinutes,
     date: v.date,
     time: v.time,
   });
@@ -123,7 +129,7 @@ export function ReviewStep({ submitError }) {
         <Row
           label={t("booking.review.duration")}
           value={t("booking.units.durationLine", {
-            duration: formatDuration(t, v.hours),
+            duration: formatDuration(t, durationMinutes),
             cleaners: v.cleaners,
             unit: cleanersUnit,
           })}

@@ -5,8 +5,15 @@ import { formatDurationPlain } from "./duration";
  * Booking price engine
  * --------------------
  * Pure pricing logic, isolated so it can be unit-tested and reused by the
- * summary, review step and submission payload. Total = base service rate ×
- * hours × cleaners + any selected add-ons + any requested cleaning tools.
+ * summary, review step and submission payload. Total = base service rate
+ * pro-rated over the booked MINUTES × cleaners + any selected add-ons + any
+ * requested cleaning tools.
+ *
+ * A duration is an exact number of minutes, so €20/h for 85 minutes is €28.33 —
+ * a figure that only lands on the right cent if the arithmetic is done in
+ * integer cents and rounded once, exactly as the server's computeBookingTotal
+ * does it. This quote has to agree with the amount the API will charge to the
+ * cent, or the wizard shows one number and the card is debited another.
  *
  * The service, add-on and tool catalogues are passed in (they come from the
  * database now); `services` defaults to the static list so existing callers
@@ -31,7 +38,8 @@ import { formatDurationPlain } from "./duration";
 
 // Round through integer cents so the displayed total can't drift from the
 // amount the API computes (44.8 * 100 === 4479.999999999999).
-const round2 = (amount) => Math.round(Number(amount) * 100) / 100;
+const toCents = (amount) => Math.round(Number(amount) * 100);
+const round2 = (amount) => toCents(amount) / 100;
 
 export function computeQuote(
   values,
@@ -41,10 +49,12 @@ export function computeQuote(
     (s) => String(s.id) === String(values.serviceId)
   );
   const rate = service?.pricePerHour ?? 0;
-  const hours = Number(values.hours) || 0;
+  const durationMinutes = Math.max(0, Math.round(Number(values.durationMinutes) || 0));
   const cleaners = Number(values.cleaners) || 1;
 
-  const labor = rate * hours * cleaners;
+  // One rounding, on the whole labour term — the same order of operations the
+  // server uses, so the two agree on the cent for every minute count.
+  const labor = Math.round((toCents(rate) * durationMinutes * cleaners) / 60) / 100;
 
   // Resolve the selected add-on ids against the catalogue so prices/labels
   // always reflect the current database values.
@@ -82,7 +92,7 @@ export function computeQuote(
   return {
     service,
     rate,
-    hours,
+    durationMinutes,
     cleaners,
     labor,
     addons: addonsTotal,
@@ -99,8 +109,8 @@ export function computeQuote(
     lineItems: [
       service && {
         label: formatServiceLabel
-          ? formatServiceLabel({ name: service.name, hours, cleaners })
-          : `${service.name} · ${formatDurationPlain(hours)} × ${cleaners} ${cleaners > 1 ? "cleaners" : "cleaner"}`,
+          ? formatServiceLabel({ name: service.name, durationMinutes, cleaners })
+          : `${service.name} · ${formatDurationPlain(durationMinutes)} × ${cleaners} ${cleaners > 1 ? "cleaners" : "cleaner"}`,
         amount: labor,
       },
       ...selectedAddons.map((a) => ({

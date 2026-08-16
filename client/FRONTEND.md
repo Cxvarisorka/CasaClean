@@ -230,15 +230,15 @@ The most complex front-end domain — a **five-step wizard** (property → prefe
 
 **Per-step validation:** `BOOKING_STEPS[].fields` lists which schema keys to `trigger()` before `next()`. Full schema validates on final submit.
 
-**Step guards:** a rule that spans fields *and* fetched data can't live in the flat schema, so a step may register one with `useStepGuard(stepId, fn)` (BookingContext) and `next()` refuses while it returns false. `ScheduleStep` uses it for the start time: the customer types any minute (12:20), and `utils/timeWindow.js` validates it against the chosen city's opening hours and the booking's duration — the same rules `assertBookingWindow` enforces server-side.
+**Step guards:** a rule that spans fields *and* fetched data can't live in the flat schema, so a step may register one with `useStepGuard(stepId, fn)` (BookingContext) and `next()` refuses while it returns false. `ScheduleStep` uses it for the slot: the customer types any minute (12:20), and `utils/timeWindow.js` validates it against the **48-hour advance notice** (waived by the chosen service's `allowInstantBooking`), the chosen city's opening hours, and whether the entered duration still finishes before closing — the same four rules `assertBookingWindow` enforces server-side, which stays the authority.
 
-**Duration:** `hours` is a whole or half hour (1.5 = 90 minutes), chosen from `durationChoices()` and always displayed through `utils/duration.js` `formatDuration(t, hours)` — "1 h 30 min", never "1.5". The admin panel imports the same helper from the feature barrel.
+**Duration:** collected as two numeric inputs — an *Hours* field and a *Minutes* field (0–59) — on `PreferencesStep`, combined by `utils/duration.js` `combineDuration()` into the **total minutes** the API takes (`durationMinutes: 85` for 1 h 25 min). There is no duration dropdown and no free-text or decimal spelling. Displayed through `formatDuration(t, minutes)` — "1 h 25 min", never "85" or "1.42". The admin panel uses the same pair behind the `ResourceModal` `"duration"` field type, and imports the same helpers from the feature barrel. `durationInMinutes(record)` reads either the canonical field or a legacy record's `hours`.
 
 **Step components:** `PropertyStep`, `PreferencesStep`, `ScheduleStep`, `ContactStep`, `ReviewStep`, `ConfirmationStep`.
 
 **UI helpers:** `BookingProgress`, `BookingSummary` (live quote sidebar), `ToggleCard`.
 
-**Pricing engine:** `total = rate × hours × cleaners + add-ons` where rate comes from `data/services` by `serviceId`; add-ons from `ADDITIONAL_SERVICES` constant.
+**Pricing engine:** `total = rate pro-rated over the booked minutes × cleaners + add-ons`, computed in **integer cents and rounded once** so the quote matches the server's `computeBookingTotal` to the cent (85 min at €20/h is €28.33, never €28.34). Rate comes from the live service catalogue by `serviceId`; add-ons and tools from their catalogues.
 
 **API mapping:** `toBookingPayload(values, quote)` maps camelCase form fields to snake_case API body (`service_id`, `customer_email`, `total_amount`, etc.).
 
@@ -281,15 +281,36 @@ Tailwind v4 `@theme` defines the entire brand language:
 - **sand** — section backgrounds
 - **Fonts** — Inter (body), Plus Jakarta Sans (display)
 - **Radius**, **shadow** ladder (soft → premium), **ease-premium** / **ease-spring**
-- **Breakpoints** — Tailwind's defaults plus two of our own: `3xl` (112rem) at the
-  top, and **`xs` (25rem / 400px)** at the bottom. `sm` is Tailwind's smallest
-  stop at 640px, so a 320px phone and a 430px one otherwise share one set of base
-  styles; `xs:` marks what needs the extra 40-odd pixels, leaving the base
-  declaration as the one the smallest screen gets. It exists for the dense
-  surfaces — the admin panel's KPI grids, filter bars and detail rows, the
-  profile's cards, and the `Modal` / `Pagination` primitives every page shares —
-  where side-by-side layouts stop fitting below 400px. Write the narrow case as
-  the base and opt back in at `xs`, never the reverse.
+- **Breakpoints** — Tailwind's defaults plus three of our own: `3xl` (112rem) at
+  the top, and **`xs` (25rem / 400px)** and **`2xs` (20rem / 320px)** at the
+  bottom. `sm` is Tailwind's smallest stop at 640px, so a 320px phone and a 430px
+  one otherwise share one set of base styles; `xs:` marks what needs the extra
+  40-odd pixels, leaving the base declaration as the one the smallest screen
+  gets. It exists for the dense surfaces — the admin panel's KPI grids, filter
+  bars and detail rows, the profile's cards, and the `Modal` / `Pagination`
+  primitives every page shares — where side-by-side layouts stop fitting below
+  400px. `2xs` is the second stop, for the few places that survive a 360px phone
+  but not the 200px floor (the profile's identity header, the footer's link
+  columns). Write the narrow case as the base and opt back in at `xs`, never the
+  reverse; reach for `2xs` only after measuring that the base case needs it.
+
+  Both small stops are **named in `@theme`, never written inline as
+  `min-[20rem]:`** — and that is load-bearing. Tailwind sorts named breakpoint
+  variants by value (`2xs` → `xs` → `sm`), but emits arbitrary `min-[…]` variants
+  after *all* of them, so `min-[20rem]:gap-4 sm:gap-5` silently resolves to
+  `gap-4` on a desktop. Container queries (`@container` + `@min-[…]:`) don't
+  share that hazard — they live in their own at-rule — and are the right tool
+  when a component's layout depends on its own column rather than the window;
+  `PhoneInput` and `NewsletterForm` both use one.
+
+**The layout floor is 200px** — no surface may scroll sideways above it. Three
+things set that floor in practice, so they are worth knowing before adding UI:
+a bare `<input>` carries an intrinsic ~20-character width (the primitives pass
+`min-w-0` for exactly this reason, and a raw one in a flex row still needs it); a
+`Button` label is `whitespace-nowrap` only from `xs` up, and wraps below it
+rather than escaping its container; and any control row that mixes fixed widths
+(a filter bar, a badge-and-total header) needs `flex-wrap`, because `min-width`
+beats `flex-shrink` and the overflow lands on the page, not the row.
 
 Supporting sheets: `typography.css` (type scale utilities), `utilities.css` (layout helpers like `sr-only-focusable`), `animations.css` (CSS-level motion; respects `prefers-reduced-motion`).
 

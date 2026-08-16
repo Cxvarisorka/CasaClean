@@ -84,6 +84,9 @@ const invoiceSchema = new mongoose.Schema(
       city: { type: String, default: '' },
       date: { type: String, default: '' },
       time: { type: String, default: '' },
+      // Total minutes, snapshotted. `hours` is what invoices issued before
+      // minute-level durations carry; the PDF reads both via durationInMinutes.
+      durationMinutes: { type: Number },
       hours: { type: Number },
       cleaners: { type: Number }
     },

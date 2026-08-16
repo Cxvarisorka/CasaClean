@@ -35,6 +35,9 @@ const { priceForCustomer, applyTaxTreatment } = require('../utils/tax.util');
 // Local-midnight date helpers — booking dates are YYYY-MM-DD strings, so a
 // plain string comparison against today is a correct date comparison.
 const { todayString } = require('../utils/date.util');
+// A booking's length is total minutes; durationInMinutes also reads the legacy
+// `hours` field on records written before that change.
+const { durationInMinutes } = require('../utils/duration.util');
 
 // Refund policy for a customer self-cancellation: a full refund when made at
 // least CANCELLATION_WINDOW_HOURS before the appointment, and inside that window
@@ -237,7 +240,7 @@ const createBooking = catchAsync(async (req, res, next) => {
   // Booking-specific fields — the only things the wizard actually collects.
   const {
     serviceId, cityId, streetName, houseNumber, propertySize,
-    doorbellName, bookingDate, bookingTime, hours, cleaners,
+    doorbellName, bookingDate, bookingTime, durationMinutes, cleaners,
     notes, specialRequests, cleaningTools, supplies, workers
   } = req.body;
 
@@ -246,7 +249,7 @@ const createBooking = catchAsync(async (req, res, next) => {
   if (
     serviceId === undefined || cityId === undefined || !streetName ||
     !houseNumber || !propertySize || !doorbellName || !bookingDate ||
-    !bookingTime || hours === undefined || cleaners === undefined
+    !bookingTime || durationMinutes === undefined || cleaners === undefined
   ) {
     return next(new AppError("Please provide all required fields for booking!", 400));
   }
@@ -264,8 +267,10 @@ const createBooking = catchAsync(async (req, res, next) => {
   // (for working-hours check). Fix 1 + Fix 3.
   const { service, city } = await resolveServiceAndCity(serviceId, cityId);
 
-  // Start inside working hours, end before closing, and not in the past today.
-  assertBookingWindow(city, bookingDate, bookingTime, hours);
+  // Advance notice (unless the service sells same-day), start inside working
+  // hours, end before closing, and nothing in the past. An admin booking is held
+  // to the same slot rules as a customer's: the crew still has to get there.
+  assertBookingWindow(city, bookingDate, bookingTime, durationMinutes, { service });
 
   // Make sure any selected add-ons are real, enabled, and offered by the
   // service. Returns full documents so we can sum prices (Fix 1).
@@ -279,7 +284,7 @@ const createBooking = catchAsync(async (req, res, next) => {
   // specialRequests/cleaningTools now contain full documents with a `price` field.
   const netTotal = computeBookingTotal({
     service,
-    hours,
+    durationMinutes,
     cleaners,
     specialRequests: resolvedSpecialRequests,
     cleaningTools: resolvedCleaningTools
@@ -324,7 +329,7 @@ const createBooking = catchAsync(async (req, res, next) => {
     doorbellName,
     bookingDate,
     bookingTime,
-    hours,
+    durationMinutes,
     cleaners,
     totalAmount: computedTotal,
     tax,
@@ -346,7 +351,7 @@ const createBooking = catchAsync(async (req, res, next) => {
       serviceName: service?.name,
       bookingDate,
       bookingTime,
-      hours,
+      durationMinutes,
       cleaners,
       streetName,
       houseNumber,
@@ -372,7 +377,7 @@ const editBooking = catchAsync(async (req, res, next) => {
   // payment fields (user/paymentIntentId/...) by including them in the body.
   // totalAmount is intentionally excluded — price is server-managed (Fix 1).
   const editableFields = [
-    'status', 'bookingDate', 'bookingTime', 'hours', 'cleaners',
+    'status', 'bookingDate', 'bookingTime', 'durationMinutes', 'cleaners',
     'streetName', 'houseNumber', 'propertySize',
     'doorbellName', 'customerPhone', 'notes', 'supplies'
   ];
@@ -384,7 +389,7 @@ const editBooking = catchAsync(async (req, res, next) => {
 
   const srChanged = req.body.specialRequests !== undefined;
   const ctChanged = req.body.cleaningTools !== undefined;
-  const hoursChanged = updates.hours !== undefined;
+  const durationChanged = updates.durationMinutes !== undefined;
   const cleanersChanged = updates.cleaners !== undefined;
   const timeChanged = updates.bookingTime !== undefined;
   const dateChanged = updates.bookingDate !== undefined;
@@ -395,11 +400,13 @@ const editBooking = catchAsync(async (req, res, next) => {
   let existing = null;
   let service = null;
   let city = null;
-  if (srChanged || ctChanged || hoursChanged || cleanersChanged || timeChanged || dateChanged) {
+  if (srChanged || ctChanged || durationChanged || cleanersChanged || timeChanged || dateChanged) {
     existing = await Booking.findById(id)
       // `tax` comes along so a reprice re-applies the treatment this booking was
       // originally priced under (see the reprice block below).
-      .select('serviceId cityId hours cleaners bookingDate bookingTime specialRequests cleaningTools tax')
+      // `hours` comes along beside `durationMinutes` so a booking written
+      // before minute-level durations can still be re-priced and re-windowed.
+      .select('serviceId cityId durationMinutes hours cleaners bookingDate bookingTime specialRequests cleaningTools tax')
       .lean();
     if (!existing) {
       return next(new AppError("Booking not found!", 404));
@@ -428,12 +435,18 @@ const editBooking = catchAsync(async (req, res, next) => {
 
   // Re-validate the working-hours window when the date, time OR duration
   // changes — a longer booking can run past closing even with the same start.
-  if ((timeChanged || hoursChanged || dateChanged) && city) {
+  if ((timeChanged || durationChanged || dateChanged) && city) {
     assertBookingWindow(
       city,
       dateChanged ? updates.bookingDate : existing.bookingDate,
       timeChanged ? updates.bookingTime : existing.bookingTime,
-      hoursChanged ? updates.hours : existing.hours
+      durationChanged ? updates.durationMinutes : durationInMinutes(existing),
+      // An admin RESCHEDULE is held to the working-hours rules, but not to the
+      // advance notice: staffing a booking the team is already looking at is
+      // exactly the judgement call the panel exists to make, and the 48-hour
+      // rule would otherwise make it impossible to move tomorrow's visit an
+      // hour later. The "not in the past" guard above still applies.
+      { service: { allowInstantBooking: true } }
     );
   }
 
@@ -459,12 +472,14 @@ const editBooking = catchAsync(async (req, res, next) => {
     updates.workers = await resolveWorkers(req.body.workers);
   }
 
-  // Recompute the server-managed total whenever a price input (hours, add-ons
-  // or tools) changes — otherwise the stored amount would drift out of sync
-  // with the booking. Price = pricePerHour * hours + sum(add-on prices) +
-  // sum(tool surcharges).
-  if ((hoursChanged || cleanersChanged || srChanged || ctChanged) && service) {
-    const finalHours = hoursChanged ? updates.hours : existing.hours;
+  // Recompute the server-managed total whenever a price input (duration,
+  // cleaners, add-ons or tools) changes — otherwise the stored amount would
+  // drift out of sync with the booking. Price = pricePerHour pro-rated over the
+  // booked minutes + sum(add-on prices) + sum(tool surcharges).
+  if ((durationChanged || cleanersChanged || srChanged || ctChanged) && service) {
+    const finalMinutes = durationChanged
+      ? updates.durationMinutes
+      : durationInMinutes(existing);
     const finalCleaners = cleanersChanged ? updates.cleaners : existing.cleaners;
 
     let finalSpecialRequests;
@@ -496,7 +511,7 @@ const editBooking = catchAsync(async (req, res, next) => {
 
     const repricedNet = computeBookingTotal({
       service,
-      hours: finalHours,
+      durationMinutes: finalMinutes,
       cleaners: finalCleaners,
       specialRequests: finalSpecialRequests,
       cleaningTools: finalCleaningTools

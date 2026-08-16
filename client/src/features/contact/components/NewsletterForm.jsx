@@ -44,8 +44,10 @@ export function NewsletterForm({ tone = "light", className }) {
 
   const dark = tone === "dark";
 
+  // `@container` here rather than on the row: a container query styles the
+  // context's descendants, never the element that declares it.
   return (
-    <div className={className}>
+    <div className={cn("@container", className)}>
       <AnimatePresence mode="wait" initial={false}>
         {isSuccess ? (
           <motion.p
@@ -68,8 +70,17 @@ export function NewsletterForm({ tone = "light", className }) {
             exit={{ opacity: 0 }}
             noValidate
           >
-            <div className="flex gap-2">
-              <div className="flex-1">
+            {/*
+             * "Subscribe" is ~140px and doesn't shrink, so beside a `flex-1`
+             * input the field is whatever is left — which on a small phone is a
+             * couple of characters. Below ~280px of form width the button drops
+             * under the input and both take the full width.
+             *
+             * Measured against the form, not the window: this sits in the
+             * footer's brand column, which is a fraction of the page.
+             */}
+            <div className="flex flex-col gap-2 @min-[17.5rem]:flex-row">
+              <div className="min-w-0 flex-1">
                 <label htmlFor="newsletter-email" className="sr-only">
                   {t("footer.emailLabel")}
                 </label>
@@ -94,7 +105,13 @@ export function NewsletterForm({ tone = "light", className }) {
                   )}
                 />
               </div>
-              <Button type="submit" size="md" loading={isPending} rightIcon={ArrowRight}>
+              <Button
+                type="submit"
+                size="md"
+                loading={isPending}
+                rightIcon={ArrowRight}
+                className="w-full @min-[17.5rem]:w-auto"
+              >
                 {t("footer.subscribe")}
               </Button>
             </div>

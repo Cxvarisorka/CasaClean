@@ -203,7 +203,9 @@ export default function CalendarPage() {
 
       {/* Toolbar: month switcher + status filter */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
+        {/* Two arrows plus a month name ("September 2026") is already wider than
+            a 200px screen's content column, so the label may drop under them. */}
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="ghost"
             size="icon"
@@ -220,14 +222,18 @@ export default function CalendarPage() {
           >
             <ChevronRight className="size-4.5" />
           </Button>
-          <div className="ml-1">
-            <h2 className="text-heading-sm font-bold capitalize text-ink-900">{monthLabel}</h2>
+          <div className="min-w-0 xs:ml-1">
+            <h2 className="wrap-break-word text-heading-sm font-bold capitalize text-ink-900">
+              {monthLabel}
+            </h2>
             <p className="text-caption text-ink-400">
               {t("admin.calendar.monthCount", { count: monthCount })}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        {/* The filter is 160px from `xs` up; below that it shares whatever the
+            row has left with "Today", or wraps onto its own line. */}
+        <div className="flex flex-wrap items-center gap-2 *:flex-1 xs:*:flex-none">
           <Button variant="outline" size="sm" onClick={goToday}>
             {t("admin.calendar.today")}
           </Button>
@@ -235,7 +241,7 @@ export default function CalendarPage() {
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             options={[{ value: "", label: t("admin.bookings.allStatuses") }, ...statusOptions]}
-            className="h-9 min-w-[10rem]"
+            className="h-9 xs:min-w-40"
           />
         </div>
       </div>
@@ -345,8 +351,8 @@ export default function CalendarPage() {
       >
         {viewing && (
           <div className="space-y-1">
-            <div className="mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Badge variant={BOOKING_STATUS_META[viewing.status]?.variant}>
                   {BOOKING_STATUS_META[viewing.status] &&
                     t(BOOKING_STATUS_META[viewing.status].labelKey)}
@@ -379,7 +385,7 @@ export default function CalendarPage() {
             />
             <DetailRow
               label={t("admin.bookings.detail.hoursCleaners")}
-              value={`${formatDuration(t, viewing.hours) || "—"} · ${viewing.cleaners || "—"}`}
+              value={`${formatDuration(t, viewing.duration_minutes) || "—"} · ${viewing.cleaners || "—"}`}
             />
             <DetailRow
               label={t("admin.bookings.detail.workers")}

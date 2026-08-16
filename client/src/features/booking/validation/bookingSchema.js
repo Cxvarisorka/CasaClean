@@ -2,11 +2,13 @@ import { z } from "zod";
 import { isValidPhone } from "@/lib/phone";
 import { todayDateString } from "../utils/recurrence";
 import {
-  DURATION_STEP_HOURS,
-  MAX_DURATION_HOURS,
+  MAX_DURATION_HOURS_PART,
+  MAX_DURATION_MINUTES,
   MAX_INTERVAL_DAYS,
-  MIN_DURATION_HOURS,
+  MAX_MINUTES_PART,
+  MIN_DURATION_MINUTES,
 } from "../constants";
+import { combineDuration } from "../utils/duration";
 
 /*
  * Booking validation
@@ -17,6 +19,40 @@ import {
  */
 
 const todayISO = () => todayDateString();
+
+/*
+ * Duration
+ * --------
+ * Collected as two numeric inputs and carried as two form fields, then combined
+ * into TOTAL MINUTES at submission (`durationMinutesOf`). The pair is validated
+ * field-by-field for shape — a whole number of hours, 0–59 minutes — and the
+ * combined TOTAL is checked in a schema-level refinement, because "at least an
+ * hour, at most six" is a statement about the pair rather than either half.
+ *
+ * The refinement reports on `durationMins`: it is the field a customer most
+ * often has to fix, and an error has to land on a real field to be rendered.
+ *
+ * Whether a duration also fits the chosen city's remaining working hours needs
+ * the city and the start time, which a flat field schema can't see — the
+ * schedule step applies that rule (utils/timeWindow.js) and the server enforces
+ * it (assertBookingWindow).
+ */
+const durationHoursField = z.coerce
+  .number({ message: "Enter the hours as a number" })
+  .int("Enter whole hours")
+  .min(0, "Hours can't be negative")
+  .max(MAX_DURATION_HOURS_PART, "Choose a shorter booking");
+
+const durationMinsField = z.coerce
+  .number({ message: "Enter the minutes as a number" })
+  .int("Enter whole minutes")
+  .min(0, "Minutes can't be negative")
+  .max(MAX_MINUTES_PART, `Minutes must be between 0 and ${MAX_MINUTES_PART}`);
+
+/** The wizard's duration pair as the total minutes the API takes. */
+export function durationMinutesOf(values) {
+  return combineDuration(values?.durationHours, values?.durationMins);
+}
 
 export const bookingSchema = z.object({
   // Step 1 — property
@@ -32,15 +68,9 @@ export const bookingSchema = z.object({
   // Step 2 — preferences
   serviceId: z.string().min(1, "Choose a service"),
   // Bounds mirror the duration constants / CLEANERS_RANGE in ../constants.js and
-  // the server's createBookingSchema. Keep all three in step — `hours` previously
-  // allowed 8 here while the UI only offered 6 and the server had no cap.
-  // Half hours are bookable (1.5 = a 90-minute visit); finer steps are not, here
-  // or in the server's utils/duration.util.js.
-  hours: z.coerce
-    .number()
-    .min(MIN_DURATION_HOURS, "Select a duration")
-    .max(MAX_DURATION_HOURS, "Choose a shorter booking")
-    .multipleOf(DURATION_STEP_HOURS, "Choose a whole or half hour"),
+  // the server's createBookingSchema. Keep them in step.
+  durationHours: durationHoursField,
+  durationMins: durationMinsField,
   cleaners: z.coerce.number().int().min(1, "Select cleaners").max(3),
   additionalServices: z.array(z.string()).default([]),
   cleaningTools: z.array(z.string()).default([]),
@@ -75,6 +105,29 @@ export const bookingSchema = z.object({
     .trim()
     .refine(isValidPhone, "Enter a valid phone number, including the country prefix"),
   notes: z.string().trim().max(500, "Keep notes under 500 characters").optional(),
+}).superRefine((values, ctx) => {
+  // The combined duration, checked once the two halves are individually sane.
+  // A pair that failed its own field rules produces NaN here; reporting a
+  // second error for it would just duplicate the one already shown.
+  const total = durationMinutesOf(values);
+  if (!Number.isFinite(total)) return;
+
+  if (total < MIN_DURATION_MINUTES) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["durationMins"],
+      message: `A booking must be at least ${MIN_DURATION_MINUTES} minutes`,
+    });
+    return;
+  }
+
+  if (total > MAX_DURATION_MINUTES) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["durationMins"],
+      message: "Choose a shorter booking",
+    });
+  }
 });
 
 export const bookingDefaults = {
@@ -84,7 +137,9 @@ export const bookingDefaults = {
   propertySize: "",
   doorbellName: "",
   serviceId: "",
-  hours: 2,
+  // Two hours, spelled as the pair the two inputs hold.
+  durationHours: 2,
+  durationMins: 0,
   cleaners: 1,
   additionalServices: [],
   cleaningTools: [],

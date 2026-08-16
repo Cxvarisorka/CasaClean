@@ -6,7 +6,7 @@ import { useTranslation } from "@/i18n";
 import { useServices } from "@/features/services";
 import { useAuth } from "@/features/admin/context/AuthContext";
 import { computeQuote } from "../utils/pricing";
-import { formatDuration } from "../utils/duration";
+import { combineDuration, formatDuration } from "../utils/duration";
 import { useSpecialRequests } from "../hooks/useSpecialRequests";
 import { useCleaningTools } from "../hooks/useCleaningTools";
 
@@ -25,7 +25,10 @@ import { useCleaningTools } from "../hooks/useCleaningTools";
 // Exactly the inputs computeQuote reads. Keep in sync with utils/pricing.js.
 const PRICING_FIELDS = [
   "serviceId",
-  "hours",
+  // The duration pair, combined into total minutes below — computeQuote takes
+  // the total, but the FORM holds the two fields the customer types.
+  "durationHours",
+  "durationMins",
   "cleaners",
   "additionalServices",
   "cleaningTools",
@@ -40,8 +43,16 @@ export function BookingSummary() {
   const { t } = useTranslation();
   const { control } = useFormContext();
 
-  const [serviceId, hours, cleaners, additionalServices, cleaningTools] =
-    useWatch({ control, name: PRICING_FIELDS });
+  const [
+    serviceId,
+    durationHours,
+    durationMins,
+    cleaners,
+    additionalServices,
+    cleaningTools,
+  ] = useWatch({ control, name: PRICING_FIELDS });
+
+  const durationMinutes = combineDuration(durationHours, durationMins);
 
   const { data: addons = NO_ADDONS } = useSpecialRequests();
   const { data: tools = NO_TOOLS } = useCleaningTools();
@@ -51,10 +62,10 @@ export function BookingSummary() {
   const { tax } = useAuth();
 
   const formatServiceLabel = useCallback(
-    ({ name, hours: h, cleaners: c }) =>
+    ({ name, durationMinutes: minutes, cleaners: c }) =>
       t("booking.units.serviceLine", {
         name,
-        duration: formatDuration(t, h),
+        duration: formatDuration(t, minutes),
         cleaners: c,
         unit: t(c > 1 ? "booking.units.cleaners" : "booking.units.cleaner"),
       }),
@@ -64,12 +75,12 @@ export function BookingSummary() {
   const quote = useMemo(
     () =>
       computeQuote(
-        { serviceId, hours, cleaners, additionalServices, cleaningTools },
+        { serviceId, durationMinutes, cleaners, additionalServices, cleaningTools },
         { addons, tools, services, formatServiceLabel, tax }
       ),
     [
       serviceId,
-      hours,
+      durationMinutes,
       cleaners,
       additionalServices,
       cleaningTools,

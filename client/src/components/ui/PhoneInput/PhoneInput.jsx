@@ -80,12 +80,13 @@ export const PhoneInput = forwardRef(function PhoneInput(
     emit(dialCode, typed);
   };
 
-  const controlBorder = error
-    ? "border-red-400 focus:border-red-500"
-    : "border-ink-200 focus:border-brand-500";
+  const selected = COUNTRIES.find((c) => c.code === country);
 
   return (
-    <div className={cn("w-full", containerClassName)}>
+    // `@container`: what this field can show depends on how wide *it* is, not on
+    // how wide the window is — the same component sits in a full-width form and
+    // in a narrow modal column. See the flag below.
+    <div className={cn("@container w-full min-w-0", containerClassName)}>
       {label && (
         <label
           htmlFor={fieldId}
@@ -96,9 +97,30 @@ export const PhoneInput = forwardRef(function PhoneInput(
         </label>
       )}
 
-      <div className="flex gap-2">
-        {/* The picker keeps its own width: wide enough for the dial code, never
-            wide enough to squeeze the number box on a phone. */}
+      {/*
+       * One control, two segments — a dial-code chip against the number box,
+       * sharing a single border and a single focus ring. Two separate boxes
+       * (which is what a bordered picker beside a bordered input reads as)
+       * looked like two unrelated questions, and side by side they needed
+       * ~250px before the number box was usable at all.
+       *
+       * What made it wide was the OPTION text ("🇮🇹 +39 Italy"), which a native
+       * <select> also renders into the closed control. So the two are split:
+       * the real <select> keeps the full labels and the native popup, and sits
+       * invisibly on top of a display that shows only what has to be read back.
+       */}
+      <div
+        className={cn(
+          // `overflow-hidden` so the segment tint and the input meet the border
+          // radius exactly, instead of each re-guessing it a pixel inside.
+          "flex w-full items-stretch overflow-hidden rounded-xl border bg-surface transition-colors duration-200",
+          "focus-within:ring-4",
+          error
+            ? "border-red-400 focus-within:border-red-500 focus-within:ring-red-500/15"
+            : "border-ink-200 focus-within:border-brand-500 focus-within:ring-brand-500/15",
+          disabled && "cursor-not-allowed opacity-60"
+        )}
+      >
         <div className="relative shrink-0">
           <select
             aria-label={countryLabel}
@@ -106,15 +128,12 @@ export const PhoneInput = forwardRef(function PhoneInput(
             onChange={onCountryChange}
             disabled={disabled}
             className={cn(
-              "h-11 w-28 appearance-none rounded-xl border bg-surface pl-3 pr-8 text-body-sm",
-              "cursor-pointer text-ink-900 transition-colors duration-200",
+              "peer absolute inset-0 size-full cursor-pointer appearance-none opacity-0",
               // Explicit rather than inherited: Chromium draws the option list
               // in its own popup, and this is the element whose font it reads
               // for it — see the flag @font-face in styles/globals.css.
               "font-sans",
-              "focus:outline-none focus:ring-4 focus:ring-brand-500/15",
-              "disabled:cursor-not-allowed disabled:opacity-60",
-              controlBorder
+              "disabled:cursor-not-allowed"
             )}
           >
             {COUNTRIES.map((option) => (
@@ -123,11 +142,29 @@ export const PhoneInput = forwardRef(function PhoneInput(
               </option>
             ))}
           </select>
-          <ChevronDown
-            className="pointer-events-none absolute right-2.5 top-1/2 size-4.5 -translate-y-1/2 text-ink-400"
+
+          {/* The select above is invisible, so its focus ring would be too —
+              the chip lights up in its place, which also says which of the two
+              segments the keyboard is on. */}
+          <span
             aria-hidden="true"
-          />
+            className={cn(
+              "pointer-events-none flex h-11 items-center gap-1.5 pl-3 pr-2 text-body-sm text-ink-900",
+              "transition-colors peer-focus-visible:bg-brand-50 peer-focus-visible:text-brand-700"
+            )}
+          >
+            {/* Dropped when the field itself is narrow — the dial code is the
+                part that has to be read back, the flag is the part that makes
+                it scannable. A container query, not a media query: this is
+                about the field's own width, and it sits in columns of very
+                different sizes on the same screen. */}
+            <span className="hidden @min-[15rem]:inline">{selected?.flag}</span>
+            <span className="tabular-nums">{dialCode}</span>
+            <ChevronDown className="size-4 shrink-0 text-ink-400" />
+          </span>
         </div>
+
+        <span className="my-2 w-px shrink-0 bg-ink-200" aria-hidden="true" />
 
         <input
           ref={ref}
@@ -144,11 +181,12 @@ export const PhoneInput = forwardRef(function PhoneInput(
           aria-invalid={error ? "true" : undefined}
           aria-describedby={describedBy}
           className={cn(
-            "h-11 min-w-0 flex-1 rounded-xl border bg-surface px-4 text-body-sm text-ink-900",
-            "placeholder:text-ink-400 transition-colors duration-200",
-            "focus:outline-none focus:ring-4 focus:ring-brand-500/15",
-            "disabled:cursor-not-allowed disabled:opacity-60",
-            controlBorder,
+            "h-11 min-w-0 flex-1 bg-transparent px-3 text-body-sm text-ink-900",
+            "placeholder:text-ink-400",
+            // The group owns the ring now, so the input must not draw a second
+            // one inside it.
+            "focus:outline-none",
+            "disabled:cursor-not-allowed",
             className
           )}
         />

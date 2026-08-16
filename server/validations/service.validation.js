@@ -97,7 +97,13 @@ const createServiceSchema = z.object({
         .boolean()
         .optional(),
 
-    recurringIntervalDays: recurringIntervalDays.optional()
+    recurringIntervalDays: recurringIntervalDays.optional(),
+
+    // Opt-in same-day booking: skips the 48-hour advance notice every other
+    // service waits out (utils/leadTime.util.js). Absent means false.
+    allowInstantBooking: z
+        .boolean()
+        .optional()
 }).strict({ message: "Unknown fields are not allowed!" });
 
 // Schema for validate edit service request body
@@ -159,6 +165,10 @@ const editServiceSchema = z.object({
         .optional(),
 
     recurringIntervalDays: recurringIntervalDays.optional(),
+
+    allowInstantBooking: z
+        .boolean()
+        .optional(),
 
     // Soft on/off switch: a disabled service is hidden from the public site and
     // can't be booked, without deleting it. Only editable, not set on create.

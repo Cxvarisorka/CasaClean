@@ -11,6 +11,10 @@
 // controller reads as policy rather than arithmetic.
 
 const { roundMoney } = require('./invoice.util');
+const { durationInMinutes } = require('./duration.util');
+// The moment a booking starts is the same "YYYY-MM-DD" + "HH:MM" pair the
+// advance-notice rule works from, so it is defined once, there.
+const { bookingStartsAt } = require('./leadTime.util');
 
 // How long before the appointment a self-cancellation stops being free.
 // Configurable, defaulting to one day.
@@ -18,16 +22,6 @@ const CANCELLATION_WINDOW_HOURS =
   Number(process.env.CANCELLATION_WINDOW_HOURS) >= 0
     ? Number(process.env.CANCELLATION_WINDOW_HOURS)
     : 24;
-
-/**
- * The moment a booking starts, built from the stored local-format strings
- * ("YYYY-MM-DD" + "HH:MM") — the same pair `assertBookingWindow` validates.
- */
-const bookingStartsAt = ({ bookingDate, bookingTime }) => {
-  const [year, month, day] = String(bookingDate).split('-').map(Number);
-  const [hour, minute] = String(bookingTime).split(':').map(Number);
-  return new Date(year, month - 1, day, hour, minute);
-};
 
 /** True when the booking starts less than CANCELLATION_WINDOW_HOURS from now. */
 const isLateCancellation = (booking, now = Date.now()) =>
@@ -37,9 +31,11 @@ const isLateCancellation = (booking, now = Date.now()) =>
  * Split a late-cancelled booking's charge into what we keep and what goes back.
  *
  * The fee is one hour of the booked crew, which is exactly the booking's labour
- * divided by its hours — the total is `pricePerHour × hours × cleaners` plus
- * add-ons (`computeBookingTotal`), so dividing the labour by `hours` leaves
- * `pricePerHour × cleaners`: an hour of everyone who was going to turn up.
+ * divided by its length in hours — the total is `pricePerHour × (minutes ÷ 60) ×
+ * cleaners` plus add-ons (`computeBookingTotal`), so scaling the labour back to
+ * a single hour leaves `pricePerHour × cleaners`: an hour of everyone who was
+ * going to turn up. A booking of an hour or less has no more than that in it, so
+ * the cap below keeps its whole charge.
  *
  * Add-ons are excluded on purpose. A fridge cleaning that never happens costs us
  * nothing, whereas the hour does — the fee compensates for the blocked slot, not
@@ -60,17 +56,17 @@ const isLateCancellation = (booking, now = Date.now()) =>
  * built on figures we can't trust, and the fallback can only ever favour us by
  * the add-ons' share, never overcharge past the hour it is meant to be.
  *
- * @param {Object} booking  a booking with totalAmount, hours, the `tax` snapshot
- *                          and POPULATED specialRequests/cleaningTools
+ * @param {Object} booking  a booking with totalAmount, durationMinutes, the
+ *                          `tax` snapshot and POPULATED specialRequests/cleaningTools
  * @returns {{ fee: number, refundAmount: number }} euros, summing to totalAmount
  */
 const lateCancellationSettlement = (booking) => {
   const total = roundMoney(booking.totalAmount);
-  const hours = Number(booking.hours);
+  const minutes = durationInMinutes(booking);
 
   // Nothing to split, or a duration we can't divide by: keep what was charged,
   // which is the behaviour this policy replaced.
-  if (!(total > 0) || !(hours > 0)) {
+  if (!(total > 0) || !(minutes > 0)) {
     return { fee: Math.max(total, 0), refundAmount: 0 };
   }
 
@@ -92,7 +88,7 @@ const lateCancellationSettlement = (booking) => {
   const labour = addOnTotal === null ? null : roundMoney(total - addOnTotal);
   const base = labour > 0 ? labour : total;
 
-  const fee = Math.min(roundMoney(base / hours), total);
+  const fee = Math.min(roundMoney((base * 60) / minutes), total);
   return { fee, refundAmount: roundMoney(total - fee) };
 };
 

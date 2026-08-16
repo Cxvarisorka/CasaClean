@@ -172,7 +172,7 @@ describe("subscription-cycle webhooks", () => {
             doorbellName: "Rossi",
             bookingDate: dateStr(3),
             bookingTime: "10:00",
-            hours: 2,
+            durationMinutes: 120,
             cleaners: 1,
             totalAmount: 40,
             status: "confirmed",
@@ -219,7 +219,7 @@ describe("subscription-cycle webhooks", () => {
             doorbellName: "Rossi",
             bookingDate: dateStr(3),
             bookingTime: "10:00",
-            hours: 2,
+            durationMinutes: 120,
             cleaners: 1,
             totalAmount: 40,
             status: "confirmed",
@@ -265,7 +265,7 @@ describe("subscription-cycle webhooks", () => {
                 doorbellName: "Rossi",
                 bookingDate: dateStr(2),
                 bookingTime: "10:00",
-                hours: 2,
+                durationMinutes: 120,
                 cleaners: 1,
                 totalAmount: 40
             }

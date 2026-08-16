@@ -453,7 +453,7 @@ describe('the invoice a business receives', () => {
       doorbellName: 'Rossi',
       bookingDate: '2026-12-01',
       bookingTime: '10:00',
-      hours: 2,
+      durationMinutes: 120,
       cleaners: 1,
       totalAmount: 73.2,
       tax: {
@@ -589,5 +589,88 @@ describe('the invoice a business receives', () => {
     } finally {
       process.env.INVOICE_VAT_RATE = saved;
     }
+  });
+});
+
+// An exact-minute duration is where pricing, VAT and Stripe can most easily
+// disagree: 85/60 x 20 is 28.3333..., and every layer has to land on the same
+// cent. This walks one such booking from the quote to the invoice.
+describe('exact-minute pricing, end to end', () => {
+  it('prices, charges and invoices a 1 h 25 m booking with VAT on top', async () => {
+    const [user, city] = await Promise.all([createUser(), createCity()]);
+    const service = await createService({ pricePerHour: 20 });
+    mockPaidIntent('pi_test_minutes_vat');
+
+    const intent = await api
+      .post('/api/v1/payment/booking/intent')
+      .set('Cookie', cookieFor(user))
+      .send(validBookingBody(service, city, { durationMinutes: 85 }));
+
+    // Net 28.33, VAT at 22% is 6.23, so the customer owes 34.56.
+    expect(intent.status).toBe(201);
+    expect(intent.body.data.amount).toBe(34.56);
+
+    // Stripe is asked for exactly that, in integer cents.
+    expect(stripeMock.paymentIntents.create).toHaveBeenCalledWith(
+      expect.objectContaining({ amount: 3456 }),
+      undefined
+    );
+
+    const finalize = await api
+      .post('/api/v1/payment/booking/finalize')
+      .set('Cookie', cookieFor(user))
+      .send({ paymentIntentId: intent.body.data.paymentIntentId });
+    expect(finalize.status).toBe(201);
+
+    const booking = await Booking.findById(finalize.body.data.booking._id).lean();
+    expect(booking.durationMinutes).toBe(85);
+    expect(booking.totalAmount).toBe(34.56);
+    expect(booking.tax.netAmount).toBe(28.33);
+    expect(booking.tax.vatAmount).toBe(6.23);
+    expect(booking.tax.netAmount + booking.tax.vatAmount).toBeCloseTo(booking.totalAmount, 2);
+
+    const invoice = await issueInvoiceForBooking(booking._id);
+    expect(invoice.subtotal).toBe(28.33);
+    expect(invoice.vatAmount).toBe(6.23);
+    expect(invoice.total).toBe(34.56);
+    // The lines are stated NET, so they sum to the subtotal the VAT sits under.
+    const sum = invoice.lineItems.reduce((total, item) => total + item.amount, 0);
+    expect(sum).toBe(invoice.subtotal);
+    expect(invoice.service.durationMinutes).toBe(85);
+    expect(invoice.lineItems[0].detail).toBe('1 h 25 min × 1 cleaner');
+  });
+
+  it('gives a VIES-verified business the same minute-exact net, with no VAT added', async () => {
+    const [business, city] = await Promise.all([verifiedBusiness(), createCity()]);
+    const service = await createService({ pricePerHour: 20 });
+    mockPaidIntent('pi_test_minutes_rc');
+
+    const intent = await api
+      .post('/api/v1/payment/booking/intent')
+      .set('Cookie', cookieFor(business))
+      .send(validBookingBody(service, city, { durationMinutes: 85 }));
+
+    // Reverse charge: the catalogue net itself, to the cent.
+    expect(intent.body.data.amount).toBe(28.33);
+    expect(stripeMock.paymentIntents.create).toHaveBeenCalledWith(
+      expect.objectContaining({ amount: 2833 }),
+      undefined
+    );
+
+    const finalize = await api
+      .post('/api/v1/payment/booking/finalize')
+      .set('Cookie', cookieFor(business))
+      .send({ paymentIntentId: intent.body.data.paymentIntentId });
+
+    const booking = await Booking.findById(finalize.body.data.booking._id).lean();
+    expect(booking.totalAmount).toBe(28.33);
+    expect(booking.tax.treatment).toBe('reverse-charge');
+    expect(booking.tax.vatAmount).toBe(0);
+    expect(booking.tax.netAmount).toBe(28.33);
+
+    const invoice = await issueInvoiceForBooking(booking._id);
+    expect(invoice.reverseCharge).toBe(true);
+    expect(invoice.subtotal).toBe(28.33);
+    expect(invoice.total).toBe(28.33);
   });
 });

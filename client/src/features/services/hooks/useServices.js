@@ -73,6 +73,10 @@ function normalizeDbService(s, index, locale) {
     recurringIntervalDays: Array.isArray(s.recurringIntervalDays)
       ? s.recurringIntervalDays.map(Number).filter(Number.isInteger)
       : [],
+    // Same-day booking: when true this service skips the 48-hour advance
+    // notice, so the wizard's date picker opens on today instead of two days
+    // out. Fail-closed — an absent flag means the notice applies.
+    allowInstantBooking: Boolean(s.allowInstantBooking),
   };
 }
 

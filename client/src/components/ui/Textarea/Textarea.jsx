@@ -21,7 +21,7 @@ export const Textarea = forwardRef(function Textarea(
     : undefined;
 
   return (
-    <div className={cn("w-full", containerClassName)}>
+    <div className={cn("w-full min-w-0", containerClassName)}>
       {label && (
         <label
           htmlFor={fieldId}

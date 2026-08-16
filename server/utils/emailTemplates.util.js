@@ -11,8 +11,9 @@
 //   ink (text)  -> #0e1424 / #636c88
 
 const { formatEuro, formatDateLong } = require("./invoice.util");
-// Durations are whole or half hours; formatDuration keeps 1.5 out of the text.
-const { formatDuration } = require("./duration.util");
+// Durations are total minutes; formatDuration keeps raw minute counts out of
+// the text ("1 h 25 min", never "85").
+const { formatDuration, durationInMinutes } = require("./duration.util");
 
 // Shared palette so every template stays on-brand from one place.
 const COLORS = {
@@ -385,6 +386,9 @@ const newBookingAlertEmail = ({
     customerPhone,
     bookingDate,
     bookingTime,
+    durationMinutes,
+    // Legacy bookings store whole/half hours instead; durationInMinutes below
+    // reads whichever one this booking actually carries.
     hours,
     cleaners,
     streetName,
@@ -399,6 +403,7 @@ const newBookingAlertEmail = ({
     adminUrl
 }) => {
     const service = serviceName || "Cleaning service";
+    const minutes = durationInMinutes({ durationMinutes, hours });
     // The date and time lead the subject: an inbox full of these is triaged by
     // "when is it", not by "which of our services was it".
     const subject = `${recurring ? "New recurring booking" : "New booking"} — ${service} · ${bookingDate || "date TBC"} ${bookingTime || ""}`.trim();
@@ -435,7 +440,7 @@ const newBookingAlertEmail = ({
             ${row("Service", escapeHtml(service))}
             ${row("Date", escapeHtml(bookingDate ? formatDateLong(bookingDate) : "—"))}
             ${row("Time", escapeHtml(bookingTime || "—"))}
-            ${row("Duration", escapeHtml(`${formatDuration(hours)} · ${cleaners} cleaner(s)`))}
+            ${row("Duration", escapeHtml(`${formatDuration(minutes)} · ${cleaners} cleaner(s)`))}
             ${row("Address", escapeHtml(address || "—"))}
             ${propertySize ? row("Property size", `${escapeHtml(propertySize)} m&sup2;`) : ""}
             ${doorbellName ? row("Doorbell", escapeHtml(doorbellName)) : ""}
@@ -462,7 +467,7 @@ const newBookingAlertEmail = ({
         `${subject}\n\n` +
         `Service:   ${service}\n` +
         `Date:      ${bookingDate || "—"} ${bookingTime || ""}\n` +
-        `Duration:  ${formatDuration(hours)} (${cleaners} cleaner(s))\n` +
+        `Duration:  ${formatDuration(minutes)} (${cleaners} cleaner(s))\n` +
         `Address:   ${address || "—"}\n` +
         (propertySize ? `Size:      ${propertySize} m2\n` : "") +
         (doorbellName ? `Doorbell:  ${doorbellName}\n` : "") +

@@ -3,10 +3,28 @@ const { z } = require("zod");
 const mongoose = require("mongoose");
 
 const {
-    DURATION_STEP_HOURS,
-    MIN_DURATION_HOURS,
-    MAX_DURATION_HOURS
+    MIN_DURATION_MINUTES,
+    MAX_DURATION_MINUTES
 } = require("../utils/duration.util");
+
+// A duration is TOTAL MINUTES — the canonical representation everywhere (see
+// utils/duration.util.js). The wizard collects it as an "Hours + Minutes" pair
+// and combines the two before sending, so the wire format has exactly one
+// spelling of "1 h 25 min" and no float can express it wrongly.
+//
+// The bounds are the platform's; whether a duration also FITS the chosen city's
+// working hours needs the city and the start time, which a flat field schema
+// can't see — assertBookingWindow (services/booking.service.js) enforces that.
+const durationMinutesField = () =>
+    z
+        .number()
+        .int({ message: "Duration must be a whole number of minutes!" })
+        .min(MIN_DURATION_MINUTES, {
+            message: `A booking must be at least ${MIN_DURATION_MINUTES} minutes!`
+        })
+        .max(MAX_DURATION_MINUTES, {
+            message: `A booking cannot exceed ${MAX_DURATION_MINUTES} minutes!`
+        });
 
 const { phoneField } = require("./phone.validation");
 
@@ -99,16 +117,11 @@ const createBookingSchema = z.object({
         .trim()
         .min(1, { message: "Doorbell name can't be empty!" }),
 
-    // Whole or half hours (see utils/duration.util.js) — a booking can be 1.5 h.
     // An explicit ceiling as well as a floor: assertBookingWindow already caps
     // the duration against the city's closing time, but that is a per-city rule;
     // without a hard bound here an absurd value reaches the pricing maths and
     // the Stripe amount before anything rejects it.
-    hours: z
-        .number()
-        .min(MIN_DURATION_HOURS, { message: "A booking must be at least 1 hour!" })
-        .max(MAX_DURATION_HOURS, { message: "A booking cannot exceed 12 hours!" })
-        .multipleOf(DURATION_STEP_HOURS, { message: "Hours must be in half-hour steps (e.g. 1, 1.5, 2)!" }),
+    durationMinutes: durationMinutesField(),
 
     cleaners: z
         .number()
@@ -116,7 +129,7 @@ const createBookingSchema = z.object({
         .min(1, { message: "A booking must have at least 1 cleaner!" })
         .max(10, { message: "A booking cannot have more than 10 cleaners!" }),
 
-    // totalAmount is now server-managed (computed from service.pricePerHour * hours
+    // totalAmount is now server-managed (computed from service.pricePerHour pro-rated
     // + sum of specialRequest prices). It is intentionally absent from this schema
     // so the Zod .strict() guard rejects any client-supplied value.
 
@@ -213,12 +226,7 @@ const editBookingSchema = z.object({
         .min(1, { message: "Doorbell name can't be empty!" })
         .optional(),
 
-    hours: z
-        .number()
-        .min(MIN_DURATION_HOURS, { message: "A booking must be at least 1 hour!" })
-        .max(MAX_DURATION_HOURS, { message: "A booking cannot exceed 12 hours!" })
-        .multipleOf(DURATION_STEP_HOURS, { message: "Hours must be in half-hour steps (e.g. 1, 1.5, 2)!" })
-        .optional(),
+    durationMinutes: durationMinutesField().optional(),
 
     cleaners: z
         .number()

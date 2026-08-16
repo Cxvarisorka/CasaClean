@@ -250,7 +250,7 @@ export default function MessagesPage() {
                   {fmtDateTime(current.createdAt)}
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="outline" size="sm">
                   {t(`pages.contact.topics.${current.topic}`)}
                 </Badge>

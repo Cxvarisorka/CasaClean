@@ -77,11 +77,15 @@ export function LanguageSwitcher({ variant = "menu", className }) {
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={t("language.select")}
-        className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-body-sm font-medium text-ink-600 transition-colors hover:bg-ink-100/70 hover:text-ink-900"
+        className="inline-flex items-center gap-1.5 rounded-full px-2 py-2 text-body-sm font-medium text-ink-600 transition-colors hover:bg-ink-100/70 hover:text-ink-900 xs:px-3"
       >
-        <Globe className="size-4.5" />
+        {/* The globe alone identifies the control (it carries an aria-label);
+            the flag and the code are progressive detail, dropped in turn as the
+            bar they sit in — the admin topbar, the marketing navbar — runs out
+            of room on a small phone. */}
+        <Globe className="size-4.5 shrink-0" />
         <span className="hidden sm:inline">{active.flag}</span>
-        <span className="uppercase">{active.code}</span>
+        <span className="hidden uppercase xs:inline">{active.code}</span>
       </button>
 
       <AnimatePresence>
@@ -92,7 +96,7 @@ export function LanguageSwitcher({ variant = "menu", className }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.97 }}
             transition={{ duration: 0.18 }}
-            className="absolute right-0 z-50 mt-2 w-44 overflow-hidden rounded-2xl border border-ink-100 bg-surface p-1.5 shadow-large"
+            className="absolute right-0 z-50 mt-2 w-44 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl border border-ink-100 bg-surface p-1.5 shadow-large"
           >
             {languages.map((lang) => (
               <li key={lang.code}>

@@ -27,7 +27,7 @@ const CUSTOMER_SUBSCRIPTION_FIELDS = [
 const ADMIN_SUBSCRIPTION_FIELDS = [
   'user', 'serviceId', 'cityId', 'customerName', 'customerEmail',
   'customerPhone', 'streetName', 'houseNumber', 'propertySize',
-  'doorbellName', 'bookingTime', 'hours', 'cleaners', 'notes',
+  'doorbellName', 'bookingTime', 'durationMinutes', 'hours', 'cleaners', 'notes',
   'specialRequests', 'cleaningTools', 'supplies', 'intervalDays', 'status',
   'pausedReason', 'nextServiceDate', 'nextChargeAt', 'failedAttempts',
   'lastChargeStatus', 'lastChargeAt', 'lastError', 'lastCycleAmount',

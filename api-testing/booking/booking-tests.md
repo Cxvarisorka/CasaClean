@@ -30,7 +30,7 @@ A booking request body looks like this:
   "doorbellName": "Smith",
   "bookingDate": "2026-07-01",
   "bookingTime": "14:00",
-  "hours": 3,
+  "durationMinutes": 85,
   "cleaners": 2,
   "totalAmount": 120,
   "notes": "Please bring eco products",
@@ -48,8 +48,17 @@ Important things to know:
   (`+39 331 234 5678`, `+995 555 12 34 56`); spacing and dashes are normalised
   away, a bare `3312345678` is rejected as ambiguous.
 - **Required fields:** `serviceId`, `cityId`, `streetName`, `houseNumber`,
-  `propertySize`, `doorbellName`, `bookingDate`, `bookingTime`, `hours`,
-  `cleaners`, `totalAmount`. Missing any of these gives a 400.
+  `propertySize`, `doorbellName`, `bookingDate`, `bookingTime`,
+  `durationMinutes`, `cleaners`. Missing any of these gives a 400.
+- **Duration is TOTAL MINUTES**, a whole number between 60 and 720. `85` is a
+  1 h 25 min visit. There is no `hours` field any more, and no decimal spelling
+  of a duration — the wizard collects an Hours box and a Minutes box and sends
+  the sum. The price is the service's hourly rate pro-rated over those minutes
+  (85 / 60 x EUR 20 = EUR 28.33), computed in integer cents server-side.
+- **Bookings need 48 hours' notice**, measured to the minute against the chosen
+  start — not by calendar day. A service with `allowInstantBooking: true` skips
+  the wait and can be booked for today; every other rule (working hours, the
+  duration fitting inside them, "not already past") still applies to it.
 - **`serviceId` / `cityId` are numbers** (the current client contract), not ids
   of real City/Service documents. Sending `0` is allowed (it is a real value).
 - **`specialRequests`** must be a list of ids of **existing, enabled** add-ons.
@@ -72,7 +81,7 @@ Important things to know:
 curl -X POST http://localhost:3000/api/v1/booking ^
   -H "Content-Type: application/json" ^
   -b cookie.txt ^
-  -d "{\"serviceId\":1,\"cityId\":1,\"streetName\":\"Rustaveli Ave\",\"houseNumber\":\"12\",\"propertySize\":\"80m2\",\"doorbellName\":\"Smith\",\"bookingDate\":\"2026-07-01\",\"bookingTime\":\"14:00\",\"hours\":3,\"cleaners\":2,\"totalAmount\":120}"
+  -d "{\"serviceId\":1,\"cityId\":1,\"streetName\":\"Rustaveli Ave\",\"houseNumber\":\"12\",\"propertySize\":\"80m2\",\"doorbellName\":\"Smith\",\"bookingDate\":\"2026-07-01\",\"bookingTime\":\"14:00\",\"durationMinutes\":85,\"cleaners\":2}"
 ```
 
 ### Tests
@@ -89,7 +98,7 @@ curl -X POST http://localhost:3000/api/v1/booking ^
 | 8  | Send `supplies` as something that is not a list (e.g. a string) | **201**         | Created; `supplies` becomes an empty list                           |
 | 9  | Send `serviceId: 0` and `cityId: 0`                             | **201**         | Created — `0` is a valid value (not treated as missing)             |
 | 10 | Leave out a required field (e.g. `streetName`)                  | **400**         | message: "Please provide all required fields for booking!"          |
-| 11 | Leave out `hours` / `cleaners` / `totalAmount`                  | **400**         | message: "Please provide all required fields for booking!"          |
+| 11 | Leave out `durationMinutes` / `cleaners`                        | **400**         | message: "Please provide all required fields for booking!"          |
 | 12 | Account has **no** phone and you do **not** send `customerPhone` | **400**         | message: "Please add a phone number to your profile or provide one for this booking!" |
 | 13 | Account has no phone but you **do** send `customerPhone`        | **201**         | Created; `customerPhone` uses the value you sent                    |
 | 14 | `specialRequests` is not a list (e.g. a string)                 | **400**         | message: "specialRequests must be an array of ids!"                 |
@@ -97,9 +106,16 @@ curl -X POST http://localhost:3000/api/v1/booking ^
 | 16 | `specialRequests` has an id that does not exist                 | **400**         | message: "One or more selected special requests do not exist or are unavailable!" |
 | 17 | `specialRequests` points to a **disabled** add-on              | **400**         | message: "One or more selected special requests do not exist or are unavailable!" |
 | 18 | Not logged in                                                   | **401**         | "Authorization is required!"                                        |
-| 19 | Send `hours: 1.5` (a 90-minute visit) inside the city's hours    | **201**         | Created; `data.booking.hours` is `1.5` and the total is priced on 1.5 h |
-| 20 | Send `hours: 1.25`                                              | **400**         | message mentions half-hour steps; `fields` names `hours`             |
+| 19 | Send `durationMinutes: 85` inside the city's hours              | **201**         | Created; `data.booking.durationMinutes` is `85`, total = rate x 85/60 |
+| 20 | Send `durationMinutes: 85.5`, `0`, `-60`, `30` or `721`         | **400**         | Validation failed; `fields` names `durationMinutes`                  |
 | 21 | Send `bookingTime: "12:20"` inside the city's hours             | **201**         | Created; any minute is a valid start, not just whole hours          |
+| 22 | Start 15:00 with `durationMinutes: 120` in a 09:00-17:00 city   | **201**         | Ends exactly at closing, which is allowed                            |
+| 23 | Same start with `durationMinutes: 121`                          | **400**         | message: "...would run past the city's closing time"                 |
+| 24 | Book a date/time **exactly 48 h** away                          | **201**         | Created — the notice rule is "at least"                              |
+| 25 | Book a date/time **47 h 59 m** away                             | **400**         | message: "Bookings must be made at least 48 hours in advance..."     |
+| 26 | Book **today** on a service with `allowInstantBooking: true`    | **201**         | Created, provided the visit still finishes before the city closes    |
+| 27 | Book a start **earlier today** on an instant service            | **400**         | message: "Booking time for today must be in the future!"             |
+| 28 | Two different customers book the same service, date and start   | **201** both    | Deliberately allowed — there is no service-level conflict rule       |
 
 > **Check #2 carefully:** Even if you send `customerName` or `customerEmail` in
 > the body, the server **ignores** them and uses your account details. This is on
@@ -175,7 +191,7 @@ curl http://localhost:3000/api/v1/booking/PASTE_BOOKING_ID -b cookie.txt
 ## 5. PATCH `/:id` — Edit a booking (admin only)
 
 Only send the fields you want to change. The admin can edit these fields:
-`status`, `bookingDate`, `bookingTime`, `hours`, `cleaners`, `totalAmount`,
+`status`, `bookingDate`, `bookingTime`, `durationMinutes`, `cleaners`,
 `streetName`, `houseNumber`, `propertySize`, `doorbellName`, `customerPhone`,
 `notes`, `supplies`, and `specialRequests`.
 

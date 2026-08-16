@@ -275,7 +275,7 @@ leaves the status alone.
 
 ## 10. Existing bookings are never re-taxed
 
-Edit a business booking in the admin panel (change the hours, say). It must be
+Edit a business booking in the admin panel (change the duration, say). It must be
 repriced under **its own** stored treatment, not the customer's current one — a
 business that has since let its registration lapse must not have an already-paid
 booking silently re-taxed.
@@ -316,7 +316,7 @@ If you only have fifteen minutes, this is the whole feature. Set
 | 8 | As admin, book a walk-in (no `userId`) | **€146.40** |
 | 9 | Force a recurring cycle (§8) before and after verifying | **€146.40** then **€120.00**, no plan edit |
 | 10 | Open the business invoice | net lines summing to 120.00, €0.00 VAT, VAT number, Article 196 |
-| 11 | Edit an old business booking's hours in the panel | repriced on **its own** stored treatment |
+| 11 | Edit an old business booking's duration in the panel | repriced on **its own** stored treatment |
 
 ## What the automated tests already cover
 

@@ -27,23 +27,26 @@ const VARIANTS = {
   link: "text-brand-600 underline-offset-4 hover:underline px-0",
 };
 
+/*
+ * Heights are minimums, not fixed values. A button is `whitespace-nowrap` from
+ * `xs` up (see BASE) because a pill that breaks mid-label looks broken — but
+ * below 400px there are places where the label is simply wider than the column
+ * it sits in (a 200px viewport leaves a card ~140px of content, and "Change
+ * password" wants 150), and a nowrap label there doesn't shrink, it escapes the
+ * card and scrolls the page sideways. So the label may wrap on the smallest
+ * screens, and the box grows to hold it.
+ *
+ * The vertical padding is set so a single line still measures exactly the old
+ * fixed height — `min-h` wins for one line at every width — which is why this
+ * changes nothing above 400px, or below it for any label that fits.
+ */
 const SIZES = {
-  sm: "h-9 px-4 text-body-sm gap-1.5",
-  md: "h-11 px-5 text-body-sm gap-2",
-  lg: "h-13 px-7 text-body-md gap-2.5",
-  xl: "h-15 px-9 text-body-md gap-3",
-  icon: "h-11 w-11",
-};
-
-// A full-width button can't grow horizontally, so a long label (translations
-// run much longer than English) must wrap instead of overflowing the pill:
-// trade the fixed height for the matching min-height.
-const FULL_WIDTH_SIZES = {
-  sm: "min-h-9",
-  md: "min-h-11",
-  lg: "min-h-13",
-  xl: "min-h-15",
-  icon: "min-h-11",
+  sm: "min-h-9 px-4 py-1.5 text-body-sm gap-1.5",
+  md: "min-h-11 px-5 py-2 text-body-sm gap-2",
+  lg: "min-h-13 px-7 py-2.5 text-body-md gap-2.5",
+  xl: "min-h-15 px-9 py-3 text-body-md gap-3",
+  // No label to wrap, so this one keeps a fixed square.
+  icon: "h-11 w-11 shrink-0",
 };
 
 const BASE =
@@ -51,7 +54,7 @@ const BASE =
   "transition-[background-color,box-shadow,color,border-color] duration-200 " +
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 " +
   "focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-55 " +
-  "select-none whitespace-nowrap";
+  "select-none max-w-full text-center whitespace-normal xs:whitespace-nowrap";
 
 export const Button = forwardRef(function Button(
   {
@@ -75,10 +78,9 @@ export const Button = forwardRef(function Button(
     BASE,
     VARIANTS[variant],
     SIZES[size],
-    fullWidth && [
-      "h-auto w-full whitespace-normal py-2 text-center",
-      FULL_WIDTH_SIZES[size],
-    ],
+    // A full-width button can never grow sideways, so its label wraps at every
+    // width — the sizes above already carry the matching min-height.
+    fullWidth && "w-full whitespace-normal",
     className
   );
 

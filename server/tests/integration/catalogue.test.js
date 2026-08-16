@@ -196,6 +196,55 @@ describe("services", () => {
         expect(recurring.body.data.service.recurringIntervalDays).toEqual([7, 14]);
     });
 
+    test("instant booking is off unless an admin turns it on, and survives an unrelated edit", async () => {
+        const admin = await createAdmin();
+
+        // Fail-closed: a service that says nothing about it waits out the
+        // 48-hour advance notice like every other one.
+        const scheduled = await api.post("/api/v1/service")
+            .set("Cookie", cookieFor(admin))
+            .send({
+                name: "Scheduled Only Cleaning",
+                description: "Booked ahead, like everything else.",
+                pricePerHour: 20,
+                allCities: true,
+                cities: []
+            });
+
+        expect(scheduled.status).toBe(201);
+        expect(scheduled.body.data.service.allowInstantBooking).toBe(false);
+
+        const instant = await api.post("/api/v1/service")
+            .set("Cookie", cookieFor(admin))
+            .send({
+                name: "Same Day Cleaning",
+                description: "Staffed today.",
+                pricePerHour: 25,
+                allCities: true,
+                cities: [],
+                allowInstantBooking: true
+            });
+
+        expect(instant.status).toBe(201);
+        expect(instant.body.data.service.allowInstantBooking).toBe(true);
+
+        // A rename must not quietly put the service back on the 48-hour wait.
+        const renamed = await api.patch(`/api/v1/service/${instant.body.data.service._id}`)
+            .set("Cookie", cookieFor(admin))
+            .send({ name: "Same Day Cleaning Renamed" });
+
+        expect(renamed.status).toBe(200);
+        expect(renamed.body.data.service.allowInstantBooking).toBe(true);
+
+        // And turning it off is a real edit.
+        const off = await api.patch(`/api/v1/service/${instant.body.data.service._id}`)
+            .set("Cookie", cookieFor(admin))
+            .send({ allowInstantBooking: false });
+
+        expect(off.status).toBe(200);
+        expect(off.body.data.service.allowInstantBooking).toBe(false);
+    });
+
     test("stores per-language copy, dropping the blanks a half-finished language leaves", async () => {
         const admin = await createAdmin();
 

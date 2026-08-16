@@ -134,7 +134,7 @@ describe('invoice issuing', () => {
 
     // 20/h x 3h x 2 cleaners = 120, + 15 add-on = 135.
     const booking = await createPaidBooking(user, service, city, {
-      hours: 3,
+      durationMinutes: 180,
       cleaners: 2,
       totalAmount: 135,
       amountPaid: 135,
@@ -144,11 +144,15 @@ describe('invoice issuing', () => {
     const invoice = await issueInvoiceForBooking(booking._id);
 
     expect(invoice.lineItems).toHaveLength(2);
+    // One unit at the whole labour charge: a duration is an exact number of
+    // minutes, so cleaner-hours is no longer a whole quantity and a qty × unit
+    // pair built from it wouldn't multiply back to the amount. The length and
+    // crew that produced the figure are stated in `detail` instead.
     expect(invoice.lineItems[0]).toMatchObject({
       description: 'Deep cleaning',
       detail: '3 h × 2 cleaners',
-      quantity: 6,
-      unitPrice: 20,
+      quantity: 1,
+      unitPrice: 120,
       amount: 120
     });
     expect(invoice.lineItems[1]).toMatchObject({ description: 'Fridge cleaning', amount: 15 });

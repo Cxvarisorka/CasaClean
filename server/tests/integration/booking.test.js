@@ -8,6 +8,7 @@ const {
     cookieFor,
     createCity,
     createService,
+    createInstantService,
     createSpecialRequest,
     createCleaningTool,
     createWorker,
@@ -41,7 +42,7 @@ describe("POST /api/v1/booking (admin manual bookings)", () => {
         const res = await api.post("/api/v1/booking")
             .set("Cookie", cookieFor(admin))
             .send(validBookingBody(service, city, {
-                hours: 3,
+                durationMinutes: 180,
                 cleaners: 2,
                 specialRequests: [String(addon._id)],
                 cleaningTools: [String(tool._id)]
@@ -238,24 +239,41 @@ describe("POST /api/v1/booking (admin manual bookings)", () => {
 
             const res = await api.post("/api/v1/booking")
                 .set("Cookie", cookieFor(admin))
-                .send(validBookingBody(service, city, { bookingTime: "16:00", hours: 4 }));
+                .send(validBookingBody(service, city, { bookingTime: "16:00", durationMinutes: 240 }));
             expect(res.status).toBe(400);
             expect(res.body.message).toMatch(/run past the city's closing time/i);
         });
 
-        test("prices and stores a half-hour booking", async () => {
+        test("prices and stores an exact-minute duration", async () => {
             const admin = await createAdmin();
             const service = await createService({ pricePerHour: 20 });
             const city = await createCity({ workingHourStarts: "09:00", workingHourEnds: "17:30" });
 
-            // 16:00 + 1 h 30 min ends exactly at closing, and 20 €/h × 1.5 = 30.
+            // 16:05 + 1 h 25 min ends exactly at closing, and 85/60 × 20 = 28.33.
             const res = await api.post("/api/v1/booking")
                 .set("Cookie", cookieFor(admin))
-                .send(validBookingBody(service, city, { bookingTime: "16:00", hours: 1.5 }));
+                .send(validBookingBody(service, city, { bookingTime: "16:05", durationMinutes: 85 }));
 
             expect(res.status).toBe(201);
-            expect(res.body.data.booking.hours).toBe(1.5);
-            expect(res.body.data.booking.totalAmount).toBe(30);
+            expect(res.body.data.booking.durationMinutes).toBe(85);
+            expect(res.body.data.booking.totalAmount).toBe(28.33);
+        });
+
+        test("rejects a duration that overruns closing by a single minute", async () => {
+            const admin = await createAdmin();
+            const service = await createService();
+            const city = await createCity({ workingHourStarts: "09:00", workingHourEnds: "17:00" });
+
+            const fits = await api.post("/api/v1/booking")
+                .set("Cookie", cookieFor(admin))
+                .send(validBookingBody(service, city, { bookingTime: "15:00", durationMinutes: 120 }));
+            expect(fits.status).toBe(201);
+
+            const overruns = await api.post("/api/v1/booking")
+                .set("Cookie", cookieFor(admin))
+                .send(validBookingBody(service, city, { bookingTime: "15:00", durationMinutes: 121 }));
+            expect(overruns.status).toBe(400);
+            expect(overruns.body.message).toMatch(/run past the city's closing time/i);
         });
 
         test("accepts an arbitrary start minute, not just whole hours", async () => {
@@ -265,23 +283,30 @@ describe("POST /api/v1/booking (admin manual bookings)", () => {
 
             const res = await api.post("/api/v1/booking")
                 .set("Cookie", cookieFor(admin))
-                .send(validBookingBody(service, city, { bookingTime: "12:20", hours: 2 }));
+                .send(validBookingBody(service, city, { bookingTime: "12:20", durationMinutes: 120 }));
 
             expect(res.status).toBe(201);
             expect(res.body.data.booking.bookingTime).toBe("12:20");
         });
 
-        test("rejects a duration finer than a half hour", async () => {
+        test.each([
+            ["a fraction of a minute", 85.5],
+            ["a zero duration", 0],
+            ["a negative duration", -60],
+            ["less than the platform minimum", 30],
+            ["more than the platform maximum", 721],
+            ["a non-numeric value", "1h 25m"]
+        ])("rejects %s at the validation layer", async (_label, durationMinutes) => {
             const admin = await createAdmin();
             const service = await createService();
             const city = await createCity();
 
             const res = await api.post("/api/v1/booking")
                 .set("Cookie", cookieFor(admin))
-                .send(validBookingBody(service, city, { hours: 1.25 }));
+                .send(validBookingBody(service, city, { durationMinutes }));
 
             expect(res.status).toBe(400);
-            expect(res.body.fields).toHaveProperty("hours");
+            expect(res.body.fields).toHaveProperty("durationMinutes");
         });
 
         test("rejects a past date at the validation layer", async () => {
@@ -294,6 +319,158 @@ describe("POST /api/v1/booking (admin manual bookings)", () => {
                 .send(validBookingBody(service, city, { bookingDate: "2020-01-01" }));
             expect(res.status).toBe(400);
             expect(res.body.message).toMatch(/Validation failed/);
+        });
+    });
+
+    describe("48-hour advance notice", () => {
+        // Built from the real clock so the assertions describe the rule the way a
+        // customer meets it, rather than a frozen fixture the code could drift from.
+        const stamp = (msFromNow) => {
+            const d = new Date(Date.now() + msFromNow);
+            return {
+                bookingDate: [
+                    d.getFullYear(),
+                    String(d.getMonth() + 1).padStart(2, "0"),
+                    String(d.getDate()).padStart(2, "0")
+                ].join("-"),
+                bookingTime: `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
+            };
+        };
+        const HOURS = 60 * 60 * 1000;
+        // Open around the clock, so only the notice rule can reject these.
+        const allDay = { workingHourStarts: "00:00", workingHourEnds: "23:59" };
+
+        test("accepts a booking placed a minute over 48 hours ahead", async () => {
+            const admin = await createAdmin();
+            const service = await createService();
+            const city = await createCity(allDay);
+
+            const res = await api.post("/api/v1/booking")
+                .set("Cookie", cookieFor(admin))
+                .send(validBookingBody(service, city, { ...stamp(48 * HOURS + 60 * 1000), durationMinutes: 60 }));
+
+            expect(res.status).toBe(201);
+        });
+
+        test("rejects a booking 47 h 59 m ahead", async () => {
+            const admin = await createAdmin();
+            const service = await createService();
+            const city = await createCity(allDay);
+
+            const res = await api.post("/api/v1/booking")
+                .set("Cookie", cookieFor(admin))
+                .send(validBookingBody(service, city, { ...stamp(47 * HOURS + 59 * 60 * 1000), durationMinutes: 60 }));
+
+            expect(res.status).toBe(400);
+            expect(res.body.message).toMatch(/at least 48 hours in advance/i);
+        });
+
+        test("a service with allowInstantBooking can be booked later today", async () => {
+            const admin = await createAdmin();
+            const service = await createInstantService();
+            const city = await createCity(allDay);
+
+            const res = await api.post("/api/v1/booking")
+                .set("Cookie", cookieFor(admin))
+                .send(validBookingBody(service, city, { ...stamp(2 * HOURS), durationMinutes: 60 }));
+
+            expect(res.status).toBe(201);
+        });
+
+        test("an instant booking still cannot start in the past", async () => {
+            const admin = await createAdmin();
+            const service = await createInstantService();
+            const city = await createCity(allDay);
+
+            const res = await api.post("/api/v1/booking")
+                .set("Cookie", cookieFor(admin))
+                .send(validBookingBody(service, city, {
+                    ...stamp(0),
+                    bookingDate: stamp(0).bookingDate,
+                    durationMinutes: 60
+                }));
+
+            expect(res.status).toBe(400);
+            expect(res.body.message).toMatch(/must be in the future/i);
+        });
+
+        test("an instant booking still has to finish before the city closes", async () => {
+            const admin = await createAdmin();
+            const service = await createInstantService();
+            // A window that certainly contains "an hour from now" and closes two
+            // hours later, so 60 minutes fits and 180 cannot.
+            const now = new Date();
+            const opens = new Date(now.getTime() + 30 * 60 * 1000);
+            const closes = new Date(now.getTime() + 3 * HOURS);
+            const hhmm = (d) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+            // Skip when "now + 3 h" would cross midnight — the window would wrap.
+            if (closes.getDate() !== now.getDate()) return;
+
+            const city = await createCity({
+                workingHourStarts: hhmm(opens),
+                workingHourEnds: hhmm(closes)
+            });
+            const slot = stamp(60 * 60 * 1000);
+
+            const fits = await api.post("/api/v1/booking")
+                .set("Cookie", cookieFor(admin))
+                .send(validBookingBody(service, city, { ...slot, durationMinutes: 60 }));
+            expect(fits.status).toBe(201);
+
+            const overruns = await api.post("/api/v1/booking")
+                .set("Cookie", cookieFor(admin))
+                .send(validBookingBody(service, city, { ...slot, durationMinutes: 180 }));
+            expect(overruns.status).toBe(400);
+            expect(overruns.body.message).toMatch(/run past the city's closing time/i);
+        });
+    });
+
+    describe("concurrent bookings of the same slot", () => {
+        // There is deliberately NO service-level conflict rule: two customers
+        // wanting the same service at the same hour is ordinary demand, not a
+        // collision. Staffing is handled by worker assignment, which is separate.
+        test("two customers may book the same service at the same start time", async () => {
+            const admin = await createAdmin();
+            const service = await createService({ pricePerHour: 20 });
+            const city = await createCity({ workingHourStarts: "09:00", workingHourEnds: "20:00" });
+
+            const body = validBookingBody(service, city, {
+                bookingTime: "14:00",
+                durationMinutes: 120,
+                customerName: "Customer A",
+                customerEmail: "a@test.casaclean.local",
+                customerPhone: "+393310000001"
+            });
+
+            const first = await api.post("/api/v1/booking")
+                .set("Cookie", cookieFor(admin))
+                .send(body);
+            expect(first.status).toBe(201);
+
+            // Overlapping, different length, same service, same start.
+            const second = await api.post("/api/v1/booking")
+                .set("Cookie", cookieFor(admin))
+                .send({
+                    ...body,
+                    durationMinutes: 85,
+                    customerName: "Customer B",
+                    customerEmail: "b@test.casaclean.local",
+                    customerPhone: "+393310000002"
+                });
+            expect(second.status).toBe(201);
+
+            // And a third that merely overlaps rather than matching exactly.
+            const third = await api.post("/api/v1/booking")
+                .set("Cookie", cookieFor(admin))
+                .send({
+                    ...body,
+                    bookingTime: "15:00",
+                    durationMinutes: 90,
+                    customerName: "Customer C",
+                    customerEmail: "c@test.casaclean.local",
+                    customerPhone: "+393310000003"
+                });
+            expect(third.status).toBe(201);
         });
     });
 
@@ -390,16 +567,16 @@ describe("PATCH /api/v1/booking/:id (admin edit)", () => {
         expect(fresh.totalAmount).toBe(40);
     });
 
-    test("recomputes the total when hours change", async () => {
+    test("recomputes the total when the duration changes", async () => {
         const admin = await createAdmin();
         const user = await createUser();
         const service = await createService({ pricePerHour: 20 });
         const city = await createCity();
-        const booking = await createPaidBooking(user, service, city, { hours: 2, totalAmount: 40 });
+        const booking = await createPaidBooking(user, service, city, { durationMinutes: 120, totalAmount: 40 });
 
         const res = await api.patch(`/api/v1/booking/${booking._id}`)
             .set("Cookie", cookieFor(admin))
-            .send({ hours: 5 });
+            .send({ durationMinutes: 300 });
 
         expect(res.status).toBe(200);
         expect(res.body.data.booking.totalAmount).toBe(100);
@@ -543,10 +720,10 @@ describe("PATCH /api/v1/booking/:id (admin edit)", () => {
 
         const res = await api.patch(`/api/v1/booking/${booking._id}`)
             .set("Cookie", cookieFor(admin))
-            .send({ hours: 99 });
+            .send({ durationMinutes: 9999 });
 
         expect(res.status).toBe(400);
-        expect(res.body.fields).toHaveProperty("hours");
+        expect(res.body.fields).toHaveProperty("durationMinutes");
     });
 
     test("re-cancelling an already-cancelled booking never double-refunds", async () => {
@@ -687,7 +864,7 @@ describe("PATCH /api/v1/booking/:id/cancel (customer self-cancel)", () => {
         // delivered, so none of their price is kept.
         const booking = await createPaidBooking(user, service, city, {
             ...dateTimeIn(2),
-            hours: 3,
+            durationMinutes: 180,
             cleaners: 2,
             totalAmount: 140,
             amountPaid: 140,
@@ -714,7 +891,7 @@ describe("PATCH /api/v1/booking/:id/cancel (customer self-cancel)", () => {
         // nothing left to refund and Stripe is never called.
         const booking = await createPaidBooking(user, service, city, {
             ...dateTimeIn(2),
-            hours: 1,
+            durationMinutes: 60,
             totalAmount: 20,
             amountPaid: 20
         });

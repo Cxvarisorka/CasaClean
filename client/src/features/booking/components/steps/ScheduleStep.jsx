@@ -4,10 +4,10 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { useTranslation } from "@/i18n";
 import { useServices } from "@/features/services";
-import { recurrenceChoices } from "../../constants";
-import { formatDuration } from "../../utils/duration";
-import { intervalLabel, todayDateString } from "../../utils/recurrence";
-import { startWindow } from "../../utils/timeWindow";
+import { ADVANCE_BOOKING_HOURS, recurrenceChoices } from "../../constants";
+import { combineDuration, formatDuration } from "../../utils/duration";
+import { intervalLabel } from "../../utils/recurrence";
+import { earliestBookableDate, startWindow } from "../../utils/timeWindow";
 import { useStepGuard } from "../../store/BookingContext";
 import { useTimeIssue } from "../../hooks/useTimeIssue";
 import { useCities } from "../../hooks/useCities";
@@ -15,17 +15,27 @@ import { useCities } from "../../hooks/useCities";
 /*
  * ScheduleStep
  * ------------
- * Step 3 — date and start time. Both are native inputs: the date has min=today
- * so a past day can't be chosen, and the time is TYPED to the minute, because
- * a crew arriving at 12:20 is an ordinary request and a grid of whole hours
- * silently refuses it.
+ * Step 3 — date and start time. Both are native inputs: the date has a `min`
+ * that already accounts for the advance notice, so a day that cannot hold a
+ * valid start can't be chosen at all, and the time is TYPED to the minute,
+ * because a crew arriving at 12:20 is an ordinary request and a grid of whole
+ * hours silently refuses it.
  *
- * Typing means validating rather than enumerating. The CHOSEN CITY's working
- * hours and the chosen duration define a window (utils/timeWindow.js) — the
- * step shows it as the allowed range, marks the input's own min/max, and blocks
- * Continue through a step guard while the entered time falls outside it. All
- * three rules mirror `assertBookingWindow` server-side, so the wizard reports
- * the problem here instead of at the payment step.
+ * Typing means validating rather than enumerating. Three things define the
+ * bookable window (utils/timeWindow.js): the CHOSEN SERVICE decides whether the
+ * 48-hour notice applies at all (`allowInstantBooking` waives it), and the
+ * CHOSEN CITY's working hours plus the entered duration decide which minutes of
+ * an eligible day are left. The step shows that as the allowed range, marks the
+ * input's own min/max, and blocks Continue through a step guard while the
+ * entered time falls outside it.
+ *
+ * The duration is entered a step earlier, so this is also where a duration that
+ * no longer fits surfaces: the check re-runs on every change to the date, time,
+ * city or duration, and reports "the selected duration exceeds the city's
+ * working hours" rather than quietly shortening what the customer typed.
+ *
+ * Every rule here mirrors `assertBookingWindow` server-side, which is the
+ * authority — the wizard just reports the problem before the payment step does.
  *
  * The frequency picker follows the same rule against the CHOSEN SERVICE: it is
  * hidden entirely for a service that can't repeat, and offers only the cadences
@@ -47,7 +57,8 @@ export function ScheduleStep() {
   const { services } = useServices();
   const cityId = useWatch({ control, name: "cityId" });
   const serviceId = useWatch({ control, name: "serviceId" });
-  const hours = useWatch({ control, name: "hours" });
+  const durationHours = useWatch({ control, name: "durationHours" });
+  const durationMins = useWatch({ control, name: "durationMins" });
   const date = useWatch({ control, name: "date" });
   const time = useWatch({ control, name: "time" });
   const intervalDays = useWatch({ control, name: "intervalDays" });
@@ -65,11 +76,22 @@ export function ScheduleStep() {
   // [] when the chosen service is one-off only; otherwise its allowed cadences.
   const cadences = useMemo(() => recurrenceChoices(service), [service]);
 
-  const durationLabel = formatDuration(t, hours);
+  const durationMinutes = combineDuration(durationHours, durationMins);
+  const durationLabel = formatDuration(t, durationMinutes);
 
   // The range this booking may start in. null = the duration doesn't fit the
-  // city's day at all (or no city yet), which is a different message.
-  const startRange = useMemo(() => startWindow({ city, hours }), [city, hours]);
+  // city's day at all (or no city yet), which is a different message. Recomputed
+  // whenever the duration changes, so lengthening the visit on the previous step
+  // immediately narrows the times offered here.
+  const startRange = useMemo(
+    () => startWindow({ city, durationMinutes: combineDuration(durationHours, durationMins) }),
+    [city, durationHours, durationMins]
+  );
+
+  // The first day that can hold a valid start: today for an instant service,
+  // otherwise the day the notice period lands on. Recomputed per render rather
+  // than memoised on the clock — it only has to be right when the picker opens.
+  const earliestDate = earliestBookableDate({ service });
 
   // Re-derived whenever the inputs change, so a time that stops fitting — the
   // customer lengthens the booking, switches city, or picks today — reports
@@ -78,7 +100,8 @@ export function ScheduleStep() {
   // to change.
   const { message: timeIssueMessage, describe } = useTimeIssue({
     city,
-    hours,
+    service,
+    durationMinutes,
     date,
     time,
   });
@@ -106,7 +129,6 @@ export function ScheduleStep() {
     }
   }, [cadences, intervalDays, setValue]);
 
-  const today = todayDateString();
   const recurrenceOptions = [0, ...cadences].map((value) => ({
     value,
     label: intervalLabel(t, value),
@@ -117,8 +139,18 @@ export function ScheduleStep() {
       <Input
         label={t("booking.schedule.date")}
         type="date"
-        min={today}
+        min={earliestDate}
         required
+        hint={
+          service && !service.allowInstantBooking
+            ? t("booking.schedule.noticeHint", {
+                hours: ADVANCE_BOOKING_HOURS,
+                date: earliestDate,
+              })
+            : service
+            ? t("booking.schedule.instantHint")
+            : undefined
+        }
         error={errors.date?.message}
         {...register("date")}
       />

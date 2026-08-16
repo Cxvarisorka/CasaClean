@@ -116,7 +116,18 @@
    * where the dense surfaces (the admin panel, the profile's cards and modals)
    * run out of room: two-up KPI tiles, label/value rows and filter bars all fit
    * at 400 and overflow below it. `xs:` marks the styles that need those 40-ish
-   * pixels, leaving the base declaration as the one a 320px screen gets. */
+   * pixels, leaving the base declaration as the one a 320px screen gets.
+   *
+   * `2xs` (320px) is the second stop, for the handful of places where a layout
+   * survives a 360px phone but not the 200px floor — the profile's identity
+   * header, the footer's link columns. Use `xs` unless you have measured that
+   * the base case needs to go further; two stops are already a lot.
+   *
+   * Both are NAMED rather than written as `min-[20rem]:` on the spot, and that
+   * is load-bearing: Tailwind sorts named breakpoint variants by value (so
+   * 2xs → xs → sm), but emits arbitrary `min-[…]` variants after all of them.
+   * `min-[20rem]:gap-4 sm:gap-5` therefore resolves to gap-4 on a desktop. */
+  --breakpoint-2xs: 20rem;
   --breakpoint-xs: 25rem;
 
   /* ----- Container width ----- */

@@ -278,7 +278,7 @@ export default function SubscriptionsPage() {
                 { value: "", label: t("admin.subscriptions.allStatuses") },
                 ...statusOptions,
               ]}
-              className="h-11 min-w-[10rem]"
+              className="h-11 xs:min-w-40"
             />
           }
           onRowClick={setViewing}

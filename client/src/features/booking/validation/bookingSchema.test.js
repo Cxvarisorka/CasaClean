@@ -1,5 +1,9 @@
 import { describe, test, expect } from "vitest";
-import { bookingSchema, bookingDefaults } from "./bookingSchema";
+import {
+  bookingSchema,
+  bookingDefaults,
+  durationMinutesOf,
+} from "./bookingSchema";
 import { todayDateString } from "../utils/recurrence";
 
 const todayISO = () => todayDateString();
@@ -11,7 +15,8 @@ const validValues = {
   propertySize: "80",
   doorbellName: "Rossi",
   serviceId: "svc1",
-  hours: 3,
+  durationHours: 3,
+  durationMins: 0,
   cleaners: 2,
   additionalServices: [],
   cleaningTools: [],
@@ -34,11 +39,19 @@ describe("bookingSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  test("coerces hours and cleaners from the select-string values", () => {
-    const result = bookingSchema.safeParse({ ...validValues, hours: "4", cleaners: "2" });
+  test("coerces the duration pair and cleaners from their input strings", () => {
+    const result = bookingSchema.safeParse({
+      ...validValues,
+      durationHours: "1",
+      durationMins: "25",
+      cleaners: "2",
+    });
     expect(result.success).toBe(true);
-    expect(result.data.hours).toBe(4);
+    expect(result.data.durationHours).toBe(1);
+    expect(result.data.durationMins).toBe(25);
     expect(result.data.cleaners).toBe(2);
+    // And the pair reads as the one total the API takes.
+    expect(durationMinutesOf(result.data)).toBe(85);
   });
 
   test("defaults a one-time booking frequency and accepts recurring intervals", () => {
@@ -51,21 +64,60 @@ describe("bookingSchema", () => {
     expect(recurring.data.intervalDays).toBe(7);
   });
 
-  test("bounds hours to 1–6 and cleaners to 1–3", () => {
-    expect(bookingSchema.safeParse({ ...validValues, hours: 0 }).success).toBe(false);
-    expect(bookingSchema.safeParse({ ...validValues, hours: 6.5 }).success).toBe(false);
+  test("bounds the combined duration to 1–6 hours and cleaners to 1–3", () => {
+    const duration = (durationHours, durationMins) =>
+      bookingSchema.safeParse({ ...validValues, durationHours, durationMins });
+
+    // 0h 0m is not a booking; neither is anything under the hour.
+    expect(duration(0, 0).success).toBe(false);
+    expect(duration(0, 59).success).toBe(false);
+    // Exactly the minimum, and exactly the maximum.
+    expect(duration(1, 0).success).toBe(true);
+    expect(duration(6, 0).success).toBe(true);
+    // One minute past the ceiling.
+    expect(duration(6, 1).success).toBe(false);
+
     expect(bookingSchema.safeParse({ ...validValues, cleaners: 0 }).success).toBe(false);
     expect(bookingSchema.safeParse({ ...validValues, cleaners: 4 }).success).toBe(false);
   });
 
-  test("accepts a half-hour duration but nothing finer", () => {
-    const half = bookingSchema.safeParse({ ...validValues, hours: "1.5" });
-    expect(half.success).toBe(true);
-    expect(half.data.hours).toBe(1.5);
+  test("accepts any whole minute, so an odd length is bookable", () => {
+    for (const [h, m, total] of [[1, 25, 85], [2, 10, 130], [3, 45, 225]]) {
+      const result = bookingSchema.safeParse({
+        ...validValues,
+        durationHours: h,
+        durationMins: m,
+      });
+      expect(result.success).toBe(true);
+      expect(durationMinutesOf(result.data)).toBe(total);
+    }
+  });
 
-    // 15 minutes can't be priced to the cent from a per-hour rate, and the
-    // server's utils/duration.util.js refuses it too.
-    expect(bookingSchema.safeParse({ ...validValues, hours: 1.25 }).success).toBe(false);
+  test("rejects a minutes value outside 0–59", () => {
+    const minutes = (durationMins) =>
+      bookingSchema.safeParse({ ...validValues, durationHours: 1, durationMins });
+
+    expect(minutes(0).success).toBe(true);
+    expect(minutes(59).success).toBe(true);
+    // 60 minutes is one more hour, not a minutes value.
+    expect(minutes(60).success).toBe(false);
+    expect(minutes(-1).success).toBe(false);
+  });
+
+  test("rejects a fractional or non-numeric duration outright", () => {
+    expect(
+      bookingSchema.safeParse({ ...validValues, durationHours: 1.5, durationMins: 0 }).success
+    ).toBe(false);
+    expect(
+      bookingSchema.safeParse({ ...validValues, durationHours: 1, durationMins: 25.5 }).success
+    ).toBe(false);
+    // Free-form text was never an accepted spelling of a duration.
+    expect(
+      bookingSchema.safeParse({ ...validValues, durationHours: "1h", durationMins: "25m" }).success
+    ).toBe(false);
+    expect(
+      bookingSchema.safeParse({ ...validValues, durationHours: "", durationMins: 25 }).success
+    ).toBe(false);
   });
 
   test("requires a start time in HH:MM, since the customer types it", () => {

@@ -169,7 +169,7 @@ const ADMIN_REVIEW_POPULATE = [
   {
     path: "booking",
     select:
-      "bookingDate bookingTime streetName houseNumber propertySize doorbellName hours cleaners totalAmount status customerName customerEmail cityId",
+      "bookingDate bookingTime streetName houseNumber propertySize doorbellName durationMinutes hours cleaners totalAmount status customerName customerEmail cityId",
     populate: { path: "cityId", select: "name" },
   },
 ];

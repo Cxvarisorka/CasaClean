@@ -17,6 +17,7 @@
  */
 
 import { apiClient, request, MAIL_REQUEST_TIMEOUT } from "@/services/api";
+import { durationInMinutes } from "@/features/booking/utils/duration";
 
 // The server clamps every list endpoint to `limit=100`. The panel used to send
 // exactly that and render whatever came back, so the 101st booking/user/
@@ -185,6 +186,8 @@ const serviceFromApi = (s) => ({
   // An empty list means "the customer picks any cadence the platform allows".
   recurring_enabled: Boolean(s.recurringEnabled),
   recurring_interval_days: (s.recurringIntervalDays ?? []).map(Number),
+  // Same-day booking: skips the 48-hour advance notice for this service.
+  allow_instant_booking: Boolean(s.allowInstantBooking),
   enabled: s.enabled,
   createdAt: s.createdAt,
 });
@@ -224,6 +227,7 @@ export const serviceApi = {
       recurringIntervalDays: recurringEnabled
         ? (v.recurring_interval_days ?? []).map(Number)
         : [],
+      allowInstantBooking: Boolean(v.allow_instant_booking),
     };
     const data = await request({
       method: "POST",
@@ -261,6 +265,7 @@ export const serviceApi = {
         patch.recurring_interval_days === undefined
           ? undefined
           : patch.recurring_interval_days.map(Number),
+      allowInstantBooking: patch.allow_instant_booking,
       // Soft on/off switch — a disabled service is hidden from the public site.
       enabled: patch.enabled,
     });
@@ -468,7 +473,10 @@ const bookingFromApi = (b) => ({
   doorbell_name: b.doorbellName,
   booking_date: b.bookingDate,
   booking_time: b.bookingTime,
-  hours: b.hours,
+  // Total minutes. `hours` is what bookings written before minute-level
+  // durations carry, so read it through durationInMinutes rather than either
+  // field — see features/booking/utils/duration.js.
+  duration_minutes: durationInMinutes(b),
   cleaners: b.cleaners,
   total_amount: b.totalAmount,
   // VAT treatment snapshot: how this booking was actually taxed. 'reverse-charge'
@@ -512,7 +520,7 @@ export const bookingApi = {
     // server fills any omitted contact field from the linked account. serviceId/
     // cityId must be real, enabled Service/City ObjectIds (server-validated).
     // totalAmount is NOT sent — the server computes it from the service price,
-    // hours and add-ons.
+    // the booked minutes and the add-ons.
     const data = await request({
       method: "POST",
       url: "/booking",
@@ -531,7 +539,7 @@ export const bookingApi = {
         doorbellName: v.doorbell_name,
         bookingDate: v.booking_date,
         bookingTime: v.booking_time,
-        hours: Number(v.hours),
+        durationMinutes: Number(v.duration_minutes),
         cleaners: Number(v.cleaners),
         notes: v.notes || null,
         supplies: v.supplies || [],
@@ -542,7 +550,7 @@ export const bookingApi = {
   },
   async update(id, patch) {
     // editBooking whitelists these fields server-side. totalAmount is omitted —
-    // the server recomputes it whenever hours or add-ons change.
+    // the server recomputes it whenever the duration or add-ons change.
     const data = await request({
       method: "PATCH",
       url: `/booking/${id}`,
@@ -550,7 +558,10 @@ export const bookingApi = {
         status: patch.status,
         bookingDate: patch.booking_date,
         bookingTime: patch.booking_time,
-        hours: patch.hours !== undefined ? Number(patch.hours) : undefined,
+        durationMinutes:
+          patch.duration_minutes !== undefined
+            ? Number(patch.duration_minutes)
+            : undefined,
         cleaners:
           patch.cleaners !== undefined ? Number(patch.cleaners) : undefined,
         streetName: patch.street_name,
@@ -651,7 +662,7 @@ const reviewFromApi = (r) => {
     booking_time: b?.bookingTime || "",
     booking_status: b?.status || "",
     booking_total: b?.totalAmount,
-    booking_hours: b?.hours,
+    booking_duration_minutes: durationInMinutes(b),
     booking_cleaners: b?.cleaners,
     booking_property_size: b?.propertySize || "",
     booking_doorbell: b?.doorbellName || "",
@@ -835,7 +846,7 @@ const invoiceFromApi = (i) => ({
   service_date: i.service?.date || "",
   service_time: i.service?.time || "",
   service_city: i.service?.city || "",
-  hours: i.service?.hours ?? null,
+  duration_minutes: durationInMinutes(i.service) || null,
   cleaners: i.service?.cleaners ?? null,
   line_items: (i.lineItems ?? []).map((item) => ({
     description: item.description,

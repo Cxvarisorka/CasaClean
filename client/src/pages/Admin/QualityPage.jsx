@@ -323,7 +323,9 @@ export default function QualityPage() {
           <div className="space-y-6">
             {/* The review */}
             <div className="rounded-2xl border border-ink-100 bg-ink-50/50 p-4 xs:p-5">
-              <div className="flex items-center justify-between gap-3">
+              {/* Five stars are ~95px and a formatted date ~80; they only share
+                  a line once the dialog is wider than a small phone. */}
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                 <Stars value={current.rating} />
                 <span className="text-caption text-ink-400">
                   {fmtDate(current.createdAt)}
@@ -412,9 +414,9 @@ export default function QualityPage() {
                   icon={Clock}
                   label={t("admin.quality.detail.duration")}
                   value={
-                    current.booking_hours
+                    current.booking_duration_minutes
                       ? t("admin.quality.detail.durationValue", {
-                          duration: formatDuration(t, current.booking_hours),
+                          duration: formatDuration(t, current.booking_duration_minutes),
                           cleaners: current.booking_cleaners || 1,
                         })
                       : "—"

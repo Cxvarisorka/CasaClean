@@ -561,7 +561,7 @@
             "url": { "raw": "{{baseUrl}}/booking", "host": ["{{baseUrl}}"], "path": ["booking"] },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"serviceId\": 1,\n  \"cityId\": 1,\n  \"streetName\": \"Rustaveli Ave\",\n  \"houseNumber\": \"12\",\n  \"propertySize\": \"80m2\",\n  \"doorbellName\": \"Smith\",\n  \"bookingDate\": \"2026-07-01\",\n  \"bookingTime\": \"14:00\",\n  \"hours\": 3,\n  \"cleaners\": 2,\n  \"totalAmount\": 120,\n  \"notes\": \"Please bring eco products\",\n  \"supplies\": [\"vacuum\", \"mop\"]\n}"
+              "raw": "{\n  \"serviceId\": 1,\n  \"cityId\": 1,\n  \"streetName\": \"Rustaveli Ave\",\n  \"houseNumber\": \"12\",\n  \"propertySize\": \"80m2\",\n  \"doorbellName\": \"Smith\",\n  \"bookingDate\": \"2026-07-01\",\n  \"bookingTime\": \"14:00\",\n  \"durationMinutes\": 85,\n  \"cleaners\": 2,\n  \"notes\": \"Please bring eco products\",\n  \"supplies\": [\"vacuum\", \"mop\"]\n}"
             },
             "description": "Any logged-in user. Create a booking. Contact name/email come from your account (not the body). serviceId/cityId are NUMBERS. Status defaults to 'confirmed'. Expect 201. The new id is saved to bookingId.\n\nTo test add-ons, add a valid enabled id to specialRequests, e.g.: \"specialRequests\": [\"{{specialRequestId}}\"] (create one in the Special Request group first)."
           },
@@ -665,9 +665,9 @@
             "url": { "raw": "{{baseUrl}}/booking/{{bookingId}}", "host": ["{{baseUrl}}"], "path": ["booking", "{{bookingId}}"] },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": \"completed\",\n  \"totalAmount\": 130\n}"
+              "raw": "{\n  \"status\": \"completed\",\n  \"durationMinutes\": 130\n}"
             },
-            "description": "Admin only. Change only allowed fields (status, dates, hours, cleaners, totalAmount, address, notes, supplies, specialRequests). status must be one of pending/confirmed/cancelled/completed. Fields like user/customerEmail are ignored. Expect 200."
+            "description": "Admin only. Change only allowed fields (status, dates, durationMinutes, cleaners, address, notes, supplies, specialRequests). status must be one of pending/confirmed/cancelled/completed. Fields like user/customerEmail are ignored. Expect 200."
           },
           "event": [
             {

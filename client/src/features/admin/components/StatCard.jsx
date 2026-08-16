@@ -23,13 +23,18 @@ export function StatCard({ icon: Icon, label, value, hint, accent = "brand" }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <Card className="h-full p-5">
+      <Card className="h-full p-4 xs:p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <p className="text-caption font-semibold uppercase tracking-wide text-ink-400">
               {label}
             </p>
-            <p className="mt-2 overflow-x-auto whitespace-nowrap text-heading-lg font-bold leading-tight text-ink-900 tabular-nums [scrollbar-width:thin]">
+            {/* The figure sets the tile's floor: at `heading-lg` a formatted
+                euro total is ~100px, which is the whole text column once the
+                icon chip has taken its share on a 200px screen. One step down
+                below `xs`, and the chip goes with it — it is decoration, and
+                the label already says which metric this is. */}
+            <p className="mt-2 overflow-x-auto whitespace-nowrap text-heading-md font-bold leading-tight text-ink-900 tabular-nums xs:text-heading-lg [scrollbar-width:thin]">
               {value}
             </p>
             {hint && <p className="mt-1 text-body-sm text-ink-500">{hint}</p>}
@@ -37,7 +42,7 @@ export function StatCard({ icon: Icon, label, value, hint, accent = "brand" }) {
           {Icon && (
             <span
               className={cn(
-                "grid size-11 shrink-0 place-items-center rounded-2xl",
+                "hidden size-11 shrink-0 place-items-center rounded-2xl xs:grid",
                 ACCENTS[accent]
               )}
             >

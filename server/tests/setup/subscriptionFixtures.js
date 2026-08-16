@@ -24,7 +24,7 @@ const createSubscription = async (user, service, city, overrides = {}) => {
         propertySize: "80",
         doorbellName: "Rossi",
         bookingTime: "10:00",
-        hours: 2,
+        durationMinutes: 120,
         cleaners: 1,
         notes: null,
         specialRequests: [],

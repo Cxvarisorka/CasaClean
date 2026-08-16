@@ -77,6 +77,10 @@ const createService = (overrides = {}) =>
         ...overrides
     });
 
+/** A service that skips the 48-hour notice — bookable today. */
+const createInstantService = (overrides = {}) =>
+    createService({ allowInstantBooking: true, ...overrides });
+
 const createSpecialRequest = (overrides = {}) =>
     SpecialRequest.create({
         name: `Test Add-on ${next()}`,
@@ -125,7 +129,13 @@ const dateTimeIn = (hoursAhead) => {
     };
 };
 
-/** A valid createBooking/bookingIntent body for the given service+city. */
+/**
+ * A valid createBooking/bookingIntent body for the given service+city.
+ *
+ * The date is three days out because every booking must clear the 48-hour
+ * advance notice (utils/leadTime.util.js) unless its service opts into instant
+ * booking. Suites exercising the notice rule override `bookingDate` explicitly.
+ */
 const validBookingBody = (service, city, overrides = {}) => ({
     serviceId: String(service._id),
     cityId: String(city._id),
@@ -133,9 +143,9 @@ const validBookingBody = (service, city, overrides = {}) => ({
     houseNumber: "12",
     propertySize: "80",
     doorbellName: "Rossi",
-    bookingDate: dateStr(1),
+    bookingDate: dateStr(3),
     bookingTime: "10:00",
-    hours: 2,
+    durationMinutes: 120,
     cleaners: 1,
     ...overrides
 });
@@ -156,7 +166,7 @@ const createPaidBooking = (user, service, city, overrides = {}) => {
         doorbellName: "Rossi",
         bookingDate: dateStr(7),
         bookingTime: "10:00",
-        hours: 2,
+        durationMinutes: 120,
         cleaners: 1,
         totalAmount: 40,
         status: "confirmed",
@@ -178,6 +188,7 @@ module.exports = {
     cookieFor,
     createCity,
     createService,
+    createInstantService,
     createSpecialRequest,
     createCleaningTool,
     createWorker,

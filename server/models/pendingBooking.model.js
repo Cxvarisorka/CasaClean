@@ -61,7 +61,9 @@ const pendingBookingSchema = new mongoose.Schema({
     doorbellName: { type: String, required: true },
     bookingDate: { type: String, required: true },
     bookingTime: { type: String, required: true },
-    hours: { type: Number, required: true },
+    // Total minutes (see utils/duration.util.js). Drafts live an hour at most
+    // (TTL), so there is no legacy `hours` shape to tolerate here.
+    durationMinutes: { type: Number, required: true },
     cleaners: { type: Number, required: true },
     totalAmount: { type: Number, required: true },
     // The VAT treatment resolved when the draft was priced (see

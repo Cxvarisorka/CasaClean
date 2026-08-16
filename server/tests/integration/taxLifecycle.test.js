@@ -452,7 +452,7 @@ describe('an admin edit re-prices on the booking’s OWN treatment', () => {
       doorbellName: 'Rossi',
       bookingDate: '2026-12-01',
       bookingTime: '10:00',
-      hours: 2,
+      durationMinutes: 120,
       cleaners: 1,
       totalAmount,
       tax,
@@ -490,11 +490,12 @@ describe('an admin edit re-prices on the booking’s OWN treatment', () => {
       CATALOGUE
     );
 
-    // Extend it to 4 hours: catalogue 240, charged as-is under the relief.
+    // Extend it to 4 hours (240 minutes): catalogue 240, charged as-is under
+    // the relief.
     const res = await api
       .patch(`/api/v1/booking/${booking._id}`)
       .set('Cookie', cookieFor(admin))
-      .send({ hours: 4 });
+      .send({ durationMinutes: 240 });
 
     expect(res.status).toBe(200);
     expect(res.body.data.booking.totalAmount).toBe(240);
@@ -530,7 +531,7 @@ describe('an admin edit re-prices on the booking’s OWN treatment', () => {
     const res = await api
       .patch(`/api/v1/booking/${booking._id}`)
       .set('Cookie', cookieFor(admin))
-      .send({ hours: 4 });
+      .send({ durationMinutes: 240 });
 
     expect(res.status).toBe(200);
     // 240 catalogue + 22% — the customer's current status is irrelevant to a
@@ -551,7 +552,7 @@ describe('an admin edit re-prices on the booking’s OWN treatment', () => {
     const res = await api
       .patch(`/api/v1/booking/${booking._id}`)
       .set('Cookie', cookieFor(admin))
-      .send({ hours: 4 });
+      .send({ durationMinutes: 240 });
 
     expect(res.status).toBe(200);
     expect(res.body.data.booking.totalAmount).toBe(240);

@@ -17,6 +17,12 @@ import { Textarea } from "@/components/ui/Textarea";
 import { Select } from "@/components/ui/Select";
 import { Switch } from "@/components/ui/Switch";
 import { useTranslation } from "@/i18n";
+import {
+  combineDuration,
+  formatDuration,
+  splitDuration,
+} from "@/features/booking/utils/duration";
+import { MAX_MINUTES_PART } from "@/features/booking/constants";
 import { downscaleImage } from "@/utils/downscaleImage";
 import { assetUrl } from "@/services/api";
 import { cn } from "@/lib/cn";
@@ -33,7 +39,12 @@ import { cn } from "@/lib/cn";
  *   fields: [{ name, label, type, options?, required?, hint?, placeholder?,
  *              rows?, full? }]
  *   type ∈ "text" | "email" | "number" | "textarea" | "select" | "switch" |
- *          "multiselect" | "image" | "list" | "i18n"
+ *          "multiselect" | "image" | "list" | "i18n" | "duration"
+ *
+ * The "duration" type holds ONE value — a booking's length in total minutes —
+ * behind the two inputs a length is actually typed as, an Hours and a Minutes.
+ * The panel collects a duration exactly the way the customer wizard does, so a
+ * job an admin enters by hand can be the same 1 h 25 min a customer can book.
  *
  * The "i18n" type edits the same group of text fields in several languages —
  * one language at a time, so five languages cost no more screen space than one.
@@ -48,6 +59,8 @@ const buildInitialState = (fields, initialValues) =>
     else if (f.type === "switch") acc[f.name] = false;
     else if (f.type === "multiselect" || f.type === "list") acc[f.name] = [];
     else if (f.type === "i18n") acc[f.name] = {};
+    // A "duration" starts empty like a text field — DurationField renders two
+    // blank boxes for it and only reports a number once both are filled.
     else acc[f.name] = "";
     return acc;
   }, {});
@@ -167,10 +180,16 @@ function ResourceForm({ fields, initialValues, onSubmit }) {
       return;
     }
 
-    // Coerce number fields so the store keeps real numbers.
+    // Coerce number fields so the store keeps real numbers. A duration is
+    // already a number of minutes — DurationField combines its two inputs
+    // before it ever reaches this state.
     const clean = { ...values };
     for (const f of fields) {
-      if (f.type === "number" && clean[f.name] !== "" && clean[f.name] != null) {
+      if (
+        (f.type === "number" || f.type === "duration") &&
+        clean[f.name] !== "" &&
+        clean[f.name] != null
+      ) {
         clean[f.name] = Number(clean[f.name]);
       }
     }
@@ -317,6 +336,21 @@ function ResourceForm({ fields, initialValues, onSubmit }) {
             );
           }
 
+          if (f.type === "duration") {
+            return (
+              <div key={f.name} className={span}>
+                <DurationField
+                  label={f.label}
+                  hint={f.hint}
+                  required={f.required}
+                  error={errors[f.name]}
+                  value={values[f.name]}
+                  onChange={(minutes) => setField(f.name, minutes)}
+                />
+              </div>
+            );
+          }
+
           if (f.type === "select") {
             return (
               <div key={f.name} className={span}>
@@ -344,6 +378,89 @@ function ResourceForm({ fields, initialValues, onSubmit }) {
           );
         })}
     </form>
+  );
+}
+
+/*
+ * DurationField
+ * -------------
+ * One value — a booking's length in TOTAL MINUTES — collected as the two
+ * numbers a length is actually spoken in. The customer wizard's duration
+ * inputs work the same way (features/booking/components/steps/PreferencesStep),
+ * so an admin entering a job by hand can enter the same 1 h 25 min a customer
+ * can book, and the panel and the wizard agree on what a duration is.
+ *
+ * The two inputs are display state; the FORM only ever holds the combined
+ * total, so nothing downstream has to know the pair existed. A half-typed pair
+ * (either box cleared) resolves to "" rather than to a wrong number, which the
+ * required check then catches like any other empty field.
+ */
+function DurationField({ label, hint, required, error, value, onChange }) {
+  const { t } = useTranslation();
+  // The two boxes are tracked separately so clearing one doesn't rewrite the
+  // other from a total that no longer exists. Seeded once at mount, which is
+  // enough: ResourceForm is keyed per record and remounts with it.
+  const [parts, setParts] = useState(() => {
+    if (value === "" || value == null) return { hours: "", minutes: "" };
+    const seed = splitDuration(value);
+    return { hours: seed.hours, minutes: seed.minutes };
+  });
+
+  const emit = (next) => {
+    setParts(next);
+    const total = combineDuration(next.hours, next.minutes);
+    onChange(Number.isFinite(total) ? total : "");
+  };
+
+  const total = combineDuration(parts.hours, parts.minutes);
+
+  return (
+    <div>
+      <p className="mb-2 text-body-sm font-medium text-ink-800">
+        {label}
+        {required && <span className="ml-0.5 text-red-600">*</span>}
+      </p>
+      <div className="grid grid-cols-2 gap-3">
+        <Input
+          label={t("admin.bookings.field.durationHours")}
+          type="number"
+          inputMode="numeric"
+          min={0}
+          step={1}
+          value={parts.hours}
+          onChange={(e) =>
+            emit({
+              ...parts,
+              hours: e.target.value === "" ? "" : Number(e.target.value),
+            })
+          }
+        />
+        <Input
+          label={t("admin.bookings.field.durationMinutes")}
+          type="number"
+          inputMode="numeric"
+          min={0}
+          max={MAX_MINUTES_PART}
+          step={1}
+          value={parts.minutes}
+          onChange={(e) =>
+            emit({
+              ...parts,
+              minutes: e.target.value === "" ? "" : Number(e.target.value),
+            })
+          }
+        />
+      </div>
+      {error ? (
+        <p className="mt-1.5 text-body-sm text-red-600 dark:text-red-400">{error}</p>
+      ) : (
+        <p className="mt-1.5 text-body-sm text-ink-500">
+          {Number.isFinite(total) && total > 0
+            ? formatDuration(t, total)
+            : hint || ""}
+        </p>
+      )}
+    </div>
   );
 }
 

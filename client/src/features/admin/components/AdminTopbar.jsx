@@ -60,7 +60,12 @@ export function AdminTopbar({ onOpenSidebar }) {
         {t("admin.topbar.console")}
       </div>
 
-      <div className="ml-auto flex items-center gap-1.5">
+      {/* Everything here is fixed-width, so the bar has a hard floor: menu +
+          view-live + language + theme + account is ~250px of controls, and a
+          200px viewport leaves the row 176. The live-site link is the one that
+          also lives in the sidebar ("Back to site"), so it is the one that goes
+          below `xs` — the rest stay reachable. */}
+      <div className="ml-auto flex items-center gap-1 xs:gap-1.5">
         {/* Opens the full live website in a new tab so the admin can review
             changes (services, cities, prices, …) on the real site without
             leaving the panel. */}
@@ -68,7 +73,7 @@ export function AdminTopbar({ onOpenSidebar }) {
           href={ROUTES.home}
           target="_blank"
           rel="noopener noreferrer"
-          className="mr-1 inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-3 py-2 text-body-sm font-semibold text-brand-700 transition-colors hover:bg-brand-100 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300 dark:hover:bg-brand-500/20"
+          className="mr-1 hidden items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-3 py-2 text-body-sm font-semibold text-brand-700 transition-colors hover:bg-brand-100 xs:inline-flex dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300 dark:hover:bg-brand-500/20"
         >
           <ExternalLink className="size-4.5 shrink-0" aria-hidden="true" />
           <span className="hidden sm:inline">{t("admin.topbar.viewLive")}</span>
@@ -83,7 +88,7 @@ export function AdminTopbar({ onOpenSidebar }) {
             onClick={() => setOpen((v) => !v)}
             aria-haspopup="menu"
             aria-expanded={open}
-            className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 transition-colors hover:bg-ink-100"
+            className="flex items-center gap-2 rounded-full p-0.5 transition-colors hover:bg-ink-100 xs:py-1 xs:pl-1 xs:pr-2"
           >
             <span className="grid size-9 place-items-center rounded-full bg-brand-600 text-body-sm font-bold text-white">
               {initials(user?.fullname)}
@@ -107,7 +112,10 @@ export function AdminTopbar({ onOpenSidebar }) {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 8, scale: 0.97 }}
                 transition={{ duration: 0.18 }}
-                className="absolute right-0 z-50 mt-2 w-60 overflow-hidden rounded-2xl border border-ink-100 bg-surface p-1.5 shadow-large"
+                /* Anchored to the right edge, so on a 200px screen a fixed 240px
+                   menu runs off the left of the viewport — where overflow is
+                   silently clipped rather than scrollable. Cap it to the page. */
+                className="absolute right-0 z-50 mt-2 w-60 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl border border-ink-100 bg-surface p-1.5 shadow-large"
               >
                 <div className="border-b border-ink-100 px-3 py-3">
                   <p className="text-body-sm font-semibold text-ink-900">

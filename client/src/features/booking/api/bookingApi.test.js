@@ -15,7 +15,8 @@ const wizardValues = {
   doorbellName: "Rossi",
   date: "2026-08-01",
   time: "10:00",
-  hours: "3",
+  durationHours: "1",
+  durationMins: "25",
   cleaners: "2",
   name: "Mario Rossi",
   email: "mario@example.com",
@@ -38,12 +39,22 @@ describe("toBookingPayload", () => {
       doorbellName: "Rossi",
       bookingDate: "2026-08-01",
       bookingTime: "10:00",
-      hours: 3, // numeric
+      // The two duration inputs, combined into the one total the API takes.
+      durationMinutes: 85,
       cleaners: 2,
       notes: null, // empty string -> null
       specialRequests: ["sr1"],
       cleaningTools: ["ct1"],
     });
+  });
+
+  test("never sends the duration as hours, or as anything but whole minutes", () => {
+    const payload = toBookingPayload({ ...wizardValues, durationHours: 2, durationMins: 10 });
+    expect(payload.durationMinutes).toBe(130);
+    expect(payload).not.toHaveProperty("hours");
+    expect(payload).not.toHaveProperty("durationHours");
+    expect(payload).not.toHaveProperty("durationMins");
+    expect(Number.isInteger(payload.durationMinutes)).toBe(true);
   });
 
   test("never sends identity or price fields (server derives them)", () => {

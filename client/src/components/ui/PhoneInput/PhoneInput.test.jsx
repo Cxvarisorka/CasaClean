@@ -31,6 +31,24 @@ describe("PhoneInput", () => {
     expect(numberBox()).toHaveValue("555123456");
   });
 
+  /*
+   * The chip is a second rendering of the same choice: the <select> carries the
+   * full option labels (and the native popup), while the closed control shows
+   * only the dial code, so the field stays narrow enough for the number box on
+   * a small screen. Two renderings can drift — this pins them together.
+   */
+  test("the chip shows the dial code of whatever the picker holds", async () => {
+    const user = userEvent.setup();
+    render(<Harness initial="+393312345678" />);
+
+    expect(screen.getByText("+39")).toBeInTheDocument();
+
+    await user.selectOptions(countryBox(), "GE");
+
+    expect(screen.getByText("+995")).toBeInTheDocument();
+    expect(screen.queryByText("+39")).not.toBeInTheDocument();
+  });
+
   test("emits the number with the picked country's prefix", async () => {
     const user = userEvent.setup();
     render(<Harness />);

@@ -52,7 +52,7 @@ describe("POST /api/v1/payment/booking/intent", () => {
         const res = await api.post("/api/v1/payment/booking/intent")
             .set("Cookie", cookieFor(user))
             .send(validBookingBody(service, city, {
-                hours: 2,
+                durationMinutes: 120,
                 cleaners: 2,
                 specialRequests: [String(addon._id)],
                 cleaningTools: [String(tool._id)]
@@ -90,27 +90,28 @@ describe("POST /api/v1/payment/booking/intent", () => {
         expect(freshUser.stripeCustomerId).toBe("cus_test_1");
     });
 
-    test("charges a half-hour booking to the cent", async () => {
+    test("charges an exact-minute booking to the cent", async () => {
         const user = await createUser();
-        const service = await createService({ pricePerHour: 25 });
+        const service = await createService({ pricePerHour: 20 });
         const city = await createCity({ workingHourStarts: "09:00", workingHourEnds: "17:30" });
         mockCustomerCreate();
         mockIntentCreate();
 
         const res = await api.post("/api/v1/payment/booking/intent")
             .set("Cookie", cookieFor(user))
-            .send(validBookingBody(service, city, { bookingTime: "12:20", hours: 1.5 }));
+            .send(validBookingBody(service, city, { bookingTime: "12:20", durationMinutes: 85 }));
 
-        // 25 €/h × 1.5 h = 37.50, and Stripe is charged in integer cents.
+        // 85/60 × 20 €/h = 28.3333…, charged as 28.33 — and Stripe gets the
+        // integer cents, so the amount debited is exactly what was quoted.
         expect(res.status).toBe(201);
-        expect(res.body.data.amount).toBe(37.5);
+        expect(res.body.data.amount).toBe(28.33);
         expect(stripeMock.paymentIntents.create).toHaveBeenCalledWith(
-            expect.objectContaining({ amount: 3750 }),
+            expect.objectContaining({ amount: 2833 }),
             undefined
         );
 
         const pending = await PendingBooking.findOne({ paymentIntentId: "pi_test_1" });
-        expect(pending.draft.hours).toBe(1.5);
+        expect(pending.draft.durationMinutes).toBe(85);
         expect(pending.draft.bookingTime).toBe("12:20");
     });
 
