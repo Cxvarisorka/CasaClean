@@ -1064,6 +1064,7 @@ export default {
       result: "risultato",
       results: "risultati",
       empty: "Ancora niente qui",
+      loading: "Caricamento…",
     },
     action: {
       edit: "Modifica",

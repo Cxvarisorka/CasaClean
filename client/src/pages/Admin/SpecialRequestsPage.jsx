@@ -32,7 +32,7 @@ const eur = (n) =>
   );
 
 export default function SpecialRequestsPage() {
-  const { items, create, update, remove } = useCollection("specialRequests");
+  const { items, create, update, remove, loading } = useCollection("specialRequests");
   const { t } = useTranslation();
   const [editing, setEditing] = useState(undefined);
   const [deleting, setDeleting] = useState(null);
@@ -118,6 +118,7 @@ export default function SpecialRequestsPage() {
       <DataTable
         columns={columns}
         data={items}
+        loading={loading}
         searchKeys={["name", "description"]}
         searchPlaceholder={t("admin.specialRequests.search")}
         emptyTitle={t("admin.specialRequests.emptyTitle")}

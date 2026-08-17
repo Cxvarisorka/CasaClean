@@ -1066,6 +1066,7 @@ export default {
       result: "результат",
       results: "результатов",
       empty: "Здесь пока пусто",
+      loading: "Загрузка…",
     },
     action: {
       edit: "Редактировать",

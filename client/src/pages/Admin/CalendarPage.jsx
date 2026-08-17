@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Select } from "@/components/ui/Select";
 import { Modal } from "@/components/ui/Modal";
+import { Skeleton } from "@/components/ui/Skeleton";
 import {
   PageHeader,
   BOOKING_STATUS_META,
@@ -90,10 +91,21 @@ function BookingChip({ booking, onClick, detailed }) {
 
 const MAX_CHIPS = 3;
 
+/*
+ * How many placeholder chips a day cell shows while the bookings load. The grid
+ * itself is real (the dates are known offline) — only its contents are pending —
+ * so an uneven, date-derived pattern reads as "a month with bookings in it"
+ * rather than a uniform stripe across every cell.
+ */
+const skeletonChips = (date) => [0, 1, 2, 1, 0, 2, 1][date.getDate() % 7];
+
 export default function CalendarPage() {
-  const { items } = useCollection("bookings");
-  const { items: cities } = useCollection("cities");
-  const { items: services } = useCollection("services");
+  const { items, loading: bookingsLoading } = useCollection("bookings");
+  // The chips print service and city names, so the grid waits on the catalogues
+  // as well — same reasoning as the Bookings table.
+  const { items: cities, loading: citiesLoading } = useCollection("cities");
+  const { items: services, loading: servicesLoading } = useCollection("services");
+  const loading = bookingsLoading || citiesLoading || servicesLoading;
   const { t, locale } = useTranslation();
 
   const [cursor, setCursor] = useState(() => {
@@ -226,8 +238,12 @@ export default function CalendarPage() {
             <h2 className="wrap-break-word text-heading-sm font-bold capitalize text-ink-900">
               {monthLabel}
             </h2>
-            <p className="text-caption text-ink-400">
-              {t("admin.calendar.monthCount", { count: monthCount })}
+            {/* Live only while loading — otherwise it would re-announce the
+                count on every month step. */}
+            <p className="text-caption text-ink-400" role={loading ? "status" : undefined}>
+              {loading
+                ? t("admin.table.loading")
+                : t("admin.calendar.monthCount", { count: monthCount })}
             </p>
           </div>
         </div>
@@ -285,10 +301,20 @@ export default function CalendarPage() {
                     {date.getDate()}
                   </span>
                   <div className="space-y-0.5">
-                    {dayList.slice(0, MAX_CHIPS).map((b) => (
-                      <BookingChip key={b._id} booking={b} onClick={() => setViewing(b)} />
-                    ))}
-                    {overflow > 0 && (
+                    {loading &&
+                      inMonth &&
+                      Array.from({ length: skeletonChips(date) }).map((_, i) => (
+                        // The wrapper reproduces a chip's own box (px-1.5 py-1
+                        // around a caption line) so the cell heights match.
+                        <div key={`skeleton-${i}`} className="px-1.5 py-1">
+                          <Skeleton className="h-3 w-full" />
+                        </div>
+                      ))}
+                    {!loading &&
+                      dayList.slice(0, MAX_CHIPS).map((b) => (
+                        <BookingChip key={b._id} booking={b} onClick={() => setViewing(b)} />
+                      ))}
+                    {!loading && overflow > 0 && (
                       <button
                         type="button"
                         onClick={() => setDayOpen(key)}

@@ -72,7 +72,10 @@ function Stars({ value, className }) {
 }
 
 export default function QualityPage() {
-  const { items, update, remove } = useCollection("reviews");
+  const { items, update, remove, loading } = useCollection("reviews");
+  // Every figure on this page is derived from the review feed alone, so the
+  // collection's own arrival — not `useAdminData().loading`, which waits on all
+  // nine — is what the placeholders key off.
   const { stats } = useAdminData();
   const { t, locale } = useTranslation();
   const [deleting, setDeleting] = useState(null);
@@ -214,6 +217,7 @@ export default function QualityPage() {
           value={stats.reviews ? `${avg.toFixed(1)} / 5` : "—"}
           hint={t("admin.quality.stat.avgHint", { count: stats.reviews || 0 })}
           accent="accent"
+          loading={loading}
         />
         <StatCard
           icon={MessageSquareQuote}
@@ -221,6 +225,7 @@ export default function QualityPage() {
           value={stats.reviews || 0}
           hint={t("admin.quality.stat.totalHint")}
           accent="brand"
+          loading={loading}
         />
         <StatCard
           icon={ThumbsUp}
@@ -231,6 +236,7 @@ export default function QualityPage() {
             total: stats.reviews || 0,
           })}
           accent="success"
+          loading={loading}
         />
         <StatCard
           icon={Globe}
@@ -238,6 +244,7 @@ export default function QualityPage() {
           value={published}
           hint={t("admin.quality.stat.publishedHint", { count: pending })}
           accent={pending > 0 ? "accent" : "success"}
+          loading={loading}
         />
       </div>
 
@@ -260,14 +267,25 @@ export default function QualityPage() {
                     aria-hidden="true"
                   />
                 </span>
-                <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-ink-100">
-                  <div
-                    className="h-full rounded-full bg-amber-400 transition-all"
-                    style={{ width: `${(count / maxBar) * 100}%` }}
-                  />
+                {/* An empty track and a 0 are what "no reviews at this score"
+                    looks like, so while the feed is in flight the bar shimmers
+                    instead — otherwise the histogram states a fact it doesn't
+                    know yet. */}
+                <div
+                  className={cn(
+                    "h-2.5 flex-1 overflow-hidden rounded-full",
+                    loading ? "animate-shimmer" : "bg-ink-100"
+                  )}
+                >
+                  {!loading && (
+                    <div
+                      className="h-full rounded-full bg-amber-400 transition-all"
+                      style={{ width: `${(count / maxBar) * 100}%` }}
+                    />
+                  )}
                 </div>
                 <span className="w-8 shrink-0 text-right text-body-sm font-semibold tabular-nums text-ink-900">
-                  {count}
+                  {loading ? "" : count}
                 </span>
               </li>
             );
@@ -278,6 +296,7 @@ export default function QualityPage() {
       <DataTable
         columns={columns}
         data={items}
+        loading={loading}
         searchKeys={[
           "customer_name",
           "customer_email",

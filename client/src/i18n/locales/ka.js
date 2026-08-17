@@ -1055,6 +1055,7 @@ export default {
       result: "შედეგი",
       results: "შედეგები",
       empty: "მონაცემები არ მოიძებნა",
+      loading: "იტვირთება…",
     },
     action: {
       edit: "რედაქტირება",

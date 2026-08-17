@@ -12,7 +12,6 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
-import { Spinner } from "@/components/ui/Spinner";
 import { DataTable, PageHeader } from "@/features/admin";
 import { invoiceApi } from "@/features/admin/api/adminApi";
 import {
@@ -266,11 +265,9 @@ export default function InvoicesPage() {
         description={t("admin.invoices.description")}
       />
 
-      {invoicesQuery.isLoading ? (
-        <div className="flex justify-center py-16">
-          <Spinner size="lg" />
-        </div>
-      ) : invoicesQuery.isError ? (
+      {/* A failed fetch replaces the table; a pending one skeletons it, the same
+          way every collection-backed admin table loads. */}
+      {invoicesQuery.isError ? (
         <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-4 text-body-sm text-red-700">
           <AlertCircle className="mt-0.5 size-4.5 shrink-0" />
           {invoicesQuery.error?.message || t("admin.invoices.error")}
@@ -279,6 +276,7 @@ export default function InvoicesPage() {
         <DataTable
           columns={columns}
           data={invoices}
+          loading={invoicesQuery.isLoading}
           searchKeys={[
             "number",
             "booking_reference",

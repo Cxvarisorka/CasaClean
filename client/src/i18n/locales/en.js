@@ -1086,6 +1086,7 @@ export default {
       result: "result",
       results: "results",
       empty: "Nothing here yet",
+      loading: "Loading…",
     },
     action: {
       edit: "Edit",

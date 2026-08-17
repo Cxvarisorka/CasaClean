@@ -19,7 +19,7 @@ import { useTranslation } from "@/i18n";
  */
 
 export default function UsersPage() {
-  const { items, create, update, remove } = useCollection("users");
+  const { items, create, update, remove, loading } = useCollection("users");
   const { t, locale } = useTranslation();
   const [editing, setEditing] = useState(undefined);
   const [deleting, setDeleting] = useState(null);
@@ -131,6 +131,7 @@ export default function UsersPage() {
       <DataTable
         columns={columns}
         data={items}
+        loading={loading}
         searchKeys={["fullname", "email", "phone"]}
         searchPlaceholder={t("admin.users.search")}
         emptyTitle={t("admin.users.emptyTitle")}

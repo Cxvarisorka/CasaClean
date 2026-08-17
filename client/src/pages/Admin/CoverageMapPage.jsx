@@ -3,6 +3,7 @@ import { Map as MapIcon, MapPin, CalendarCheck, Euro } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Pagination } from "@/components/ui/Pagination";
+import { Skeleton } from "@/components/ui/Skeleton";
 import {
   PageHeader,
   StatCard,
@@ -43,9 +44,12 @@ export default function CoverageMapPage() {
   // Scoped to the three collections this page reads, rather than useAdminData()
   // — it needs no cross-collection `stats`, so it shouldn't pull users,
   // workers, reviews and messages down with it.
-  const { items: bookings } = useCollection("bookings");
-  const { items: cityList } = useCollection("cities");
-  const { items: services } = useCollection("services");
+  const { items: bookings, loading: bookingsLoading } = useCollection("bookings");
+  const { items: cityList, loading: citiesLoading } = useCollection("cities");
+  const { items: services, loading: servicesLoading } = useCollection("services");
+  // A point needs its city name to be geocodable at all, so the whole view waits
+  // on all three rather than dropping pins that resolve nowhere.
+  const loading = bookingsLoading || citiesLoading || servicesLoading;
   const { t } = useTranslation();
 
   // Bookings store only the city/service ids, so resolve real names from the
@@ -141,18 +145,21 @@ export default function CoverageMapPage() {
           label={t("admin.coverage.statBookings")}
           value={totals.bookings}
           accent="brand"
+          loading={loading}
         />
         <StatCard
           icon={MapPin}
           label={t("admin.coverage.statCities")}
           value={totals.cities}
           accent="success"
+          loading={loading}
         />
         <StatCard
           icon={Euro}
           label={t("admin.coverage.statRevenue")}
           value={eur(totals.revenue)}
           accent="accent"
+          loading={loading}
         />
       </div>
 
@@ -175,7 +182,29 @@ export default function CoverageMapPage() {
       {/* Per-booking roll-up — also the graceful fallback when the map can't render. */}
       <Card className="p-4 xs:p-6">
         <h2 className="text-heading-sm text-ink-900">{t("admin.coverage.listTitle")}</h2>
-        {points.length === 0 ? (
+        {/* Before the bookings land there is nothing to say about coverage, and
+            "no bookings yet" would be the wrong thing to say — so the roll-up
+            holds placeholder rows in the same shape. */}
+        {loading ? (
+          <ul className="mt-5 divide-y divide-ink-100">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <li
+                key={`skeleton-${i}`}
+                className="flex flex-wrap items-center gap-x-4 gap-y-1 py-3 first:pt-0 last:pb-0"
+              >
+                <Skeleton rounded="rounded-xl" className="size-10 shrink-0" />
+                <div className="min-w-0 flex-1 basis-40 space-y-2">
+                  <Skeleton className="h-3.5 w-44 max-w-full" />
+                  <Skeleton className="h-3 w-64 max-w-full" />
+                </div>
+                <div className="shrink-0 space-y-2">
+                  <Skeleton className="h-3.5 w-16" />
+                  <Skeleton className="h-3 w-24" />
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : points.length === 0 ? (
           <p className="mt-4 text-body-sm text-ink-500">{t("admin.coverage.empty")}</p>
         ) : (
           <>

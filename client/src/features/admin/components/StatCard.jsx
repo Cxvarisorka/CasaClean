@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/Card";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { cn } from "@/lib/cn";
 
 /*
@@ -7,6 +8,11 @@ import { cn } from "@/lib/cn";
  * --------
  * A single KPI tile for the dashboard. `accent` tints the icon chip so a row of
  * cards reads as distinct metrics at a glance.
+ *
+ * `loading` shims the figure (and the hint, which counts the same records) while
+ * the collections it is derived from are still in flight — a stat card has no
+ * honest zero, so "0 bookings" for a second is a wrong answer, not a pending
+ * one. The label stays: it says which metric is arriving.
  */
 
 const ACCENTS = {
@@ -16,7 +22,14 @@ const ACCENTS = {
   neutral: "bg-ink-100 text-ink-700",
 };
 
-export function StatCard({ icon: Icon, label, value, hint, accent = "brand" }) {
+export function StatCard({
+  icon: Icon,
+  label,
+  value,
+  hint,
+  accent = "brand",
+  loading = false,
+}) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -47,9 +60,21 @@ export function StatCard({ icon: Icon, label, value, hint, accent = "brand" }) {
                 `scrollbar-none` then drops the horizontal bar, which is pure
                 chrome across a figure — the value is still swipe-reachable. */}
             <p className="scrollbar-none mt-2 overflow-x-auto overflow-y-hidden whitespace-nowrap text-heading-md font-bold leading-tight text-ink-900 tabular-nums xs:text-heading-lg">
-              {value}
+              {/* Sized in `em` so the bar tracks the figure's own font size
+                  across the `xs` step instead of pinning a pixel height that
+                  only matches at one breakpoint. */}
+              {loading ? (
+                <Skeleton className="inline-block h-[1em] w-24 max-w-full align-middle" />
+              ) : (
+                value
+              )}
             </p>
-            {hint && <p className="mt-1 text-body-sm text-ink-500">{hint}</p>}
+            {hint &&
+              (loading ? (
+                <Skeleton className="mt-2 h-3.5 w-2/3" />
+              ) : (
+                <p className="mt-1 text-body-sm text-ink-500">{hint}</p>
+              ))}
           </div>
           {Icon && (
             <span

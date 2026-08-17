@@ -37,8 +37,10 @@ const eur = (n) =>
   );
 
 export default function ServicesPage() {
-  const { items, create, update, remove } = useCollection("services");
-  const { items: cities } = useCollection("cities");
+  const { items, create, update, remove, loading } = useCollection("services");
+  // The Cities column resolves ids to names, so hold the skeleton until the
+  // city catalogue is in too.
+  const { items: cities, loading: citiesLoading } = useCollection("cities");
   const { items: specialRequests } = useCollection("specialRequests");
   const { t } = useTranslation();
   const [editing, setEditing] = useState(undefined); // undefined=closed, null=create, obj=edit
@@ -308,6 +310,7 @@ export default function ServicesPage() {
       <DataTable
         columns={columns}
         data={items}
+        loading={loading || citiesLoading}
         searchKeys={["name", "description"]}
         searchPlaceholder={t("admin.services.search")}
         emptyTitle={t("admin.services.emptyTitle")}

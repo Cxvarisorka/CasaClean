@@ -1065,6 +1065,7 @@ export default {
       result: "αποτέλεσμα",
       results: "αποτελέσματα",
       empty: "Δεν υπάρχει τίποτα ακόμη",
+      loading: "Φόρτωση…",
     },
     action: {
       edit: "Επεξεργασία",

@@ -44,7 +44,9 @@ import { useTranslation } from "@/i18n";
  */
 
 export default function MessagesPage() {
-  const { items, update, remove, refresh } = useCollection("contactMessages");
+  // Both the tiles and the table read the inbox alone, so they key off this
+  // collection's arrival rather than `useAdminData().loading` (all nine).
+  const { items, update, remove, refresh, loading } = useCollection("contactMessages");
   const { stats } = useAdminData();
   const { t, locale } = useTranslation();
   const [deleting, setDeleting] = useState(null);
@@ -184,6 +186,7 @@ export default function MessagesPage() {
           value={newCount}
           hint={t("admin.messages.stat.newHint")}
           accent={newCount > 0 ? "accent" : "success"}
+          loading={loading}
         />
         <StatCard
           icon={MailOpen}
@@ -191,6 +194,7 @@ export default function MessagesPage() {
           value={handledCount}
           hint={t("admin.messages.stat.handledHint")}
           accent="success"
+          loading={loading}
         />
         <StatCard
           icon={Mail}
@@ -198,12 +202,14 @@ export default function MessagesPage() {
           value={items.length}
           hint={t("admin.messages.stat.totalHint")}
           accent="brand"
+          loading={loading}
         />
       </div>
 
       <DataTable
         columns={columns}
         data={items}
+        loading={loading}
         searchKeys={["name", "email", "phone", "message"]}
         searchPlaceholder={t("admin.messages.search")}
         emptyTitle={t("admin.messages.emptyTitle")}

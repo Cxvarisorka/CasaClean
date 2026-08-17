@@ -255,9 +255,9 @@ export default function SubscriptionsPage() {
         description={t("admin.subscriptions.description")}
       />
 
-      {subscriptionsQuery.isLoading ? (
-        <div className="flex justify-center py-16"><Spinner size="lg" /></div>
-      ) : subscriptionsQuery.isError ? (
+      {/* A failed fetch replaces the table; a pending one skeletons it, the same
+          way every collection-backed admin table loads. */}
+      {subscriptionsQuery.isError ? (
         <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-4 text-body-sm text-red-700">
           <AlertCircle className="mt-0.5 size-4.5 shrink-0" />
           {subscriptionsQuery.error?.message || t("admin.subscriptions.error")}
@@ -266,6 +266,7 @@ export default function SubscriptionsPage() {
         <DataTable
           columns={columns}
           data={subscriptions}
+          loading={subscriptionsQuery.isLoading}
           searchKeys={["customer_name", "customer_email", "service_name", "city_name"]}
           searchPlaceholder={t("admin.subscriptions.search")}
           emptyTitle={t("admin.subscriptions.emptyTitle")}

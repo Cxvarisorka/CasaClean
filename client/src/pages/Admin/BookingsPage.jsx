@@ -83,9 +83,11 @@ function DetailRow({ label, value }) {
 }
 
 export default function BookingsPage() {
-  const { items, create, update, remove } = useCollection("bookings");
-  const { items: cities } = useCollection("cities");
-  const { items: services } = useCollection("services");
+  const { items, create, update, remove, loading } = useCollection("bookings");
+  // The catalogues resolve the service/city columns, so a booking row rendered
+  // before they land shows an id where a name belongs — wait for all three.
+  const { items: cities, loading: citiesLoading } = useCollection("cities");
+  const { items: services, loading: servicesLoading } = useCollection("services");
   const { items: users } = useCollection("users");
   const { items: workers } = useCollection("workers");
   const { t } = useTranslation();
@@ -331,6 +333,7 @@ export default function BookingsPage() {
       <DataTable
         columns={columns}
         data={data}
+        loading={loading || citiesLoading || servicesLoading}
         searchKeys={["customer_name", "customer_email", "service_name", "city_name"]}
         searchPlaceholder={t("admin.bookings.search")}
         emptyTitle={t("admin.bookings.emptyTitle")}

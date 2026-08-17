@@ -25,7 +25,7 @@ import { useTranslation } from "@/i18n";
  */
 
 export default function CitiesPage() {
-  const { items, create, update, remove } = useCollection("cities");
+  const { items, create, update, remove, loading } = useCollection("cities");
   const { t } = useTranslation();
   const [editing, setEditing] = useState(undefined);
   const [deleting, setDeleting] = useState(null);
@@ -109,6 +109,7 @@ export default function CitiesPage() {
       <DataTable
         columns={columns}
         data={items}
+        loading={loading}
         searchKeys={["name"]}
         searchPlaceholder={t("admin.cities.search")}
         emptyTitle={t("admin.cities.emptyTitle")}

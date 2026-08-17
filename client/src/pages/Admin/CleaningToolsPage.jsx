@@ -32,8 +32,10 @@ const eur = (n) =>
   );
 
 export default function CleaningToolsPage() {
-  const { items, create, update, remove } = useCollection("cleaningTools");
-  const { items: services } = useCollection("services");
+  const { items, create, update, remove, loading } = useCollection("cleaningTools");
+  // The Services column resolves ids to names, so hold the skeleton until the
+  // service catalogue is in too.
+  const { items: services, loading: servicesLoading } = useCollection("services");
   const { t } = useTranslation();
   const [editing, setEditing] = useState(undefined);
   const [deleting, setDeleting] = useState(null);
@@ -151,6 +153,7 @@ export default function CleaningToolsPage() {
       <DataTable
         columns={columns}
         data={items}
+        loading={loading || servicesLoading}
         searchKeys={["name", "description"]}
         searchPlaceholder={t("admin.cleaningTools.search")}
         emptyTitle={t("admin.cleaningTools.emptyTitle")}

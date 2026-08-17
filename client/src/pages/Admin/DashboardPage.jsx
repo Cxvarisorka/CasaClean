@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { PageHeader, StatCard, useAdminData, useAuth } from "@/features/admin";
 import { BOOKING_STATUS_META } from "@/features/admin";
 import { useTranslation } from "@/i18n";
@@ -18,6 +19,11 @@ import { useTranslation } from "@/i18n";
  * ---------------
  * At-a-glance overview: KPI tiles, a status breakdown of the booking pipeline
  * and the latest bookings. All values are derived live from the admin store.
+ *
+ * Every figure here is an aggregate, and an aggregate over a half-loaded store
+ * is simply wrong rather than partial — a €0 revenue tile and an all-zero
+ * pipeline read as a business with no bookings. So the whole page holds
+ * placeholders until `useAdminData` reports every collection settled.
  */
 
 const eur = (n) =>
@@ -28,7 +34,7 @@ const eur = (n) =>
   }).format(n || 0);
 
 export default function DashboardPage() {
-  const { stats, bookings } = useAdminData();
+  const { stats, bookings, loading } = useAdminData();
   const { user } = useAuth();
   const { t } = useTranslation();
 
@@ -63,6 +69,7 @@ export default function DashboardPage() {
           value={stats.bookings}
           hint={t("admin.dashboard.pendingHint", { count: stats.byStatus.pending || 0 })}
           accent="brand"
+          loading={loading}
         />
         <StatCard
           icon={Euro}
@@ -70,6 +77,7 @@ export default function DashboardPage() {
           value={eur(stats.revenue)}
           hint={t("admin.dashboard.revenueHint")}
           accent="success"
+          loading={loading}
         />
         <StatCard
           icon={Sparkles}
@@ -77,6 +85,7 @@ export default function DashboardPage() {
           value={stats.services}
           hint={t("admin.dashboard.servicesHint", { count: stats.activeServices })}
           accent="accent"
+          loading={loading}
         />
         <StatCard
           icon={MapPin}
@@ -84,6 +93,7 @@ export default function DashboardPage() {
           value={stats.cities}
           hint={t("admin.dashboard.citiesHint", { count: stats.activeCities })}
           accent="neutral"
+          loading={loading}
         />
       </div>
 
@@ -99,13 +109,25 @@ export default function DashboardPage() {
                 <li key={key}>
                   <div className="mb-1.5 flex items-center justify-between text-body-sm">
                     <span className="font-medium text-ink-700">{t(meta.labelKey)}</span>
-                    <span className="font-semibold text-ink-900">{count}</span>
+                    <span className="font-semibold text-ink-900">
+                      {loading ? "" : count}
+                    </span>
                   </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-ink-100">
-                    <div
-                      className="h-full rounded-full bg-brand-500 transition-all"
-                      style={{ width: `${(count / maxStatus) * 100}%` }}
-                    />
+                  {/* The status labels are known up front; only the counts are
+                      in flight, so the track shimmers in place of its bar. */}
+                  <div
+                    className={
+                      loading
+                        ? "animate-shimmer h-2 rounded-full"
+                        : "h-2 overflow-hidden rounded-full bg-ink-100"
+                    }
+                  >
+                    {!loading && (
+                      <div
+                        className="h-full rounded-full bg-brand-500 transition-all"
+                        style={{ width: `${(count / maxStatus) * 100}%` }}
+                      />
+                    )}
                   </div>
                 </li>
               );
@@ -120,35 +142,55 @@ export default function DashboardPage() {
             <Users className="size-5 text-ink-300" />
           </div>
           <div className="mt-4 divide-y divide-ink-100">
-            {recent.map((b) => {
-              const meta = BOOKING_STATUS_META[b.status];
-              return (
-                /* The amount and the status badge want ~130px, which on a small
-                   phone leaves the customer's name a truncated stub. Below `xs`
-                   they drop under the name and keep their full width. */
+            {/* Six placeholder rows — the same count `recent` slices to — so the
+                card keeps its height when the real bookings replace them. */}
+            {loading &&
+              Array.from({ length: 6 }).map((_, i) => (
                 <div
-                  key={b._id}
+                  key={`skeleton-${i}`}
                   className="flex flex-col gap-1 py-3 xs:flex-row xs:items-center xs:justify-between xs:gap-4"
                 >
-                  <div className="min-w-0">
-                    <p className="truncate text-body-sm font-semibold text-ink-900">
-                      {b.customer_name}
-                    </p>
-                    <p className="truncate text-caption text-ink-400">
-                      {b.service_name} · {b.city_name}
-                    </p>
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    <Skeleton className="h-3.5 w-40 max-w-full" />
+                    <Skeleton className="h-3 w-56 max-w-full" />
                   </div>
                   <div className="flex shrink-0 items-center gap-3">
-                    <span className="text-body-sm font-semibold text-ink-700">
-                      {eur(b.total_amount)}
-                    </span>
-                    <Badge variant={meta?.variant} size="sm">
-                      {meta && t(meta.labelKey)}
-                    </Badge>
+                    <Skeleton className="h-3.5 w-14" />
+                    <Skeleton rounded="rounded-full" className="h-5 w-16" />
                   </div>
                 </div>
-              );
-            })}
+              ))}
+            {!loading &&
+              recent.map((b) => {
+                const meta = BOOKING_STATUS_META[b.status];
+                return (
+                  /* The amount and the status badge want ~130px, which on a
+                     small phone leaves the customer's name a truncated stub.
+                     Below `xs` they drop under the name and keep their full
+                     width. */
+                  <div
+                    key={b._id}
+                    className="flex flex-col gap-1 py-3 xs:flex-row xs:items-center xs:justify-between xs:gap-4"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-body-sm font-semibold text-ink-900">
+                        {b.customer_name}
+                      </p>
+                      <p className="truncate text-caption text-ink-400">
+                        {b.service_name} · {b.city_name}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3">
+                      <span className="text-body-sm font-semibold text-ink-700">
+                        {eur(b.total_amount)}
+                      </span>
+                      <Badge variant={meta?.variant} size="sm">
+                        {meta && t(meta.labelKey)}
+                      </Badge>
+                    </div>
+                  </div>
+                );
+              })}
           </div>
         </Card>
       </div>

@@ -20,7 +20,7 @@ import { useTranslation } from "@/i18n";
  */
 
 export default function WorkersPage() {
-  const { items, create, update, remove } = useCollection("workers");
+  const { items, create, update, remove, loading } = useCollection("workers");
   const { t } = useTranslation();
   const [editing, setEditing] = useState(undefined);
   const [deleting, setDeleting] = useState(null);
@@ -98,6 +98,7 @@ export default function WorkersPage() {
       <DataTable
         columns={columns}
         data={items}
+        loading={loading}
         searchKeys={["fullname", "email", "phone"]}
         searchPlaceholder={t("admin.workers.search")}
         emptyTitle={t("admin.workers.emptyTitle")}

@@ -3,6 +3,7 @@ import { Search } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Pagination } from "@/components/ui/Pagination";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { useTranslation } from "@/i18n";
 import { cn } from "@/lib/cn";
 
@@ -18,9 +19,24 @@ import { cn } from "@/lib/cn";
  * The optional `actions(row)` renders a trailing controls cell. Keeping all of
  * this here means each page describes *what* its columns are, never *how* a
  * table behaves.
+ *
+ * `loading` is the same deal: every admin collection arrives over the network,
+ * and a table that renders its empty state in the meantime says "nothing here
+ * yet" about data that is merely in flight. Skeleton rows are drawn INSIDE the
+ * real table — same header, same column widths, same row height — so the page
+ * doesn't jump when the rows land.
  */
 
 const alignClass = { left: "text-left", center: "text-center", right: "text-right" };
+
+// Placeholder rows drawn while a collection loads. Six is enough to read as "a
+// list is coming" without inventing a page's worth of fake content; a table
+// showing fewer rows than that keeps its own height.
+const SKELETON_ROWS = 6;
+
+// Deterministic per-column widths, so the placeholder reads as varied text
+// rather than a block of identical bars.
+const SKELETON_WIDTHS = ["w-32", "w-24", "w-28", "w-20", "w-24", "w-28"];
 
 export function DataTable({
   columns,
@@ -35,6 +51,7 @@ export function DataTable({
   emptyTitle,
   emptyDescription,
   onRowClick,
+  loading = false,
 }) {
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
@@ -81,6 +98,12 @@ export function DataTable({
               leftIcon={Search}
               placeholder={searchPlaceholder || t("admin.table.search")}
               value={query}
+              // Nothing to filter until the rows arrive, and a query typed
+              // against an empty set would read as "no matches". Styled here
+              // rather than in the primitive — the shared Input has no disabled
+              // look, and this is the only place that needs one.
+              disabled={loading}
+              className="disabled:cursor-not-allowed disabled:bg-ink-50 disabled:text-ink-400"
               onChange={(e) => {
                 setQuery(e.target.value);
                 setPage(1);
@@ -108,7 +131,10 @@ export function DataTable({
         </div>
       )}
 
-      <div className="overflow-hidden rounded-2xl border border-ink-100 bg-surface shadow-soft">
+      <div
+        className="overflow-hidden rounded-2xl border border-ink-100 bg-surface shadow-soft"
+        aria-busy={loading || undefined}
+      >
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-left">
             <thead>
@@ -134,7 +160,41 @@ export function DataTable({
               </tr>
             </thead>
             <tbody>
-              {pageRows.length === 0 ? (
+              {loading ? (
+                Array.from({ length: Math.min(pageSize, SKELETON_ROWS) }).map((_, r) => (
+                  <tr key={`skeleton-${r}`} className="border-b border-ink-100 last:border-0">
+                    {columns.map((col, c) => (
+                      <td
+                        key={col.key}
+                        className={cn(
+                          "px-4 py-3 align-middle",
+                          alignClass[col.align] || "text-left",
+                          col.className
+                        )}
+                      >
+                        <Skeleton
+                          className={cn(
+                            "h-4 max-w-full",
+                            SKELETON_WIDTHS[c % SKELETON_WIDTHS.length],
+                            // Right-aligned columns keep their bar on the right,
+                            // so the placeholder sits where the value will.
+                            col.align === "right" && "ml-auto",
+                            col.align === "center" && "mx-auto"
+                          )}
+                        />
+                      </td>
+                    ))}
+                    {actions && (
+                      <td className="px-4 py-3 align-middle">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Skeleton rounded="rounded-lg" className="size-8" />
+                          <Skeleton rounded="rounded-lg" className="size-8" />
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))
+              ) : pageRows.length === 0 ? (
                 <tr>
                   <td colSpan={colCount} className="p-0">
                     <EmptyState
@@ -184,12 +244,21 @@ export function DataTable({
         </div>
       </div>
 
+      {/* The count line doubles as the loading announcement. `role="status"`
+          only while loading — a live region here permanently would re-announce
+          the result count on every keystroke in the search box. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-body-sm text-ink-500">
-          {filtered.length}{" "}
-          {filtered.length === 1 ? t("admin.table.result") : t("admin.table.results")}
+        <p className="text-body-sm text-ink-500" role={loading ? "status" : undefined}>
+          {loading ? (
+            t("admin.table.loading")
+          ) : (
+            <>
+              {filtered.length}{" "}
+              {filtered.length === 1 ? t("admin.table.result") : t("admin.table.results")}
+            </>
+          )}
         </p>
-        <Pagination page={safePage} total={totalPages} onChange={setPage} />
+        {!loading && <Pagination page={safePage} total={totalPages} onChange={setPage} />}
       </div>
     </div>
   );
