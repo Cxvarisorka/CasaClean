@@ -34,7 +34,12 @@ const workerSchema = new mongoose.Schema({
     timestamps: true
 });
 
-workerSchema.index({ enabled: 1 });
+// The admin worker list is unfiltered and sorted newest-first, so createdAt is
+// the only useful key. This replaces a { enabled: 1 } index that backed no query
+// at all — nothing filters workers by `enabled` (the list is admin-only and
+// shows every worker; booking assignment looks them up by _id), so that index
+// was pure write overhead and could not serve this sort either.
+workerSchema.index({ createdAt: -1 });
 
 const Worker = mongoose.model('Worker', workerSchema);
 

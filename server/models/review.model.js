@@ -60,8 +60,14 @@ const reviewSchema = new mongoose.Schema({
 // Public per-service listing, newest first. `isPublished` is part of the key
 // because the public query always filters on it (approved reviews only).
 reviewSchema.index({ service_id: 1, isPublished: 1, createdAt: -1 });
-// "My reviews" — resolve which of a user's bookings are already rated.
-reviewSchema.index({ user: 1 });
+// "My reviews" — a user's own reviews, newest first. createdAt is part of the key
+// because that list sorts on it; the `user` prefix still answers every plain
+// { user } lookup, so this compound replaces the single-field index.
+reviewSchema.index({ user: 1, createdAt: -1 });
+// The admin moderation feed is unfiltered and sorted newest-first, at a default
+// page size of 100. Neither index above is prefixed on createdAt, so that query
+// was scanning the collection and sorting it in memory.
+reviewSchema.index({ createdAt: -1 });
 
 
 const Review = mongoose.model('Review', reviewSchema);

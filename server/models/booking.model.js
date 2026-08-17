@@ -278,6 +278,21 @@ bookingSchema.index({ createdAt: -1 });
 bookingSchema.index({ user: 1, createdAt: -1 });
 // Admin filtering by status and/or date.
 bookingSchema.index({ status: 1, bookingDate: 1 });
+// The admin list filters on status but sorts on createdAt, which the index
+// above can't serve (its second key is bookingDate) — that combination was
+// falling back to an in-memory sort of every matching booking.
+bookingSchema.index({ status: 1, createdAt: -1 });
+// The same list filters on a bookingDate range with no status, which neither
+// compound index can serve without a status prefix.
+bookingSchema.index({ bookingDate: 1 });
+// Referential guards (utils/referentialGuard.util.js) ask "is any booking still
+// pointing at this catalogue record?" before an admin deletes one. Unindexed,
+// every one of those probes scanned the largest collection in the database.
+bookingSchema.index({ serviceId: 1 });
+bookingSchema.index({ cityId: 1 });
+bookingSchema.index({ specialRequests: 1 });
+bookingSchema.index({ cleaningTools: 1 });
+bookingSchema.index({ workers: 1 });
 // Idempotency guard: a given payment can back at most one booking. `sparse` so
 // the many bookings without a payment id (current state) don't collide on null.
 bookingSchema.index({ paymentIntentId: 1 }, { unique: true, sparse: true });

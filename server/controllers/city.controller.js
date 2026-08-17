@@ -7,6 +7,10 @@ const catchAsync = require("../utils/catchAsync.util");
 const formatName = require("../utils/formatName.util");
 const { assertNotReferenced } = require("../utils/referentialGuard.util");
 const { TRANSLATABLE_FIELDS, normalizeTranslations } = require("../utils/translations.util");
+const catalogueCache = require("../utils/catalogueCache.util");
+
+// Cache-key prefix for this resource; every write below invalidates it.
+const CACHE_RESOURCE = "city";
 
 // Blank fields and empty languages are stripped before storing — see
 // utils/translations.util.js for why.
@@ -27,25 +31,37 @@ const getCities = catchAsync(async (req, res) => {
     const includeDisabled = req.query.includeDisabled === "true" && req.user?.role === "admin";
     const filter = includeDisabled ? {} : { enabled: true };
 
-    // Run the page query and the total count in parallel (independent reads).
-    // For the unfiltered admin view, estimatedDocumentCount reads collection
-    // metadata (O(1)) instead of scanning every document.
-    const [cities, cityCount] = await Promise.all([
-        City.find(filter)
-            .sort({ createdAt: -1 })
-            .skip((page - 1) * limit)
-            .limit(limit)
-            .lean(),
-        includeDisabled ? City.estimatedDocumentCount() : City.countDocuments(filter)
-    ]);
+    // The public list is the same for every visitor and changes only when an
+    // admin edits the catalogue, so it is served from a short-lived cache that
+    // every write below invalidates. Admin views are never cached — see
+    // utils/catalogueCache.util.js.
+    await catalogueCache.serveList(res, {
+        resource: CACHE_RESOURCE,
+        page,
+        limit,
+        cacheable: catalogueCache.isCacheable(req, includeDisabled),
+        build: async () => {
+            // Run the page query and the total count in parallel (independent
+            // reads). For the unfiltered admin view, estimatedDocumentCount reads
+            // collection metadata (O(1)) instead of scanning every document.
+            const [cities, cityCount] = await Promise.all([
+                City.find(filter)
+                    .sort({ createdAt: -1 })
+                    .skip((page - 1) * limit)
+                    .limit(limit)
+                    .lean(),
+                includeDisabled ? City.estimatedDocumentCount() : City.countDocuments(filter)
+            ]);
 
-    res.status(200).json({
-        status: "success",
-        message: "Cities returned successfully!",
-        cityCount,
-        length: cities.length,
-        data: {
-            cities
+            return {
+                status: "success",
+                message: "Cities returned successfully!",
+                cityCount,
+                length: cities.length,
+                data: {
+                    cities
+                }
+            };
         }
     });
 });
@@ -94,6 +110,8 @@ const addCity = catchAsync(async (req, res, next) => {
         workingHourEnds
     });
 
+    catalogueCache.invalidate(CACHE_RESOURCE);
+
     res.status(201).json({
         status: "success",
         message: "City added successfully!",
@@ -120,6 +138,8 @@ const deleteCity = catchAsync(async (req, res, next) => {
     if (!deletedCity) {
         return next(new AppError("City can't be found to delete!", 404));
     }
+
+    catalogueCache.invalidate(CACHE_RESOURCE);
 
     res.status(200).json({
         status: "success",
@@ -163,6 +183,8 @@ const editCity = catchAsync(async (req, res, next) => {
     if (enabled == false || enabled == true) city.enabled = enabled;
 
     await city.save();
+
+    catalogueCache.invalidate(CACHE_RESOURCE);
 
     res.status(200).json({
         status: "success",

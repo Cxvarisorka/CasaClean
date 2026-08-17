@@ -201,6 +201,90 @@ describe("runSubscriptionCharges", () => {
         expect(stripeMock.paymentIntents.create).not.toHaveBeenCalled();
     });
 
+    // The sweep charges several cycles concurrently (CONCURRENCY workers sharing
+    // the atomic claim). These pin the two things that could go wrong with that:
+    // a backlog must drain completely in ONE sweep, and no cycle may be charged
+    // twice because two workers got the same document.
+    test("drains a backlog of due subscriptions in a single sweep, charging each exactly once", async () => {
+        const service = await createService({ pricePerHour: 20 });
+        const city = await createCity();
+
+        // More due plans than there are concurrent workers, so the workers have
+        // to loop and re-claim rather than each taking exactly one.
+        const count = 12;
+        const subscriptions = [];
+        for (let i = 0; i < count; i += 1) {
+            const user = await createUser();
+            subscriptions.push(
+                await createSubscription(user, service, city, {
+                    nextServiceDate: dateStr(1),
+                    nextChargeAt: new Date(Date.now() - 60_000)
+                })
+            );
+        }
+
+        // Every plan has its own card and its own payment intent id, so a
+        // duplicate charge would show up as a repeated id.
+        stripeMock.paymentMethods.retrieve.mockImplementation(async (id) => {
+            const match = subscriptions.find((s) => s.paymentMethodId === id);
+            return { id, customer: match.stripeCustomerId };
+        });
+        let intent = 0;
+        stripeMock.paymentIntents.create.mockImplementation(async () => ({
+            id: `pi_backlog_${(intent += 1)}`,
+            status: "succeeded"
+        }));
+
+        const result = await runSubscriptionCharges();
+
+        expect(result).toMatchObject({ skipped: false, processed: count });
+        expect(stripeMock.paymentIntents.create).toHaveBeenCalledTimes(count);
+
+        // One booking per plan — not zero (dropped) and not two (double-charged).
+        for (const subscription of subscriptions) {
+            expect(await Booking.countDocuments({ subscriptionId: subscription._id })).toBe(1);
+        }
+
+        // Every claim was released and every schedule advanced, so an immediate
+        // second sweep finds nothing.
+        const stuck = await Subscription.countDocuments({ processingAt: { $ne: null } });
+        expect(stuck).toBe(0);
+        expect(await runSubscriptionCharges()).toMatchObject({ skipped: false, processed: 0 });
+    });
+
+    test("stamps lastAttemptAt on claim so one sweep never re-claims the same cycle", async () => {
+        const { subscription } = await dueSubscription();
+        mockOwnedCard(subscription);
+        // A non-Stripe failure clears processingAt and leaves nextChargeAt due —
+        // the exact shape that would make an unguarded sweep loop forever.
+        stripeMock.paymentIntents.create.mockRejectedValue(
+            Object.assign(new Error("Stripe API temporarily unavailable"), { type: "StripeAPIError" })
+        );
+        const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+        try {
+            const result = await runSubscriptionCharges();
+            // Claimed once, not spun on.
+            expect(result).toMatchObject({ skipped: false, processed: 1 });
+        } finally {
+            errorSpy.mockRestore();
+        }
+
+        const fresh = await Subscription.findById(subscription._id);
+        expect(fresh.lastAttemptAt).toBeInstanceOf(Date);
+        expect(fresh.processingAt).toBeNull();
+        // Still due — a LATER sweep must pick it up again (the exclusion is
+        // scoped to one sweep, not permanent).
+        expect(fresh.nextChargeAt.getTime()).toBeLessThanOrEqual(Date.now());
+
+        const errorSpy2 = jest.spyOn(console, "error").mockImplementation(() => {});
+        try {
+            expect(await runSubscriptionCharges()).toMatchObject({ processed: 1 });
+        } finally {
+            errorSpy2.mockRestore();
+        }
+    });
+
     test("clears its claim but leaves schedule and retry state unchanged for non-Stripe failures", async () => {
         const { subscription } = await dueSubscription();
         const originalChargeAt = new Date(subscription.nextChargeAt);

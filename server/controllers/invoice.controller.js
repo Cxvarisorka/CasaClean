@@ -139,8 +139,11 @@ const downloadInvoicePdf = catchAsync(async (req, res, next) => {
 const sendInvoice = catchAsync(async (req, res, next) => {
   const invoice = await findAuthorisedInvoice(req.params.id, req.user);
 
+  // deliverInvoiceEmail returns the delivery-stamped document, so the response
+  // reports the fresh emailedAt/emailCount without a second read.
+  let delivered;
   try {
-    await deliverInvoiceEmail(invoice);
+    delivered = await deliverInvoiceEmail(invoice);
   } catch (err) {
     if (err instanceof AppError) return next(err);
     return next(new AppError(`The invoice could not be sent: ${err.message}`, 502));
@@ -149,7 +152,7 @@ const sendInvoice = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: 'success',
     message: 'Invoice sent successfully!',
-    data: { invoice: await Invoice.findById(invoice._id) }
+    data: { invoice: delivered }
   });
 });
 
@@ -167,17 +170,21 @@ const issueInvoice = catchAsync(async (req, res, next) => {
   const invoice = await issueInvoiceForBooking(bookingId);
 
   // Only email a genuinely new document unless the caller asks otherwise, so
-  // re-clicking "issue" doesn't spam the customer.
+  // re-clicking "issue" doesn't spam the customer. The delivery call returns the
+  // stamped document; when we don't send, the freshly issued one is already
+  // current — either way no extra read is needed.
+  let delivered = invoice;
   if (!existed && req.body?.send !== false) {
-    await deliverInvoiceEmail(invoice).catch((err) =>
-      console.error('Invoice send error:', err.message)
-    );
+    delivered = await deliverInvoiceEmail(invoice).catch((err) => {
+      console.error('Invoice send error:', err.message);
+      return invoice;
+    });
   }
 
   res.status(existed ? 200 : 201).json({
     status: 'success',
     message: existed ? 'Invoice already issued.' : 'Invoice issued successfully!',
-    data: { invoice: await Invoice.findById(invoice._id) }
+    data: { invoice: delivered }
   });
 });
 

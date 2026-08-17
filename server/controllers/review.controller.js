@@ -2,7 +2,19 @@ const Review = require('../models/review.model');
 const Booking = require('../models/booking.model');
 const catchAsync = require('../utils/catchAsync.util');
 const AppError = require('../utils/appError.util');
-const mongoose = require("mongoose"); 
+const mongoose = require("mongoose");
+const catalogueCache = require('../utils/catalogueCache.util');
+
+// Cache-key prefix for the per-service rating summary (count + average) shown in
+// the public service-page header. Invalidated by every write below, because any
+// of them can change which reviews are published or what they score.
+const REVIEW_SUMMARY_RESOURCE = 'review-summary';
+
+// One review write can only affect its own service's summary, but resolving that
+// id on every path (including a delete, where the document is already gone) is
+// more moving parts than the saving is worth: the whole prefix is a handful of
+// keys, and dropping all of them is always correct.
+const invalidateReviewSummaries = () => catalogueCache.invalidate(REVIEW_SUMMARY_RESOURCE);
 
 
 // POST /api/v1/review/booking/:bookingId
@@ -51,6 +63,8 @@ const createReview = catchAsync(async (req, res, next) => {
     rating,
     review_text: review_text.trim(),
   });
+
+  invalidateReviewSummaries();
 
   res.status(201).json({
     status: "success",
@@ -130,6 +144,13 @@ const getServiceReviews = catchAsync(async (req, res, next) => {
     isPublished: true,
   };
 
+  // The aggregate below scans every published review of the service on each
+  // request, but its result is a per-service constant that only changes when a
+  // review is created, edited, published or deleted — all of which invalidate
+  // this key. Cached separately from the page itself so paging through reviews
+  // doesn't recompute the header figures.
+  const summaryKey = catalogueCache.buildKey(REVIEW_SUMMARY_RESOURCE, serviceId, "summary");
+
   const [reviews, summary] = await Promise.all([
     Review.find(filter)
       .populate({ path: "user", select: "fullname" })
@@ -139,11 +160,16 @@ const getServiceReviews = catchAsync(async (req, res, next) => {
       .lean(),
     // Aggregate over the whole published set — the page header must say "4.8
     // from 23 reviews" even when it only renders the first six.
-    Review.aggregate([
-      { $match: filter },
-      { $group: { _id: null, count: { $sum: 1 }, average: { $avg: "$rating" } } },
-    ]),
+    catalogueCache.get(summaryKey) ??
+      Review.aggregate([
+        { $match: filter },
+        { $group: { _id: null, count: { $sum: 1 }, average: { $avg: "$rating" } } },
+      ]),
   ]);
+
+  // Cache the resolved aggregate (an empty array is a valid, cacheable answer:
+  // "this service has no published reviews").
+  catalogueCache.set(summaryKey, summary);
 
   const stats = summary[0];
 
@@ -252,6 +278,8 @@ const editReview = catchAsync(async (req, res, next) => {
 
   await review.save();
 
+  invalidateReviewSummaries();
+
   res.status(200).json({
     status: "success",
     message: "Review updated successfully!",
@@ -281,6 +309,10 @@ const setReviewVisibility = catchAsync(async (req, res, next) => {
   if (!review) {
     return next(new AppError("Review not found!", 404));
   }
+
+  // This is the gate between customer text and the public site, so the cached
+  // header figures must not survive it.
+  invalidateReviewSummaries();
 
   res.status(200).json({
     status: "success",
@@ -312,6 +344,8 @@ const deleteReview = catchAsync(async (req, res, next) => {
   }
 
   await Review.findByIdAndDelete(id);
+
+  invalidateReviewSummaries();
 
   res.status(200).json({
     status: "success",

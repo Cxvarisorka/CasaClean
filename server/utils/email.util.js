@@ -37,7 +37,22 @@ const getTransporter = () => {
         // or a Stripe webhook for minutes.
         connectionTimeout: 10_000,
         greetingTimeout: 10_000,
-        socketTimeout: 20_000
+        socketTimeout: 20_000,
+
+        // Reuse SMTP connections instead of opening one per message. Without
+        // this, every email paid a fresh TCP handshake + TLS negotiation + AUTH
+        // before a single byte of the message moved — and several paths send more
+        // than one message in a row (a paid booking sends the customer's invoice
+        // and the admin alert; a cron sweep sends one pair per due plan).
+        //
+        // maxConnections is small on purpose: shared SMTP providers cap
+        // concurrent connections per account and answer an over-eager client with
+        // a temporary failure, which for us would mean a silently undelivered
+        // invoice. maxMessages recycles a connection periodically because
+        // providers also cap messages per connection.
+        pool: true,
+        maxConnections: 3,
+        maxMessages: 50
     });
 
     return transporter;
@@ -82,4 +97,19 @@ const sendEmail = async ({ email, subject, html, text, replyTo, attachments }) =
     });
 };
 
+/**
+ * Close the pooled SMTP connections.
+ *
+ * `pool: true` keeps sockets open between messages, and an open socket is a
+ * handle that keeps the event loop alive — so a graceful shutdown that doesn't
+ * call this waits for the hard timeout instead of exiting cleanly. Safe to call
+ * when no transporter was ever created (nothing has sent mail yet).
+ */
+const closeTransport = () => {
+    if (!transporter) return;
+    transporter.close();
+    transporter = undefined;
+};
+
 module.exports = sendEmail;
+module.exports.closeTransport = closeTransport;
