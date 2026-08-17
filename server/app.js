@@ -23,12 +23,6 @@ const connectDB = require('./config/db.config');
 require("./config/passport.config");
 require("./config/sentry.config");
 
-// Models (referenced directly for one-off startup tasks like index sync)
-const Review = require('./models/review.model');
-const Booking = require('./models/booking.model');
-const Subscription = require('./models/subscription.model');
-const User = require('./models/user.model');
-const Invoice = require('./models/invoice.model');
 
 // Custom middlewares
 const globalErrorHandler = require('./controllers/error.controller');
@@ -37,6 +31,9 @@ const sanitizeMongo = require('./middlewares/sanitize.middleware');
 const { globalLimiter } = require('./middlewares/rateLimit.middleware');
 const AppError = require('./utils/appError.util');
 const { UPLOADS_ROOT, ensureUploadDirs } = require('./utils/upload.util');
+// Required for its closeTransport() side-channel, used by the shutdown handler to
+// release the pooled SMTP sockets.
+const sendEmail = require('./utils/email.util');
 const { describeStorage, storageDriver } = require('./services/imageStorage.service');
 
 // Routers
@@ -156,7 +153,13 @@ app.use(cors({
         }
         callback(new AppError("Not allowed by CORS", 403));
     },
-    credentials: true
+    credentials: true,
+    // Let the browser cache the preflight for a day. Every state-changing call
+    // from the SPA is cross-origin AND carries X-Requested-With (the CSRF
+    // guard), which makes it non-simple and therefore preflighted — so without
+    // this each one paid an extra round trip. The allow-list is static config,
+    // so a stale cached preflight can't grant access that was revoked.
+    maxAge: 86400
 }));
 
 // Global rate limit — per-route stricter limits live on the auth router.
@@ -213,8 +216,8 @@ const start = async () => {
     try {
         await connectDB();
 
-        // Reconcile indexes with the schemas — sync drops indexes that no
-        // longer exist in code and builds new ones:
+        // Reconcile indexes with the schemas — sync drops indexes that no longer
+        // exist in code and builds the ones that do. Examples of why it matters:
         //   - Review: earlier builds used a unique (service_id, user) index;
         //     reviews are now per-booking, so the booking-unique one replaces it.
         //   - Booking/User: drops the retired customerEmail and role+isVerified
@@ -222,15 +225,20 @@ const start = async () => {
         //   - Invoice: the unique `booking` and `number` indexes are what make
         //     issuing idempotent and numbering collision-proof, so they must
         //     exist before the first payment lands.
+        //   - PendingBooking/PaymentAttempt/StripeEvent carry TTL indexes that
+        //     are the ONLY thing expiring those collections.
+        //
+        // This iterates every registered model rather than a hand-written list.
+        // In production `autoIndex` is off (config/db.config.js), so this is the
+        // only thing that creates indexes at all — and a model missing from a
+        // hand-written list would silently lose its indexes, which for the TTL
+        // collections means unbounded growth. Registration happens via the
+        // router requires above, so every model is present by now.
         // Wrapped so an index hiccup never blocks startup.
         try {
-            await Promise.all([
-                Review.syncIndexes(),
-                Booking.syncIndexes(),
-                Subscription.syncIndexes(),
-                User.syncIndexes(),
-                Invoice.syncIndexes()
-            ]);
+            await Promise.all(
+                Object.values(mongoose.models).map((model) => model.syncIndexes())
+            );
         } catch (indexErr) {
             console.error("syncIndexes failed (non-fatal):", indexErr.message);
         }
@@ -268,6 +276,11 @@ const start = async () => {
             console.log(`${signal} received — shutting down gracefully...`);
             server.close(async () => {
                 try {
+                    // The SMTP transport is pooled, so it holds open sockets that
+                    // would keep the event loop alive past this point. Optional
+                    // call: the mail module is mocked in tests, where it has no
+                    // such method.
+                    sendEmail.closeTransport?.();
                     await mongoose.connection.close();
                 } finally {
                     process.exit(0);

@@ -52,8 +52,11 @@ const cleaningToolSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
-// Most reads are "list the currently selectable tools", so index the flag.
-cleaningToolSchema.index({ enabled: 1 });
+// Most reads are "list the currently selectable tools", so index the flag —
+// and the list sorts newest-first, which a bare { enabled: 1 } index can't
+// serve. The `enabled` prefix still answers every plain { enabled: true } match,
+// so this compound replaces the single-field index rather than adding to it.
+cleaningToolSchema.index({ enabled: 1, createdAt: -1 });
 
 const CleaningTool = mongoose.model("CleaningTool", cleaningToolSchema);
 

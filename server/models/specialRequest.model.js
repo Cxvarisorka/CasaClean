@@ -50,8 +50,11 @@ const specialRequestSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
-// Most reads are "list the currently selectable requests", so index the flag.
-specialRequestSchema.index({ enabled: 1 });
+// Most reads are "list the currently selectable requests", so index the flag —
+// and the list sorts newest-first, which a bare { enabled: 1 } index can't
+// serve. The `enabled` prefix still answers every plain { enabled: true } match,
+// so this compound replaces the single-field index rather than adding to it.
+specialRequestSchema.index({ enabled: 1, createdAt: -1 });
 
 const SpecialRequest = mongoose.model("SpecialRequest", specialRequestSchema);
 

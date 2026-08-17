@@ -12,7 +12,57 @@ const { chargeSubscriptionCycle } = require('../services/subscription.service');
 // only makes scheduler cadence/configuration externally tunable.
 const STALE_LOCK_MS = 30 * 60 * 1000;
 
+// How many cycles are charged at once. Each cycle is dominated by two Stripe
+// round trips, so a strictly serial sweep spent almost all of its time waiting
+// on the network: a backlog of N due plans took N × (Stripe latency) to drain.
+//
+// Kept deliberately small. Every worker holds a Mongo connection from the pool
+// and an outbound Stripe request, and this runs on the same instance that is
+// serving customer traffic — the goal is to stop idling on the network, not to
+// let a large backlog crowd out live requests. Concurrency here is safe for the
+// same reason running several app instances is: each subscription is claimed
+// atomically, re-verified inside chargeSubscriptionCycle, and charged under an
+// attempt-scoped idempotency key, and no two subscriptions share mutable state.
+const CONCURRENCY = 5;
+
 let running = false;
+
+/**
+ * Atomically claim one due subscription, or return null when none is claimable.
+ *
+ * `sweepStartedAt` is what keeps a single sweep from spinning: a transient,
+ * non-Stripe error deliberately leaves nextChargeAt due after its lock is
+ * cleared, so without an exclusion this query would hand back the same document
+ * forever. Excluding anything already claimed *during this sweep* leaves it for
+ * the next hourly tick.
+ *
+ * This used to be an `_id: { $nin: [...claimedIds] }` array that grew by one
+ * element per iteration, so the filter itself got larger the more work there was
+ * to do — quadratic in the size of the backlog. A timestamp comparison is O(1)
+ * regardless of how many cycles the sweep processes.
+ */
+const claimNextDue = (sweepStartedAt) => {
+  const now = new Date();
+  return Subscription.findOneAndUpdate(
+    {
+      status: 'active',
+      nextChargeAt: { $lte: now },
+      $or: [
+        { processingAt: null },
+        { processingAt: { $lt: new Date(Date.now() - STALE_LOCK_MS) } }
+      ],
+      // Not yet attempted in this sweep.
+      $and: [{
+        $or: [
+          { lastAttemptAt: null },
+          { lastAttemptAt: { $lt: sweepStartedAt } }
+        ]
+      }]
+    },
+    { $set: { processingAt: now, lastAttemptAt: now } },
+    { returnDocument: 'after' }
+  );
+};
 
 const runSubscriptionCharges = async () => {
   if (running) {
@@ -22,33 +72,18 @@ const runSubscriptionCharges = async () => {
 
   running = true;
   let processed = 0;
-  // A transient/non-Stripe error deliberately leaves nextChargeAt due after its
-  // lock is cleared. Excluding already claimed ids prevents this one sweep from
-  // spinning on that same subscription forever; the next hourly tick retries.
-  const claimedIds = [];
+  const sweepStartedAt = new Date();
 
-  try {
+  /**
+   * One worker: claim and charge until nothing is left to claim. Several of
+   * these run concurrently and coordinate purely through the atomic claim — a
+   * document handed to one worker is invisible to the others.
+   */
+  const worker = async () => {
     while (true) {
-      const now = new Date();
-      const claimFilter = {
-        status: 'active',
-        nextChargeAt: { $lte: now },
-        $or: [
-          { processingAt: null },
-          { processingAt: { $lt: new Date(Date.now() - STALE_LOCK_MS) } }
-        ]
-      };
-      if (claimedIds.length > 0) claimFilter._id = { $nin: claimedIds };
+      const subscription = await claimNextDue(sweepStartedAt);
+      if (!subscription) return;
 
-      const subscription = await Subscription.findOneAndUpdate(
-        claimFilter,
-        { $set: { processingAt: now } },
-        { returnDocument: 'after' }
-      );
-
-      if (!subscription) break;
-
-      claimedIds.push(subscription._id);
       processed += 1;
       try {
         // The service catches and clears locks itself. Retain a defensive catch
@@ -64,6 +99,20 @@ const runSubscriptionCharges = async () => {
         });
       }
     }
+  };
+
+  try {
+    // allSettled, not all: one worker throwing (only possible from the claim
+    // query itself — the charge is already guarded above) must not abandon the
+    // cycles the other workers are part-way through.
+    const results = await Promise.allSettled(
+      Array.from({ length: CONCURRENCY }, () => worker())
+    );
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        console.error('Subscription charge worker failed:', result.reason?.message);
+      }
+    }
   } finally {
     running = false;
   }
@@ -71,4 +120,4 @@ const runSubscriptionCharges = async () => {
   return { skipped: false, processed };
 };
 
-module.exports = { runSubscriptionCharges, STALE_LOCK_MS };
+module.exports = { runSubscriptionCharges, STALE_LOCK_MS, CONCURRENCY };

@@ -19,6 +19,10 @@ const {
 } = require("../utils/date.util");
 const { storeServiceImage, removeServiceImage } = require("../services/imageStorage.service");
 const { TRANSLATABLE_FIELDS, normalizeTranslations } = require("../utils/translations.util");
+const catalogueCache = require("../utils/catalogueCache.util");
+
+// Cache-key prefix for this resource; every write below invalidates it.
+const CACHE_RESOURCE = "service";
 
 /**
  * The image value to store for a write request.
@@ -183,26 +187,48 @@ const getServices = catchAsync(async (req, res, next) => {
     const includeDisabled = req.query.includeDisabled === "true" && req.user?.role === "admin";
     const filter = includeDisabled ? {} : { enabled: true };
 
-    // Run the page query and the total count in parallel (independent reads).
-    // For the unfiltered admin view, estimatedDocumentCount reads collection
-    // metadata (O(1)) instead of scanning every document.
-    const [services, serviceCount] = await Promise.all([
-        Service.find(filter)
-            .populate("cities")
-            .populate("specialRequests")
-            .sort({ createdAt: -1 })
-            .skip((page - 1) * limit)
-            .limit(limit)
-            .lean(),
-        includeDisabled ? Service.estimatedDocumentCount() : Service.countDocuments(filter)
-    ]);
+    // The public list is identical for every visitor and changes only when an
+    // admin edits the catalogue, so it is served from a short-lived cache that
+    // every write below invalidates. This is the most expensive of the four
+    // catalogue lists — it also resolves two populated paths — and the booking
+    // wizard requests it on load. Admin views are never cached; see
+    // utils/catalogueCache.util.js.
+    await catalogueCache.serveList(res, {
+        resource: CACHE_RESOURCE,
+        page,
+        limit,
+        cacheable: catalogueCache.isCacheable(req, includeDisabled),
+        build: async () => {
+            // Run the page query and the total count in parallel (independent
+            // reads). For the unfiltered admin view, estimatedDocumentCount reads
+            // collection metadata (O(1)) instead of scanning every document.
+            const [services, serviceCount] = await Promise.all([
+                Service.find(filter)
+                    // Projected deliberately: both clients reduce these to ids
+                    // (client/src/features/services/hooks/useServices.js and the
+                    // admin panel's serviceFromApi both map to `_id`), and
+                    // unprojected these dragged the whole city and add-on
+                    // documents — including their five-language `translations`
+                    // map — into every row. Keeping `name` preserves the
+                    // populated object shape rather than collapsing to raw ids,
+                    // so no consumer has to change.
+                    .populate("cities", "name")
+                    .populate("specialRequests", "name price")
+                    .sort({ createdAt: -1 })
+                    .skip((page - 1) * limit)
+                    .limit(limit)
+                    .lean(),
+                includeDisabled ? Service.estimatedDocumentCount() : Service.countDocuments(filter)
+            ]);
 
-    res.status(200).json({
-        status: "success",
-        message: "Services returned successfully!",
-        serviceCount,
-        data: {
-            services
+            return {
+                status: "success",
+                message: "Services returned successfully!",
+                serviceCount,
+                data: {
+                    services
+                }
+            };
         }
     });
 });
@@ -211,7 +237,13 @@ const getServices = catchAsync(async (req, res, next) => {
 const getServiceById = catchAsync(async (req, res, next) => {
     const { id } = req.params;
 
-    const service = await Service.findById(id).populate("cities").populate("specialRequests");
+    // .lean() — the response is serialised straight to JSON and no instance
+    // method or save() is called on it, so hydrating a Mongoose document was
+    // pure overhead. Populates projected for the same reason as the list above.
+    const service = await Service.findById(id)
+        .populate("cities", "name")
+        .populate("specialRequests", "name price")
+        .lean();
 
     if (!service) {
         return next(new AppError("Service not found!", 404));
@@ -273,6 +305,8 @@ const createService = catchAsync(async (req, res, next) => {
         // reading is visible at the create site.
         allowInstantBooking: allowInstantBooking === true
     });
+
+    catalogueCache.invalidate(CACHE_RESOURCE);
 
     res.status(201).json({
         status: "success",
@@ -377,6 +411,8 @@ const editService = catchAsync(async (req, res, next) => {
 
     await service.save();
 
+    catalogueCache.invalidate(CACHE_RESOURCE);
+
     // The old file is only garbage once the new value is durably stored.
     // Best-effort and non-blocking: a stale file must never fail the request.
     if (previousImage && previousImage !== service.image) {
@@ -411,6 +447,8 @@ const deleteService = catchAsync(async (req, res, next) => {
     if (!service) {
         return next(new AppError("Service not found to delete!", 404));
     }
+
+    catalogueCache.invalidate(CACHE_RESOURCE);
 
     // Nothing references the cover image any more — drop it from disk too.
     removeServiceImage(service.image);

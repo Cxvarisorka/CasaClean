@@ -10,6 +10,10 @@ const catchAsync = require("../utils/catchAsync.util");
 const formatName = require("../utils/formatName.util");
 const { assertNotReferenced } = require("../utils/referentialGuard.util");
 const { TRANSLATABLE_FIELDS, normalizeTranslations } = require("../utils/translations.util");
+const catalogueCache = require("../utils/catalogueCache.util");
+
+// Cache-key prefix for this resource; every write below invalidates it.
+const CACHE_RESOURCE = "cleaning-tool";
 
 // Blank fields and empty languages are stripped before storing — see
 // utils/translations.util.js for why.
@@ -45,22 +49,34 @@ const getCleaningTools = catchAsync(async (req, res, next) => {
     const includeDisabled = req.query.includeDisabled === "true" && req.user?.role === "admin";
     const filter = includeDisabled ? {} : { enabled: true };
 
-    // For the unfiltered admin view, estimatedDocumentCount reads collection
-    // metadata (O(1)) instead of scanning every document.
-    const [cleaningTools, cleaningToolCount] = await Promise.all([
-        CleaningTool.find(filter)
-            .sort({ createdAt: -1 })
-            .skip((page - 1) * limit)
-            .limit(limit)
-            .lean(),
-        includeDisabled ? CleaningTool.estimatedDocumentCount() : CleaningTool.countDocuments(filter)
-    ]);
+    // The public list is identical for every visitor and changes only when an
+    // admin edits the catalogue, so it is served from a short-lived cache that
+    // every write below invalidates. Admin views are never cached — see
+    // utils/catalogueCache.util.js.
+    await catalogueCache.serveList(res, {
+        resource: CACHE_RESOURCE,
+        page,
+        limit,
+        cacheable: catalogueCache.isCacheable(req, includeDisabled),
+        build: async () => {
+            // For the unfiltered admin view, estimatedDocumentCount reads
+            // collection metadata (O(1)) instead of scanning every document.
+            const [cleaningTools, cleaningToolCount] = await Promise.all([
+                CleaningTool.find(filter)
+                    .sort({ createdAt: -1 })
+                    .skip((page - 1) * limit)
+                    .limit(limit)
+                    .lean(),
+                includeDisabled ? CleaningTool.estimatedDocumentCount() : CleaningTool.countDocuments(filter)
+            ]);
 
-    res.status(200).json({
-        status: "success",
-        message: "Cleaning tools returned successfully!",
-        cleaningToolCount,
-        data: { cleaningTools }
+            return {
+                status: "success",
+                message: "Cleaning tools returned successfully!",
+                cleaningToolCount,
+                data: { cleaningTools }
+            };
+        }
     });
 });
 
@@ -111,6 +127,8 @@ const addCleaningTool = catchAsync(async (req, res, next) => {
         services: serviceIds
     });
 
+    catalogueCache.invalidate(CACHE_RESOURCE);
+
     res.status(201).json({
         status: "success",
         message: "Cleaning tool created successfully!",
@@ -159,6 +177,8 @@ const editCleaningTool = catchAsync(async (req, res, next) => {
 
     await cleaningTool.save();
 
+    catalogueCache.invalidate(CACHE_RESOURCE);
+
     res.status(200).json({
         status: "success",
         message: "Cleaning tool edited successfully!",
@@ -182,6 +202,8 @@ const deleteCleaningTool = catchAsync(async (req, res, next) => {
     if (!cleaningTool) {
         return next(new AppError("Cleaning tool not found to delete!", 404));
     }
+
+    catalogueCache.invalidate(CACHE_RESOURCE);
 
     res.status(200).json({
         status: "success",

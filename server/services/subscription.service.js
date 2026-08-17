@@ -328,8 +328,25 @@ const priceSubscriptionCycle = async (subscription) => {
   // 'service-unavailable' pause and notifies the customer.
   assertRecurrenceAllowed(service, subscription.intervalDays);
 
-  const specialRequests = await resolveSpecialRequests(subscription.specialRequests, service);
-  const cleaningTools = await resolveCleaningTools(subscription.cleaningTools, service);
+  // These three reads are mutually independent — the add-ons and tools both need
+  // `service` (already resolved above) and the customer needs only the plan's own
+  // user id — so they go out together rather than in series. This runs unattended
+  // for every due plan on every sweep, so three round trips became one.
+  //
+  // The VAT treatment is re-resolved per cycle rather than frozen on the plan,
+  // for the same reason recurrence eligibility is re-checked above: a customer
+  // who registers a VAT number should stop paying VAT from the next charge, and
+  // one whose registration lapses must start paying it again. Reading the user
+  // fresh also means a status the webhook updated is picked up immediately.
+  const [specialRequests, cleaningTools, customer] = await Promise.all([
+    resolveSpecialRequests(subscription.specialRequests, service),
+    resolveCleaningTools(subscription.cleaningTools, service),
+    subscription.user
+      ? User.findById(subscription.user)
+          .select('customerType vatNumber vatStatus companyName')
+          .lean()
+      : null
+  ]);
 
   const netTotal = computeBookingTotal({
     service,
@@ -340,17 +357,6 @@ const priceSubscriptionCycle = async (subscription) => {
     specialRequests,
     cleaningTools
   });
-
-  // The VAT treatment is re-resolved per cycle rather than frozen on the plan,
-  // for the same reason recurrence eligibility is re-checked above: a customer
-  // who registers a VAT number should stop paying VAT from the next charge, and
-  // one whose registration lapses must start paying it again. Reading the user
-  // fresh also means a status the webhook updated is picked up immediately.
-  const customer = subscription.user
-    ? await User.findById(subscription.user)
-        .select('customerType vatNumber vatStatus companyName')
-        .lean()
-    : null;
 
   const { totalAmount, tax } = priceForCustomer(netTotal, customer);
 

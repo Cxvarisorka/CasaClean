@@ -491,16 +491,24 @@ const deliverInvoiceEmail = async (invoice, to = null) => {
     ]
   });
 
-  await Invoice.updateOne(
+  // findOneAndUpdate rather than updateOne so the stamped document comes back
+  // from the same round trip. Callers that report delivery to an admin need the
+  // fresh emailedAt/emailCount, and they used to get it with a second
+  // Invoice.findById immediately after this call.
+  const stamped = await Invoice.findOneAndUpdate(
     { _id: invoice._id },
-    { $set: { emailedTo: recipient, emailedAt: new Date() }, $inc: { emailCount: 1 } }
+    { $set: { emailedTo: recipient, emailedAt: new Date() }, $inc: { emailCount: 1 } },
+    { returnDocument: 'after' }
   ).catch((err) => {
     // The customer has the invoice; failing to record that fact is a reporting
     // problem, not a delivery one.
     console.error('Invoice delivery stamp error:', err.message);
+    return null;
   });
 
-  return invoice;
+  // Fall back to the un-stamped input when the stamp itself failed — delivery
+  // still succeeded, so this must not throw.
+  return stamped || invoice;
 };
 
 /**

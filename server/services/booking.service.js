@@ -414,8 +414,12 @@ const buildValidatedBookingDraft = async (payload, user) => {
   // city's working hours, an end before closing, and nothing in the past.
   assertBookingWindow(city, bookingDate, bookingTime, durationMinutes, { service });
 
-  const resolvedSpecialRequests = await resolveSpecialRequests(specialRequests, service);
-  const resolvedCleaningTools = await resolveCleaningTools(cleaningTools, service);
+  // Independent lookups (both only need `service`, already resolved above), so
+  // they go out together — this is on the path of every payment intent.
+  const [resolvedSpecialRequests, resolvedCleaningTools] = await Promise.all([
+    resolveSpecialRequests(specialRequests, service),
+    resolveCleaningTools(cleaningTools, service)
+  ]);
 
   // Server-side price: pricePerHour pro-rated over the booked minutes + the
   // add-on and tool prices. Never trusted from the client. This is the NET

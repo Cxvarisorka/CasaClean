@@ -115,14 +115,18 @@ const resolveNames = async (booking, serviceName = '') => {
   };
 
   try {
-    if (!names.serviceName && booking.serviceId) {
-      const service = await Service.findById(booking.serviceId).select('name').lean();
-      names.serviceName = service?.name || '';
-    }
-    if (!names.cityName && booking.cityId) {
-      const city = await City.findById(booking.cityId).select('name').lean();
-      names.cityName = city?.name || '';
-    }
+    // Independent lookups, and each is skipped when the name is already on the
+    // (populated) booking — so this is at most one round trip, not two.
+    const [service, city] = await Promise.all([
+      !names.serviceName && booking.serviceId
+        ? Service.findById(booking.serviceId).select('name').lean()
+        : null,
+      !names.cityName && booking.cityId
+        ? City.findById(booking.cityId).select('name').lean()
+        : null
+    ]);
+    if (service) names.serviceName = service.name || '';
+    if (city) names.cityName = city.name || '';
   } catch (err) {
     // A name is a nicety; the date, address and phone number are what the team
     // actually needs, so send the alert without it.

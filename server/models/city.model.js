@@ -51,7 +51,12 @@ const citySchema = new mongoose.Schema({
     timestamps: true
 });
 
-citySchema.index({ enabled: 1 });
+// The public list is find({ enabled: true }).sort({ createdAt: -1 }). A bare
+// { enabled: 1 } index serves the filter but not the sort, so MongoDB buffered
+// every enabled city in memory to sort it. The compound serves both, and its
+// `enabled` prefix still answers every plain { enabled: true } match, so it
+// fully replaces the single-field index.
+citySchema.index({ enabled: 1, createdAt: -1 });
 
 const City = mongoose.model('City', citySchema);
 

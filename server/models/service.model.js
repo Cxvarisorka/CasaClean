@@ -153,6 +153,11 @@ serviceSchema.index({ allCities: 1, enabled: 1 });
 
 serviceSchema.index({ cities: 1, enabled: 1 });
 
+// The public catalogue list is find({ enabled: true }).sort({ createdAt: -1 }).
+// Neither coverage index above is prefixed on `enabled`, so that query was a
+// collection scan followed by an in-memory sort. This one serves both halves.
+serviceSchema.index({ enabled: 1, createdAt: -1 });
+
 const Service = mongoose.model("Service", serviceSchema);
 
 module.exports = Service;

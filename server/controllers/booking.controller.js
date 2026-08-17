@@ -121,8 +121,8 @@ const getBookings = catchAsync(async (req, res, next) => {
     Booking.find(filter)
       .populate('serviceId', 'name')
       .populate('cityId', 'name')
-      .populate('specialRequests')
-      .populate('cleaningTools')
+      .populate('specialRequests', 'name price')
+      .populate('cleaningTools', 'name price')
       .populate('workers', 'fullname')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
@@ -153,8 +153,8 @@ const getMyBookings = catchAsync(async (req, res, next) => {
     Booking.find(filter)
       .populate('serviceId', 'name')
       .populate('cityId', 'name')
-      .populate('specialRequests')
-      .populate('cleaningTools')
+      .populate('specialRequests', 'name price')
+      .populate('cleaningTools', 'name price')
       .populate('workers', 'fullname')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
@@ -177,8 +177,8 @@ const getBookingById = catchAsync(async (req, res, next) => {
   const booking = await Booking.findById(id)
     .populate('serviceId', 'name')
     .populate('cityId', 'name')
-    .populate('specialRequests')
-    .populate('cleaningTools')
+    .populate('specialRequests', 'name price')
+    .populate('cleaningTools', 'name price')
     .populate('workers', 'fullname')
     .lean();
 
@@ -274,11 +274,20 @@ const createBooking = catchAsync(async (req, res, next) => {
 
   // Make sure any selected add-ons are real, enabled, and offered by the
   // service. Returns full documents so we can sum prices (Fix 1).
-  const resolvedSpecialRequests = await resolveSpecialRequests(specialRequests, service);
-
   // Same fail-closed gate for the tool catalogue: every tool must be real,
-  // enabled and usable on the chosen service.
-  const resolvedCleaningTools = await resolveCleaningTools(cleaningTools, service);
+  // enabled and usable on the chosen service. And worker assignment is an
+  // admin-only concern — a normal customer's `workers` (even if smuggled past
+  // the optional schema) is ignored; only an admin creating a booking on a
+  // customer's behalf can assign staff.
+  //
+  // All three are independent of one another (the first two need only `service`,
+  // resolved above), so they are resolved in one parallel batch instead of three
+  // serial round trips.
+  const [resolvedSpecialRequests, resolvedCleaningTools, assignedWorkers] = await Promise.all([
+    resolveSpecialRequests(specialRequests, service),
+    resolveCleaningTools(cleaningTools, service),
+    isAdmin ? resolveWorkers(workers) : []
+  ]);
 
   // Fix 1: compute the booking total on the server — never trust the client.
   // specialRequests/cleaningTools now contain full documents with a `price` field.
@@ -299,11 +308,6 @@ const createBooking = catchAsync(async (req, res, next) => {
   // Extract just the ids for storage (the Booking model stores ObjectId refs).
   const requestIds = resolvedSpecialRequests.map((sr) => sr._id);
   const toolIds = resolvedCleaningTools.map((ct) => ct._id);
-
-  // Worker assignment is an admin-only concern. A normal customer's `workers`
-  // (even if smuggled past the optional schema) is ignored — only an admin
-  // creating a booking on a customer's behalf can assign staff.
-  const assignedWorkers = isAdmin ? await resolveWorkers(workers) : [];
 
   // Status is server-managed (the create schema rejects any client-supplied
   // value). An admin booking on a customer's behalf starts as 'pending' so it
@@ -450,26 +454,27 @@ const editBooking = catchAsync(async (req, res, next) => {
     );
   }
 
-  // Special requests being changed must still pass the service compatibility
-  // gate. resolveSpecialRequests returns full docs so we can also re-price below.
-  let resolvedSpecialRequests = null;
+  // Changed references must still pass their fail-closed gates: special requests
+  // and cleaning tools against the service compatibility rules (resolve* returns
+  // full docs so we can also re-price below), and workers by existence. All three
+  // are independent, so an edit touching several of them costs one round trip
+  // rather than three. Each stays null/undefined when its field wasn't sent,
+  // which is what the re-pricing block below keys off.
+  const [resolvedSpecialRequests, resolvedCleaningTools, resolvedWorkers] = await Promise.all([
+    srChanged ? resolveSpecialRequests(req.body.specialRequests, service) : null,
+    ctChanged ? resolveCleaningTools(req.body.cleaningTools, service) : null,
+    req.body.workers !== undefined ? resolveWorkers(req.body.workers) : undefined
+  ]);
+
   if (srChanged) {
-    resolvedSpecialRequests = await resolveSpecialRequests(req.body.specialRequests, service);
     updates.specialRequests = resolvedSpecialRequests.map((sr) => sr._id);
   }
-
-  // Cleaning tools being changed must still pass the tool-side service gate
-  // (a tool restricted to specific services can't be attached to others).
-  let resolvedCleaningTools = null;
   if (ctChanged) {
-    resolvedCleaningTools = await resolveCleaningTools(req.body.cleaningTools, service);
     updates.cleaningTools = resolvedCleaningTools.map((ct) => ct._id);
   }
-
-  // Worker (re)assignment — admin-only route, so no extra role check needed.
   // An empty array clears the current assignment; ids are validated fail-closed.
   if (req.body.workers !== undefined) {
-    updates.workers = await resolveWorkers(req.body.workers);
+    updates.workers = resolvedWorkers;
   }
 
   // Recompute the server-managed total whenever a price input (duration,
@@ -591,8 +596,8 @@ const editBooking = catchAsync(async (req, res, next) => {
   })
     .populate('serviceId', 'name')
     .populate('cityId', 'name')
-    .populate('specialRequests')
-    .populate('cleaningTools')
+    .populate('specialRequests', 'name price')
+    .populate('cleaningTools', 'name price')
     .populate('workers', 'fullname');
 
   if (!booking) {
@@ -684,6 +689,19 @@ const cancelMyBooking = catchAsync(async (req, res, next) => {
   }
   booking.status = 'cancelled';
 
+  // Read the finished booking back ONCE, after the refund fields have been
+  // written, and use it for both the refund email and the response. This used to
+  // be two separate reads of the same document — one that fetched the whole
+  // booking just to resolve `serviceId.name` for the email, and one for the
+  // response — on top of the claim above.
+  const populated = await Booking.findById(booking._id)
+    .populate('serviceId', 'name')
+    .populate('cityId', 'name')
+    .populate('specialRequests', 'name price')
+    .populate('cleaningTools', 'name price')
+    .populate('workers', 'fullname')
+    .lean();
+
   // Best-effort refund email (only when an actual refund was issued).
   if (refundUpdate) {
     // Stamp the invoice so an exported PDF reflects the reversal — but only for
@@ -697,10 +715,9 @@ const cancelMyBooking = catchAsync(async (req, res, next) => {
     }
 
     try {
-      const serviceDoc = await Booking.findById(booking._id).populate('serviceId', 'name').select('serviceId').lean();
       const { subject, html, text } = renderRefundEmail({
         customerName: booking.customerName,
-        serviceName: serviceDoc?.serviceId?.name,
+        serviceName: populated?.serviceId?.name,
         bookingDate: booking.bookingDate,
         amount: refundUpdate.refundAmount,
         fee: settlement?.fee || 0,
@@ -711,14 +728,6 @@ const cancelMyBooking = catchAsync(async (req, res, next) => {
       console.error('Refund email send error:', emailError.message);
     }
   }
-
-  const populated = await Booking.findById(booking._id)
-    .populate('serviceId', 'name')
-    .populate('cityId', 'name')
-    .populate('specialRequests')
-    .populate('cleaningTools')
-    .populate('workers', 'fullname')
-    .lean();
 
   // Message reflects the money outcome: fully refunded, refunded minus the
   // one-hour late-cancellation fee, entirely kept (a late cancellation of a

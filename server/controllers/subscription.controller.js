@@ -127,18 +127,36 @@ const resumeSubscription = async (subscription) => {
 };
 
 // GET /api/v1/subscription/my
+//
+// Bounded like every other list endpoint. This was the last customer-facing read
+// with no ceiling at all: no skip, no limit, and `subscriptionCount` derived from
+// the returned array, which only "worked" because the query was unbounded.
+// The default limit is deliberately high rather than the usual 10 — the current
+// client fetches this in one shot and renders the lot, so a low default would
+// silently hide plans. `subscriptionCount` is now a real count, so a client can
+// tell when there is more than it asked for.
 const getMySubscriptions = catchAsync(async (req, res) => {
-  const subscriptions = await Subscription.find({ user: req.user._id })
-    .select(CUSTOMER_SUBSCRIPTION_FIELDS)
-    .populate('serviceId', 'name')
-    .populate('cityId', 'name')
-    .sort({ createdAt: -1 })
-    .lean();
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
+
+  const filter = { user: req.user._id };
+
+  const [subscriptions, subscriptionCount] = await Promise.all([
+    Subscription.find(filter)
+      .select(CUSTOMER_SUBSCRIPTION_FIELDS)
+      .populate('serviceId', 'name')
+      .populate('cityId', 'name')
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean(),
+    Subscription.countDocuments(filter)
+  ]);
 
   res.status(200).json({
     status: 'success',
     message: 'Your subscriptions returned successfully!',
-    subscriptionCount: subscriptions.length,
+    subscriptionCount,
     data: { subscriptions }
   });
 });
@@ -347,7 +365,17 @@ const getSubscriptionById = catchAsync(async (req, res, next) => {
   const { id } = req.params;
   if (!assertObjectId(id, next)) return;
 
-  const [subscription, bookings] = await Promise.all([
+  // The cycle history grows by one booking per charge, forever — a weekly plan
+  // running three years is 156 populated bookings and there was no ceiling at
+  // all. Bounded to the most recent cycles, newest first (the index
+  // { subscriptionId: 1, createdAt: -1 } serves exactly this). The cap is high
+  // rather than the usual 10 because the admin panel renders the history as one
+  // flat list; `bookingCount` reports the true total so the UI can say how much
+  // of it is on screen.
+  const bookingPage = Math.max(1, Number(req.query.bookingPage) || 1);
+  const bookingLimit = Math.min(200, Math.max(1, Number(req.query.bookingLimit) || 100));
+
+  const [subscription, bookings, bookingCount] = await Promise.all([
     Subscription.findById(id)
       .select(ADMIN_SUBSCRIPTION_FIELDS)
       .populate('user', 'fullname email')
@@ -358,7 +386,10 @@ const getSubscriptionById = catchAsync(async (req, res, next) => {
       .populate('serviceId', 'name')
       .populate('cityId', 'name')
       .sort({ createdAt: -1 })
-      .lean()
+      .skip((bookingPage - 1) * bookingLimit)
+      .limit(bookingLimit)
+      .lean(),
+    Booking.countDocuments({ subscriptionId: id })
   ]);
 
   if (!subscription) return next(new AppError('Subscription not found!', 404));
@@ -366,6 +397,7 @@ const getSubscriptionById = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: 'success',
     message: 'Subscription returned successfully!',
+    bookingCount,
     data: { subscription, bookings }
   });
 });

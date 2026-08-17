@@ -19,6 +19,7 @@ const { MongoMemoryServer } = require("mongodb-memory-server");
 const app = require("../../app");
 const stripeMock = require("../../config/stripe.config");
 const sendEmailMock = require("../../utils/email.util");
+const catalogueCache = require("../../utils/catalogueCache.util");
 
 // VAT is added ON TOP of catalogue prices (utils/tax.util.js), so a configured
 // rate changes every booking total. The developer's own .env must not decide
@@ -55,6 +56,12 @@ afterEach(async () => {
     // deleteMany (not dropDatabase) so the indexes built in beforeAll survive.
     const collections = await mongoose.connection.db.collections();
     await Promise.all(collections.map((c) => c.deleteMany({})));
+
+    // The public catalogue lists are served from an in-process TTL cache
+    // (utils/catalogueCache.util.js). It is keyed by resource+page and survives
+    // the collection wipe above, so without this a test would see the previous
+    // test's catalogue — emptying the database is not enough to reset state.
+    catalogueCache.clear();
 });
 
 afterAll(async () => {

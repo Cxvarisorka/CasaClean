@@ -109,12 +109,24 @@ const subscriptionSchema = new mongoose.Schema({
   // Claimed atomically by the scheduler. A stale lock is reclaimable so a
   // process crash cannot hold a cycle forever.
   processingAt: { type: Date, default: null },
+  // When the scheduler last CLAIMED this subscription, set in the same atomic
+  // update as processingAt and never cleared. processingAt alone can't answer
+  // "did this sweep already try this one?", because a transient failure clears
+  // the lock while leaving nextChargeAt due — which is exactly the case that
+  // would otherwise make one sweep spin on the same document forever.
+  // See jobs/subscriptionCharge.job.js.
+  lastAttemptAt: { type: Date, default: null },
   pausedAt: { type: Date },
   cancelledAt: { type: Date }
 }, { timestamps: true, collection: 'subscriptions' });
 
 subscriptionSchema.index({ user: 1, createdAt: -1 });
+// The scheduler's claim query: the due-and-active set, oldest due first.
 subscriptionSchema.index({ status: 1, nextChargeAt: 1 });
+// The admin list filters on status but sorts on createdAt, which the index above
+// can't serve (its second key is nextChargeAt) — that combination was falling
+// back to an in-memory sort of every matching subscription.
+subscriptionSchema.index({ status: 1, createdAt: -1 });
 subscriptionSchema.index({ firstPaymentIntentId: 1 }, { unique: true, sparse: true });
 
 const Subscription = mongoose.model('Subscription', subscriptionSchema);

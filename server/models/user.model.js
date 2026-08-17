@@ -240,6 +240,26 @@ userSchema.methods.createPasswordResetToken = function () {
     return rawToken;
 };
 
+// --- Indexes ----------------------------------------------------------------
+// The four unique constraints (email, phone, googleId, stripeCustomerId) are
+// declared inline on their fields above; everything here backs a query that
+// would otherwise scan the collection.
+//
+// Admin user list — the whole collection sorted newest-first. Without this the
+// sort is done in memory over every user document and aborts past 32 MB.
+userSchema.index({ createdAt: -1 });
+// Admin booking alerts resolve "every account with role: admin" on every paid
+// booking and every recurring cycle (services/bookingAlert.service.js).
+userSchema.index({ role: 1 });
+// Stripe's customer.tax_id.* webhooks find the user by the stored tax-id id.
+// Sparse: only business accounts that submitted a VAT number ever have one.
+userSchema.index({ stripeTaxIdId: 1 }, { sparse: true });
+// Email verification and password reset look a user up by the SHA-256 hash of
+// the token in the emailed link. Sparse: both fields are cleared once used, so
+// the overwhelming majority of documents have neither.
+userSchema.index({ verificationToken: 1 }, { sparse: true });
+userSchema.index({ passwordResetToken: 1 }, { sparse: true });
+
 const User = mongoose.model('User', userSchema);
 
 module.exports = User;
