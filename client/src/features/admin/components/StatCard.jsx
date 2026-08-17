@@ -33,8 +33,20 @@ export function StatCard({ icon: Icon, label, value, hint, accent = "brand" }) {
                 euro total is ~100px, which is the whole text column once the
                 icon chip has taken its share on a 200px screen. One step down
                 below `xs`, and the chip goes with it — it is decoration, and
-                the label already says which metric this is. */}
-            <p className="mt-2 overflow-x-auto whitespace-nowrap text-heading-md font-bold leading-tight text-ink-900 tabular-nums xs:text-heading-lg [scrollbar-width:thin]">
+                the label already says which metric this is.
+
+                The overflow needs all three parts. `overflow-x-auto` is what
+                lets a long total scroll instead of spilling out of the tile,
+                but it also computes the y axis to `auto` (CSS resolves
+                `visible` to `auto` on the opposite axis), and the display font
+                is taller than the line box it is set in — ascent + descent run
+                ~1.26em against `heading-lg`'s 1.12 — so every card scrolled
+                vertically over a sliver of leading, whatever its value.
+                `overflow-y-hidden` takes that axis back; it clips empty font
+                metrics, never ink, since digits stay inside cap-height.
+                `scrollbar-none` then drops the horizontal bar, which is pure
+                chrome across a figure — the value is still swipe-reachable. */}
+            <p className="scrollbar-none mt-2 overflow-x-auto overflow-y-hidden whitespace-nowrap text-heading-md font-bold leading-tight text-ink-900 tabular-nums xs:text-heading-lg">
               {value}
             </p>
             {hint && <p className="mt-1 text-body-sm text-ink-500">{hint}</p>}
