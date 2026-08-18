@@ -3,8 +3,8 @@
 // Read + delivery surface for invoices. Invoices are *issued* by the payment
 // pipeline, never by a request body, so there is no create/update endpoint here:
 // the only writes an admin can make are "issue the one this paid booking is
-// missing" and "send it again". Nothing on the document itself is editable —
-// that is the point of a snapshot.
+// missing", "send it again", and "withdraw one that should never have existed".
+// Nothing on the document itself is editable — that is the point of a snapshot.
 //
 //   GET    /invoice/my                    a customer's own invoices
 //   GET    /invoice                       admin list (paginated)
@@ -12,6 +12,7 @@
 //   GET    /invoice/:id/pdf               download the PDF (owner or admin)
 //   POST   /invoice/:id/send              re-email it (admin)
 //   POST   /invoice/booking/:bookingId    issue for a paid booking (admin)
+//   DELETE /invoice/:id                   withdraw one (admin)
 
 const mongoose = require('mongoose');
 
@@ -188,11 +189,58 @@ const issueInvoice = catchAsync(async (req, res, next) => {
   });
 });
 
+// DELETE /api/v1/invoice/:id — withdraw an invoice (admin).
+//
+// This is the deliberate exception to "an invoice is immutable". It exists for
+// the document that should never have been issued in the first place — a
+// duplicate, a test payment, a booking entered against the wrong customer —
+// where correcting the record means removing it, not restating it.
+//
+// Two consequences an admin has to know about, so they are documented here
+// rather than discovered later:
+//
+//  • The number is NOT recycled. Sequences come from an atomic $inc on the year
+//    counter (models/counter.model.js) and it never rewinds, so deleting
+//    CC-2026-000042 leaves a permanent hole in the series. That is the honest
+//    outcome — reusing the number would put two different documents under one
+//    reference — but a gap-free series is a bookkeeping requirement in several
+//    jurisdictions, so this is a last resort, not routine tidying.
+//  • It frees the unique `booking` index, which is exactly what makes the
+//    document re-issuable: POST /invoice/booking/:bookingId will mint a fresh,
+//    correct invoice afterwards. That is the intended repair path.
+//
+// The customer's copy, if it was already emailed, is beyond our reach either
+// way — nothing here recalls a sent message.
+const deleteInvoice = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return next(new AppError('Invoice not found.', 404));
+  }
+
+  const invoice = await Invoice.findByIdAndDelete(id);
+  if (!invoice) {
+    return next(new AppError('Invoice not found.', 404));
+  }
+
+  // Leave a trace in the log: this is the one operation on this model that
+  // destroys a financial record, and the document itself is gone afterwards.
+  console.warn(
+    `Invoice ${invoice.number} deleted by admin ${req.user._id} (booking ${invoice.booking}).`
+  );
+
+  res.status(200).json({
+    status: 'success',
+    message: 'Invoice deleted successfully!'
+  });
+});
+
 module.exports = {
   getMyInvoices,
   getInvoices,
   getInvoiceById,
   downloadInvoicePdf,
   sendInvoice,
-  issueInvoice
+  issueInvoice,
+  deleteInvoice
 };

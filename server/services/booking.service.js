@@ -665,6 +665,179 @@ const renderRefundEmail = ({ customerName, serviceName, bookingDate, amount, fee
   return { subject, html, text };
 };
 
+/**
+ * Copy for each status a booking can be moved into, keyed by the stored enum
+ * value (models/booking.model.js). One entry per status so the set can't drift:
+ * a status with no entry here simply doesn't notify, rather than emailing an
+ * empty shell.
+ *
+ * Each entry is written from the CUSTOMER's side of the change — "we're
+ * reviewing it", not "an admin set status=pending" — because that is who reads
+ * it. `headline` is the coloured strip under the logo, `lead` the sentence that
+ * carries the news, and `note` the one thing they might need to do next.
+ */
+const STATUS_EMAIL_COPY = {
+  pending: {
+    label: "Awaiting confirmation",
+    subject: "CasaClean — Your booking is being reviewed",
+    lead: "is now waiting on our confirmation. We're checking crew availability for that slot and will write again as soon as it's settled.",
+    note: "No action is needed from you in the meantime."
+  },
+  confirmed: {
+    label: "Booking confirmed",
+    subject: "CasaClean — Your booking is confirmed",
+    lead: "is confirmed. Our team is scheduled and will arrive at the address below on the day.",
+    note: "Please make sure someone can let the cleaners in, or leave access instructions by replying to this email."
+  },
+  completed: {
+    label: "Cleaning completed",
+    subject: "CasaClean — Your cleaning is complete",
+    lead: "is now marked as completed. Thank you for having us — we hope the place looks exactly as you wanted.",
+    note: "You can rate this visit from your bookings page; it takes a minute and it's how we keep our crews sharp."
+  },
+  cancelled: {
+    label: "Booking cancelled",
+    subject: "CasaClean — Your booking was cancelled",
+    lead: "has been cancelled and the slot released. No cleaners will come to the address.",
+    note: "If this is unexpected, just reply to this email and we'll sort it out."
+  }
+};
+
+/**
+ * Build the "your booking's status changed" email.
+ *
+ * Sent when the team moves a booking to a new state from the admin panel —
+ * confirming a pending request, marking a visit completed, cancelling a slot.
+ * It is deliberately NOT sent for the two moments that already have a dedicated
+ * message: the confirmation-and-receipt on first payment, and the refund email
+ * when a cancellation returns money. A customer should get one email per thing
+ * that happened, not two describing it differently.
+ *
+ * Returns null for a status with no copy above, which is the caller's signal to
+ * send nothing at all.
+ *
+ * @param {Object}  opts
+ * @param {string}  opts.status         the NEW status (booking enum value)
+ * @param {string}  [opts.previousStatus] where it came from, shown as context
+ * @returns {{ subject: string, html: string, text: string }|null}
+ */
+const renderBookingStatusEmail = ({
+  customerName, serviceName, bookingDate, bookingTime,
+  durationMinutes, hours, cleaners, streetName, houseNumber,
+  status, previousStatus
+}) => {
+  const copy = STATUS_EMAIL_COPY[status];
+  if (!copy) return null;
+
+  const name = escapeHtml(customerName);
+  const service = serviceName || "Cleaning service";
+  const minutes = durationInMinutes({ durationMinutes, hours });
+  const address =
+    [streetName, houseNumber ? `No. ${houseNumber}` : ""].filter(Boolean).join(", ");
+
+  const rows = [
+    ["Service", service],
+    ["Date", bookingDate],
+    ["Time", bookingTime],
+    // A cancelled booking has no crew to describe any more, so the operational
+    // rows are dropped rather than stated in the past tense.
+    ...(status === "cancelled"
+      ? []
+      : [
+          ["Duration", `${formatDuration(minutes)} · ${cleaners} cleaner(s)`],
+          ["Address", address || "—"]
+        ]),
+    ["Status", copy.label],
+    ...(previousStatus && previousStatus !== status
+      ? [["Previously", STATUS_EMAIL_COPY[previousStatus]?.label || previousStatus]]
+      : [])
+  ];
+
+  const detailRows = rows
+    .map(
+      ([label, value]) => `
+        <tr>
+          <td style="padding:12px 0;color:#64748b;font-size:14px;">${escapeHtml(label)}</td>
+          <td style="padding:12px 0;color:#0f172a;font-size:14px;font-weight:600;text-align:right;">${escapeHtml(value)}</td>
+        </tr>`
+    )
+    .join("");
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <body style="margin:0;padding:0;background-color:#f1f5f9;font-family:Arial,Helvetica,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f1f5f9;padding:32px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px;background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(15,23,42,0.08);">
+            <tr>
+              <td style="background-color:#0f766e;padding:32px 40px;text-align:center;">
+                <div style="color:#ffffff;font-size:22px;font-weight:700;letter-spacing:0.5px;">CasaClean</div>
+                <div style="color:#99f6e4;font-size:14px;margin-top:4px;">${escapeHtml(copy.label)}</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:36px 40px 8px;">
+                <h1 style="margin:0 0 10px;color:#0f172a;font-size:22px;font-weight:700;">Hello ${name},</h1>
+                <p style="margin:0;color:#64748b;font-size:15px;line-height:1.6;">
+                  Your booking for <strong style="color:#0f172a;">${escapeHtml(service)}</strong>
+                  on <strong style="color:#0f172a;">${escapeHtml(bookingDate)}</strong>
+                  ${escapeHtml(copy.lead)}
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:24px 40px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;">
+                  ${detailRows}
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 40px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0fdfa;border-radius:12px;">
+                  <tr>
+                    <td style="padding:16px 20px;color:#0f766e;font-size:14px;line-height:1.6;">${escapeHtml(copy.note)}</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:24px 40px 36px;text-align:center;">
+                <p style="margin:0;color:#94a3b8;font-size:13px;line-height:1.6;">
+                  Need to make a change? Just reply to this email and our team will help.<br />
+                  &copy; ${new Date().getFullYear()} CasaClean. All rights reserved.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+
+  const text =
+    `Hello ${customerName},\n\n` +
+    `Your CasaClean booking for ${service} on ${bookingDate} ${copy.lead}\n\n` +
+    `Service:  ${service}\n` +
+    `Date:     ${bookingDate}\n` +
+    `Time:     ${bookingTime}\n` +
+    (status === "cancelled"
+      ? ""
+      : `Duration: ${formatDuration(minutes)} (${cleaners} cleaner(s))\n` +
+        `Address:  ${address || "—"}\n`) +
+    `Status:   ${copy.label}\n\n` +
+    `${copy.note}\n\n` +
+    `— CasaClean`;
+
+  return { subject: copy.subject, html, text };
+};
+
 module.exports = {
   computeBookingTotal,
   resolveServiceAndCity,
@@ -675,5 +848,6 @@ module.exports = {
   buildValidatedBookingDraft,
   renderBookingConfirmationEmail,
   renderRefundEmail,
+  renderBookingStatusEmail,
   formatEuro
 };

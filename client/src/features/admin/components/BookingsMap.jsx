@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { MarkerClusterer } from "@googlemaps/markerclusterer";
 import { MapPin, AlertTriangle } from "lucide-react";
 import { Spinner } from "@/components/ui/Spinner";
@@ -126,11 +126,18 @@ function MapNotice({ icon: Icon, title, body }) {
  */
 export function BookingsMap({ bookings, labels, formatCurrency }) {
   const status = useGoogleMaps();
-  const mapRef = useRef(null);
+  // A callback ref held in STATE, not a ref object: the map can only be built
+  // once the container node exists, and an effect that early-returns on a null
+  // ref has nothing to re-run it later. Attaching the node is the trigger.
+  const [container, setContainer] = useState(null);
   const mapObj = useRef(null);
   const markers = useRef([]);
   const clusterer = useRef(null);
   const infoWindow = useRef(null);
+  // The last framing the markers asked for, so it can be re-applied if the
+  // container only reaches its real size after the map was built.
+  const framing = useRef(null);
+  const [mapReady, setMapReady] = useState(false);
   const [points, setPoints] = useState([]);
   const [locating, setLocating] = useState(false);
 
@@ -216,23 +223,76 @@ export function BookingsMap({ bookings, labels, formatCurrency }) {
     };
   }, [status, bookings]);
 
-  // Draw the map + markers whenever the resolved points change.
-  useEffect(() => {
-    if (status !== "ready" || !mapRef.current) return;
-    const g = window.google.maps;
-
-    // Create the map + a single reused InfoWindow once.
-    if (!mapObj.current) {
-      mapObj.current = new g.Map(mapRef.current, {
-        center: ITALY_CENTER,
-        zoom: 5.5,
-        styles: MAP_STYLES,
-        disableDefaultUI: true,
-        zoomControl: true,
-        gestureHandling: "cooperative",
-      });
-      infoWindow.current = new g.InfoWindow();
+  // Frame the current markers. Split out of the drawing effect because a
+  // container that gains its size late has to re-run this and nothing else.
+  const applyFraming = useCallback(() => {
+    const map = mapObj.current;
+    const view = framing.current;
+    if (!map || !view) return;
+    if (view.bounds) map.fitBounds(view.bounds, 64);
+    else {
+      map.setCenter(view.center);
+      map.setZoom(14);
     }
+  }, []);
+
+  /*
+   * Build the map — once the API is ready AND the container has a real size.
+   *
+   * Google Maps measures its container at construction and never re-measures on
+   * its own, so a map built while the node is still 0×0 paints an empty box for
+   * good. That is what made this page load blank on the FIRST visit and fine on
+   * every one after: it is a lazily-imported route sharing the app's single
+   * <Suspense> boundary, so on a cold visit the shell around it is committed
+   * hidden while the chunk is in flight; on a return visit the chunk is cached
+   * and the container is laid out before the map is ever created.
+   *
+   * A ResizeObserver closes that hole from both ends — it holds construction
+   * back until the container is measurable, and re-measures + re-frames a map
+   * that only reached its size afterwards.
+   */
+  useEffect(() => {
+    if (status !== "ready" || !container) return;
+    const g = window.google.maps;
+    let sized = false;
+
+    const build = () => {
+      if (!container.offsetWidth || !container.offsetHeight) return;
+      sized = true;
+
+      if (!mapObj.current) {
+        // The map + a single reused InfoWindow, created exactly once.
+        mapObj.current = new g.Map(container, {
+          center: ITALY_CENTER,
+          zoom: 5.5,
+          styles: MAP_STYLES,
+          disableDefaultUI: true,
+          zoomControl: true,
+          gestureHandling: "cooperative",
+        });
+        infoWindow.current = new g.InfoWindow();
+        setMapReady(true);
+        return;
+      }
+
+      g.event.trigger(mapObj.current, "resize");
+      applyFraming();
+    };
+
+    build();
+
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => {
+      if (!sized) build();
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [status, container, applyFraming]);
+
+  // Draw the markers whenever the resolved points change.
+  useEffect(() => {
+    if (!mapReady) return;
+    const g = window.google.maps;
 
     /*
      * Clear previous markers, then plot the current set. Markers are handed to
@@ -281,13 +341,14 @@ export function BookingsMap({ bookings, labels, formatCurrency }) {
     clusterer.current.addMarkers(markers.current);
 
     // Frame all markers (guard against a single-point zoom blow-out).
-    if (points.length > 1) {
-      mapObj.current.fitBounds(bounds, 64);
-    } else if (points.length === 1) {
-      mapObj.current.setCenter({ lat: points[0].lat, lng: points[0].lng });
-      mapObj.current.setZoom(14);
-    }
-  }, [status, points, labels, formatCurrency]);
+    framing.current =
+      points.length > 1
+        ? { bounds }
+        : points.length === 1
+          ? { center: { lat: points[0].lat, lng: points[0].lng } }
+          : null;
+    applyFraming();
+  }, [mapReady, points, labels, formatCurrency, applyFraming]);
 
   if (status === "no-key") {
     return <MapNotice icon={MapPin} title={labels.noKeyTitle} body={labels.noKeyBody} />;
@@ -299,18 +360,20 @@ export function BookingsMap({ bookings, labels, formatCurrency }) {
 
   return (
     <div className="relative h-[360px] overflow-hidden rounded-2xl border border-ink-100 sm:h-[460px]">
-      {status === "loading" && (
+      {/* Covers the script load AND the gap before the container is measurable
+          enough to build a map on — both read to the admin as "still loading". */}
+      {!mapReady && (
         <div className="absolute inset-0 z-10 grid place-items-center bg-sand-50">
           <Spinner size="lg" />
         </div>
       )}
-      {status === "ready" && locating && (
+      {mapReady && locating && (
         <div className="absolute left-3 top-3 z-10 flex items-center gap-2 rounded-full bg-white/95 px-3 py-1.5 shadow-soft">
           <Spinner size="sm" />
           <span className="text-caption font-medium text-ink-600">{labels.locating}</span>
         </div>
       )}
-      <div ref={mapRef} className="size-full" />
+      <div ref={setContainer} className="size-full" />
     </div>
   );
 }

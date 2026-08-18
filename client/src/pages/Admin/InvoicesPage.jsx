@@ -7,12 +7,13 @@ import {
   FileText,
   Mail,
   MailCheck,
+  Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
-import { DataTable, PageHeader } from "@/features/admin";
+import { ConfirmDialog, DataTable, PageHeader } from "@/features/admin";
 import { invoiceApi } from "@/features/admin/api/adminApi";
 import {
   formatLocalDateString,
@@ -30,8 +31,14 @@ import { formatDuration } from "@/features/booking";
  * and resend one that bounced.
  *
  * Nothing here edits an invoice — it is an immutable snapshot of a payment, and
- * the API exposes no update route. The only writes are "send it again" and
- * "issue the one this paid booking never got".
+ * the API exposes no update route. The only writes are "send it again", "issue
+ * the one this paid booking never got", and deleting one outright.
+ *
+ * Delete is the destructive exception and is presented as one: it is for the
+ * document that should never have existed (a duplicate, a test charge, the
+ * wrong customer), NOT for a refund — refunding stamps the invoice `refunded`
+ * and keeps it, because the charge really happened. The confirmation says so,
+ * since the number it burns is never reissued.
  */
 
 const DATE_OPTIONS = { day: "numeric", month: "short", year: "numeric" };
@@ -136,6 +143,7 @@ export default function InvoicesPage() {
 
   const [statusFilter, setStatusFilter] = useState("");
   const [viewing, setViewing] = useState(null);
+  const [deleting, setDeleting] = useState(null);
 
   const invoicesQuery = useQuery({
     queryKey: ["admin-invoices"],
@@ -156,6 +164,18 @@ export default function InvoicesPage() {
     mutationFn: (invoice) => invoiceApi.resend(invoice._id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-invoices"] }),
     onError: (err) => window.alert(err?.message || t("admin.invoices.sendFailed")),
+  });
+
+  // The deleted invoice may well be the one open in the detail modal, so close
+  // that too — leaving a dialog describing a document that no longer exists is
+  // worse than no dialog.
+  const deleteMutation = useMutation({
+    mutationFn: (invoice) => invoiceApi.remove(invoice._id),
+    onSuccess: (_data, invoice) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-invoices"] });
+      setViewing((current) => (current?._id === invoice._id ? null : current));
+    },
+    onError: (err) => window.alert(err?.message || t("admin.invoices.deleteFailed")),
   });
 
   const statusOptions = useMemo(
@@ -329,6 +349,17 @@ export default function InvoicesPage() {
               >
                 <Mail className="size-4.5" />
               </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={t("admin.action.delete")}
+                title={t("admin.invoices.delete")}
+                className="text-red-600 hover:bg-red-500/10 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-500/15 dark:hover:text-red-300"
+                loading={isBusy(deleteMutation, invoice._id)}
+                onClick={() => setDeleting(invoice)}
+              >
+                <Trash2 className="size-4.5" />
+              </Button>
             </>
           )}
         />
@@ -343,6 +374,17 @@ export default function InvoicesPage() {
         footer={
           viewing ? (
             <>
+              {/* Furthest from the primary action, and the only red control in
+                  the dialog — it destroys the record rather than reversing it. */}
+              <Button
+                variant="ghost"
+                leftIcon={Trash2}
+                className="text-red-600 hover:bg-red-500/10 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-500/15 dark:hover:text-red-300"
+                loading={isBusy(deleteMutation, viewing._id)}
+                onClick={() => setDeleting(viewing)}
+              >
+                {t("admin.action.delete")}
+              </Button>
               <Button
                 variant="outline"
                 leftIcon={Mail}
@@ -437,6 +479,21 @@ export default function InvoicesPage() {
           </div>
         )}
       </Modal>
+
+      <ConfirmDialog
+        open={Boolean(deleting)}
+        onClose={() => setDeleting(null)}
+        onConfirm={() => {
+          deleteMutation.mutate(deleting);
+          setDeleting(null);
+        }}
+        title={t("admin.invoices.deleteTitle")}
+        description={t("admin.invoices.deleteConfirm", {
+          number: deleting?.number,
+        })}
+        confirmLabel={t("admin.action.delete")}
+        danger
+      />
     </div>
   );
 }

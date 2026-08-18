@@ -15,8 +15,9 @@ profile afterwards must **never** change an invoice that has already been sent.
 
 There is **no update endpoint**, on purpose. The only writes are:
 
-- issue the invoice a paid booking is missing, and
-- send it by email again.
+- issue the invoice a paid booking is missing,
+- send it by email again, and
+- delete one that should never have been issued (see §12).
 
 ## The endpoints
 
@@ -28,6 +29,7 @@ There is **no update endpoint**, on purpose. The only writes are:
 | `GET` | `/invoice/:id/pdf` | owner or admin | downloads the PDF |
 | `POST` | `/invoice/:id/send` | admin | emails it again |
 | `POST` | `/invoice/booking/:bookingId` | admin | issues the invoice for a paid booking |
+| `DELETE` | `/invoice/:id` | admin | deletes it (see §12) |
 
 ## 1. Pay for a booking and check the email
 
@@ -205,3 +207,29 @@ PDF. The name must render as real letters.
 If it prints as `?????`, no Unicode font was found on the machine — set
 `INVOICE_FONT_PATH` (and `INVOICE_FONT_BOLD_PATH`) to a TrueType font that covers
 those alphabets and restart.
+
+## 12. Deleting an invoice
+
+`DELETE /invoice/:id`, admin only. This is for a document that should never have
+existed — a duplicate, a test payment, a booking billed to the wrong customer.
+
+It is **not** how you reverse a payment. Refunding (§7) keeps the invoice and
+stamps it `refunded`, because the charge really happened. Deleting removes the
+record of it.
+
+Check:
+
+1. As a normal customer, `DELETE /invoice/:id` on your **own** invoice → `403`.
+   Only an admin may delete; owning it is enough to read and download, not to
+   destroy it.
+2. Unauthenticated → `401`. An unknown or malformed id → `404`.
+3. As an admin, delete one. Expect `200` and:
+   - the invoice is gone from `GET /invoice`,
+   - the **booking** it billed is untouched — still there, still `paid`.
+4. Now `POST /invoice/booking/:bookingId` for that same booking. It issues a
+   **new** invoice with the **next** number in the series. The deleted number is
+   never handed out again, so the series now has a permanent gap. That is the
+   intended repair path: delete the wrong document, issue the right one.
+
+A gap-free series is a bookkeeping requirement in several jurisdictions, so treat
+this as a last resort rather than routine tidying.

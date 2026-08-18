@@ -237,6 +237,33 @@ curl -X PATCH http://localhost:3000/api/v1/booking/PASTE_BOOKING_ID ^
 > Sending `user`, `customerEmail`, `paymentIntentId`, etc. should have **no effect** —
 > this protects ownership and payment data from being changed by accident.
 
+### The customer is emailed when the status changes
+
+Moving a booking to a new state sends the customer a message saying so — it is
+the only thing that tells them. Watch the mail catcher (or the server log) while
+you run these:
+
+| What you do | Email |
+| --- | --- |
+| `pending` → `confirmed` | "Your booking is confirmed", with the slot and address |
+| `confirmed` → `completed` | "Your cleaning is complete" |
+| anything → `cancelled` on an **unpaid / manual** booking | "Your booking was cancelled" |
+| anything → `cancelled` on a **paid card** booking | the refund email only — **not both** |
+| re-send the same `status` with other edits | **nothing** — that isn't a transition |
+| edit that omits `status` entirely | **nothing** |
+
+Two rules worth checking deliberately, because both are easy to regress:
+
+- **One email per event.** A cancellation that refunds money already sends the
+  refund email, which says the booking is off *and* accounts for the money. A
+  status email on top of it reads to the customer like two cancellations.
+- **A no-op save is silent.** The admin form seeds itself from the booking and
+  re-sends every field, so `status` is present on every edit. Only a value that
+  actually *differs* from the stored one notifies.
+
+The send is best-effort and happens after the write: if mail is down, the edit
+still succeeds with a `200` and the failure is logged.
+
 ---
 
 ## 6. PATCH `/:id/cancel` — Cancel your own booking (any logged-in user)

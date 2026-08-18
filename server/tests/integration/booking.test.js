@@ -1026,6 +1026,155 @@ describe("PATCH /api/v1/booking/:id/cancel (customer self-cancel)", () => {
     });
 });
 
+// Moving a booking between states is something the CUSTOMER needs to hear about
+// — the admin panel is the only place it happens, and nothing else tells them.
+// What these tests pin is the restraint around it: one email per real
+// transition, none for a no-op save, and never a second one alongside a refund.
+describe("booking status-change emails", () => {
+    const setup = async (overrides = {}) => {
+        const [admin, user, service, city] = await Promise.all([
+            createAdmin(),
+            createUser(),
+            createService(),
+            createCity()
+        ]);
+        const booking = await createPaidBooking(user, service, city, overrides);
+        return { admin, user, service, city, booking };
+    };
+
+    /** The mail addressed to the booking's customer, if any went out. */
+    const mailTo = (email) =>
+        sendEmailMock.mock.calls.map(([mail]) => mail).find((mail) => mail.email === email);
+
+    test("emails the customer when a pending booking is confirmed", async () => {
+        const { admin, booking } = await setup({ status: "pending" });
+
+        const res = await api.patch(`/api/v1/booking/${booking._id}`)
+            .set("Cookie", cookieFor(admin))
+            .send({ status: "confirmed" });
+
+        expect(res.status).toBe(200);
+        expect(sendEmailMock).toHaveBeenCalledTimes(1);
+
+        const mail = mailTo(booking.customerEmail);
+        expect(mail.subject).toContain("confirmed");
+        // The message carries the slot, not just the word "confirmed" — a status
+        // email a customer has to open the site to act on isn't worth sending.
+        expect(mail.text).toContain(booking.bookingDate);
+        expect(mail.text).toContain(booking.bookingTime);
+        expect(mail.html).toContain("Booking confirmed");
+    });
+
+    test("emails the customer when a booking is marked completed", async () => {
+        const { admin, booking } = await setup({
+            status: "confirmed",
+            bookingDate: dateStr(-2)
+        });
+
+        const res = await api.patch(`/api/v1/booking/${booking._id}`)
+            .set("Cookie", cookieFor(admin))
+            .send({ status: "completed" });
+
+        expect(res.status).toBe(200);
+        const mail = mailTo(booking.customerEmail);
+        expect(mail.subject).toContain("complete");
+        // Where it came from is stated, so a customer can spot a wrong move.
+        expect(mail.text).toContain("Cleaning completed");
+    });
+
+    test("sends nothing when the admin re-saves the same status", async () => {
+        const { admin, booking } = await setup({ status: "confirmed" });
+
+        // The panel seeds its form from the booking and re-sends every field, so
+        // an unrelated edit always carries the status it already had.
+        const res = await api.patch(`/api/v1/booking/${booking._id}`)
+            .set("Cookie", cookieFor(admin))
+            .send({ status: "confirmed", notes: "Gate code 1234" });
+
+        expect(res.status).toBe(200);
+        expect(res.body.data.booking.notes).toBe("Gate code 1234");
+        expect(sendEmailMock).not.toHaveBeenCalled();
+    });
+
+    test("sends nothing when the edit doesn't touch the status at all", async () => {
+        const { admin, booking } = await setup({ status: "confirmed" });
+
+        const res = await api.patch(`/api/v1/booking/${booking._id}`)
+            .set("Cookie", cookieFor(admin))
+            .send({ doorbellName: "Bianchi" });
+
+        expect(res.status).toBe(200);
+        expect(sendEmailMock).not.toHaveBeenCalled();
+    });
+
+    test("a refunded cancellation sends the refund email only, not both", async () => {
+        const { admin, booking } = await setup({ status: "confirmed" });
+        stripeMock.refunds.create.mockResolvedValue({ id: "re_status_1" });
+
+        const res = await api.patch(`/api/v1/booking/${booking._id}`)
+            .set("Cookie", cookieFor(admin))
+            .send({ status: "cancelled" });
+
+        expect(res.status).toBe(200);
+        // One cancellation, one email — and it's the one that accounts for the
+        // money, which is the more informative of the two.
+        expect(sendEmailMock).toHaveBeenCalledTimes(1);
+        expect(mailTo(booking.customerEmail).subject).toContain("refunded");
+    });
+
+    test("cancelling an unpaid/offline booking still tells the customer", async () => {
+        // No refund is due here, so the refund email never fires — without the
+        // status email this cancellation would reach the customer silently.
+        const { admin, booking } = await setup({
+            status: "confirmed",
+            paymentMethod: "manual",
+            paymentStatus: "manual",
+            paymentIntentId: undefined
+        });
+
+        const res = await api.patch(`/api/v1/booking/${booking._id}`)
+            .set("Cookie", cookieFor(admin))
+            .send({ status: "cancelled" });
+
+        expect(res.status).toBe(200);
+        expect(stripeMock.refunds.create).not.toHaveBeenCalled();
+        expect(sendEmailMock).toHaveBeenCalledTimes(1);
+        expect(mailTo(booking.customerEmail).subject).toContain("cancelled");
+    });
+
+    test("a failed send never fails the edit the admin just made", async () => {
+        const { admin, booking } = await setup({ status: "pending" });
+        sendEmailMock.mockRejectedValueOnce(new Error("SMTP is down"));
+
+        const res = await api.patch(`/api/v1/booking/${booking._id}`)
+            .set("Cookie", cookieFor(admin))
+            .send({ status: "confirmed" });
+
+        expect(res.status).toBe(200);
+        const fresh = await Booking.findById(booking._id);
+        expect(fresh.status).toBe("confirmed");
+    });
+
+    test("a double-clicked cancel emails the customer once", async () => {
+        const { admin, booking } = await setup({
+            status: "confirmed",
+            paymentMethod: "manual",
+            paymentStatus: "manual",
+            paymentIntentId: undefined
+        });
+        const cookie = cookieFor(admin);
+
+        // Only one request wins the atomic claim; the loser must not narrate a
+        // transition it didn't perform.
+        await Promise.all([
+            api.patch(`/api/v1/booking/${booking._id}`).set("Cookie", cookie).send({ status: "cancelled" }),
+            api.patch(`/api/v1/booking/${booking._id}`).set("Cookie", cookie).send({ status: "cancelled" })
+        ]);
+
+        expect(sendEmailMock).toHaveBeenCalledTimes(1);
+    });
+});
+
 describe("DELETE /api/v1/booking/:id", () => {
     test("is admin-only", async () => {
         const user = await createUser();

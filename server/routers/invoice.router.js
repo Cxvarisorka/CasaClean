@@ -6,7 +6,8 @@ const {
   getInvoiceById,
   downloadInvoicePdf,
   sendInvoice,
-  issueInvoice
+  issueInvoice,
+  deleteInvoice
 } = require('../controllers/invoice.controller');
 const { protect, restrictTo } = require('../middlewares/protect.middleware');
 const validate = require('../middlewares/validate.middleware');
@@ -46,5 +47,11 @@ invoiceRouter.post(
 // Owner-or-admin; the controller does the authorisation.
 invoiceRouter.get('/:id/pdf', paymentLimiter, protect, downloadInvoicePdf);
 invoiceRouter.get('/:id', protect, getInvoiceById);
+
+// Withdraw an invoice that should never have been issued. Admin-only, and
+// deliberately NOT owner-accessible: the controller's authorisation helper is
+// bypassed here precisely because a customer must never be able to delete the
+// record of their own charge.
+invoiceRouter.delete('/:id', protect, restrictTo('admin'), deleteInvoice);
 
 module.exports = invoiceRouter;

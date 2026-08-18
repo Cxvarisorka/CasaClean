@@ -1533,6 +1533,11 @@ export default {
       paidOffline: "Paid offline",
       downloadFailed: "The invoice PDF couldn't be downloaded. Please try again.",
       sendFailed: "The invoice couldn't be sent. Please try again.",
+      delete: "Delete invoice",
+      deleteTitle: "Delete invoice",
+      deleteConfirm:
+        "Delete invoice {number}? This removes the record permanently and the number is never reused, leaving a gap in the series. To reverse a payment, refund the booking instead — that keeps the invoice and marks it refunded.",
+      deleteFailed: "The invoice couldn't be deleted. Please try again.",
       detailTitle: "Invoice details",
       reverseCharge: "Reverse charge · customer VAT {vat}",
       col: {

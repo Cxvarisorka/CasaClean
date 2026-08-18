@@ -522,3 +522,95 @@ describe('invoice endpoints', () => {
     expect(stored).toBeTruthy();
   });
 });
+
+// Deleting an invoice is the one destructive operation on this model, so the
+// tests pin exactly what it may and may not touch: only an admin reaches it, the
+// booking it billed survives, and the number it burns is never handed out again.
+describe('invoice deletion', () => {
+  const setup = async () => {
+    const [user, admin, city, service] = await Promise.all([
+      createUser(),
+      createAdmin(),
+      createCity(),
+      createService()
+    ]);
+    const booking = await createPaidBooking(user, service, city);
+    const invoice = await issueInvoiceForBooking(booking._id);
+    return { user, admin, booking, invoice, service, city };
+  };
+
+  it('lets an admin delete an invoice without touching the booking it billed', async () => {
+    const { admin, booking, invoice } = await setup();
+
+    const res = await api
+      .delete(`/api/v1/invoice/${invoice._id}`)
+      .set('Cookie', cookieFor(admin));
+
+    expect(res.status).toBe(200);
+    expect(await Invoice.findById(invoice._id)).toBeNull();
+
+    // The money and the reservation are unaffected — this removes a document,
+    // not a payment.
+    const stored = await Booking.findById(booking._id).lean();
+    expect(stored).toBeTruthy();
+    expect(stored.paymentStatus).toBe('paid');
+    expect(stored.status).toBe('confirmed');
+  });
+
+  it('refuses a customer deleting the record of their own charge', async () => {
+    const { user, invoice } = await setup();
+
+    const res = await api
+      .delete(`/api/v1/invoice/${invoice._id}`)
+      .set('Cookie', cookieFor(user));
+
+    // Owner access covers reading and downloading; deleting is admin-only, so
+    // this is a 403 from restrictTo rather than the read path's 404.
+    expect(res.status).toBe(403);
+    expect(await Invoice.findById(invoice._id)).toBeTruthy();
+  });
+
+  it('refuses an unauthenticated delete', async () => {
+    const { invoice } = await setup();
+
+    const res = await api.delete(`/api/v1/invoice/${invoice._id}`);
+    expect(res.status).toBe(401);
+    expect(await Invoice.findById(invoice._id)).toBeTruthy();
+  });
+
+  it('404s on an unknown or malformed id rather than throwing a CastError', async () => {
+    const { admin } = await setup();
+
+    const missing = await api
+      .delete('/api/v1/invoice/64b7f2c1e4b0a1a2b3c4d5e6')
+      .set('Cookie', cookieFor(admin));
+    expect(missing.status).toBe(404);
+
+    const malformed = await api
+      .delete('/api/v1/invoice/not-an-object-id')
+      .set('Cookie', cookieFor(admin));
+    expect(malformed.status).toBe(404);
+  });
+
+  it('frees the booking to be re-invoiced, on a fresh number', async () => {
+    const { admin, booking, invoice } = await setup();
+    const year = String(new Date().getUTCFullYear());
+
+    await api.delete(`/api/v1/invoice/${invoice._id}`).set('Cookie', cookieFor(admin));
+
+    // The unique `booking` index no longer blocks issuing, which is the repair
+    // path this endpoint exists for.
+    const res = await api
+      .post(`/api/v1/invoice/booking/${booking._id}`)
+      .set('Cookie', cookieFor(admin))
+      .send({ send: false });
+
+    expect(res.status).toBe(201);
+    // The counter never rewinds: the deleted number is gone from the series for
+    // good rather than being reused by a different document.
+    expect(res.body.data.invoice.number).not.toBe(invoice.number);
+    expect(invoice.number).toBe(`CC-${year}-000001`);
+    expect(res.body.data.invoice.number).toBe(`CC-${year}-000002`);
+    expect(await Counter.findById(`invoice:${year}`).lean()).toMatchObject({ seq: 2 });
+  });
+});

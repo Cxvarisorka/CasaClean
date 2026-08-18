@@ -820,9 +820,11 @@ export const subscriptionApi = {
 /* ---------------------------------------------------------------- Invoices */
 
 // Invoices are issued by the payment pipeline, never composed in the panel, so
-// this module is read + delivery only: list them, download the PDF, resend the
-// email, and issue the one a paid booking is missing. There is deliberately no
-// update/remove — the document is an immutable snapshot server-side.
+// this module never composes one either: it lists them, downloads the PDF,
+// resends the email, and issues the one a paid booking is missing. There is
+// deliberately no `update` — the document is an immutable snapshot server-side.
+// `remove` is the one destructive exception, for an invoice that should never
+// have been issued at all (see the note on it below).
 const invoiceFromApi = (i) => ({
   _id: i._id,
   number: i.number,
@@ -930,6 +932,17 @@ export const invoiceApi = {
     });
     return invoiceFromApi(data.invoice);
   },
+  /**
+   * Withdraw an invoice that should never have been issued — a duplicate, a
+   * test payment, a booking billed to the wrong customer.
+   *
+   * Not an edit and not a reversal: reversing a charge stamps the invoice
+   * `refunded` and keeps the document. This removes it. The number is not
+   * recycled (the year counter never rewinds), so the series keeps a permanent
+   * gap; what it does free is the booking, which can then be re-invoiced
+   * correctly through `issueForBooking`.
+   */
+  remove: (id) => request({ method: "DELETE", url: `/invoice/${id}` }),
 };
 
 /* ----------------------------------------------------------------- Registry */

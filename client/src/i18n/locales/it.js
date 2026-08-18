@@ -1490,6 +1490,11 @@ export default {
       paidOffline: "Pagata offline",
       downloadFailed: "Non è stato possibile scaricare il PDF. Riprova.",
       sendFailed: "Non è stato possibile inviare la fattura. Riprova.",
+      delete: "Elimina fattura",
+      deleteTitle: "Elimina fattura",
+      deleteConfirm:
+        "Eliminare la fattura {number}? Il documento viene rimosso definitivamente e il numero non viene mai riutilizzato, lasciando un vuoto nella serie. Per annullare un pagamento, rimborsa invece la prenotazione: la fattura resta e viene contrassegnata come rimborsata.",
+      deleteFailed: "Non è stato possibile eliminare la fattura. Riprova.",
       detailTitle: "Dettagli fattura",
       reverseCharge: "Inversione contabile · P. IVA cliente {vat}",
       col: {

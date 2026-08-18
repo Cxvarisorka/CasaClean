@@ -23,6 +23,7 @@ const {
   computeBookingTotal,
   renderBookingConfirmationEmail,
   renderRefundEmail,
+  renderBookingStatusEmail,
   formatEuro
 } = require('../services/booking.service');
 
@@ -393,6 +394,7 @@ const editBooking = catchAsync(async (req, res, next) => {
 
   const srChanged = req.body.specialRequests !== undefined;
   const ctChanged = req.body.cleaningTools !== undefined;
+  const statusChanged = updates.status !== undefined;
   const durationChanged = updates.durationMinutes !== undefined;
   const cleanersChanged = updates.cleaners !== undefined;
   const timeChanged = updates.bookingTime !== undefined;
@@ -410,7 +412,9 @@ const editBooking = catchAsync(async (req, res, next) => {
       // originally priced under (see the reprice block below).
       // `hours` comes along beside `durationMinutes` so a booking written
       // before minute-level durations can still be re-priced and re-windowed.
-      .select('serviceId cityId durationMinutes hours cleaners bookingDate bookingTime specialRequests cleaningTools tax')
+      // `status` comes along so a status edit bundled with a reschedule can tell
+      // a real transition from the admin form re-sending the value it already had.
+      .select('serviceId cityId durationMinutes hours cleaners bookingDate bookingTime specialRequests cleaningTools tax status')
       .lean();
     if (!existing) {
       return next(new AppError("Booking not found!", 404));
@@ -421,6 +425,24 @@ const editBooking = catchAsync(async (req, res, next) => {
       String(existing.serviceId),
       String(existing.cityId)
     ));
+  }
+
+  // The status the booking is moving AWAY from. The panel re-sends every field
+  // on each save, so `status` being present in the body says nothing on its own —
+  // only a value that differs from this one is a transition worth telling the
+  // customer about. Read from `existing` when a price/window change already
+  // loaded it; otherwise one narrow projection, and only when status was sent.
+  let previousStatus = null;
+  if (statusChanged) {
+    if (existing) {
+      previousStatus = existing.status;
+    } else {
+      const current = await Booking.findById(id).select('status').lean();
+      if (!current) {
+        return next(new AppError("Booking not found!", 404));
+      }
+      previousStatus = current.status;
+    }
   }
 
   // Only an actual RESCHEDULE into the past is rejected. The admin form
@@ -531,6 +553,12 @@ const editBooking = catchAsync(async (req, res, next) => {
     updates.tax = repriced.tax;
   }
 
+  // Set once a refund email has gone out, so the status-change notification
+  // below stands down: a cancellation that returned money is one event, and the
+  // refund email already tells the customer the booking is off. Two emails about
+  // the same cancellation read as two cancellations.
+  let refundEmailSent = false;
+
   // An admin cancelling a booking must release the money too — a status flip to
   // 'cancelled' here can't be allowed to bypass the refund. Load the booking's
   // payment fields, refund a paid card booking, and merge the resulting payment
@@ -556,7 +584,16 @@ const editBooking = catchAsync(async (req, res, next) => {
       if (!exists) {
         return next(new AppError("Booking not found!", 404));
       }
+      // Losing the claim means somebody else performed this transition. Their
+      // request is the one that notifies; drop ours so a double-click can't send
+      // the customer two cancellation emails.
+      previousStatus = 'cancelled';
     } else {
+      // The claim read the document at the instant it changed, so this is the
+      // authoritative "before" — more trustworthy than the projection above,
+      // which was taken earlier in the request.
+      previousStatus = claimed.status;
+
       let refundUpdate = null;
       try {
         refundUpdate = await refundBookingPayment(claimed);
@@ -583,6 +620,7 @@ const editBooking = catchAsync(async (req, res, next) => {
             amount: claimed.totalAmount
           });
           await sendEmail({ email: claimed.customerEmail, subject, html, text });
+          refundEmailSent = true;
         } catch (emailError) {
           console.error('Refund email send error:', emailError.message);
         }
@@ -602,6 +640,42 @@ const editBooking = catchAsync(async (req, res, next) => {
 
   if (!booking) {
     return next(new AppError("Booking not found!", 404));
+  }
+
+  // Tell the customer their booking moved. Only on a REAL transition — the panel
+  // re-sends every field on save, so an admin correcting a phone number while
+  // the status stays 'confirmed' must not read as a fresh confirmation. Skipped
+  // when the refund email above already covered this cancellation.
+  //
+  // Best-effort, and last: the edit is persisted by this point, so a dead SMTP
+  // host costs the notification, never the change the admin just made.
+  if (statusChanged && booking.status !== previousStatus && !refundEmailSent) {
+    try {
+      const rendered = renderBookingStatusEmail({
+        customerName: booking.customerName,
+        serviceName: booking.serviceId?.name,
+        bookingDate: booking.bookingDate,
+        bookingTime: booking.bookingTime,
+        durationMinutes: durationInMinutes(booking),
+        cleaners: booking.cleaners,
+        streetName: booking.streetName,
+        houseNumber: booking.houseNumber,
+        status: booking.status,
+        previousStatus
+      });
+      // null for a status the template has no copy for — send nothing rather
+      // than an empty shell.
+      if (rendered) {
+        await sendEmail({
+          email: booking.customerEmail,
+          subject: rendered.subject,
+          html: rendered.html,
+          text: rendered.text
+        });
+      }
+    } catch (emailError) {
+      console.error('Booking status email send error:', emailError.message);
+    }
   }
 
   res.status(200).json({
