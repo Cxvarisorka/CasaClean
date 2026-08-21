@@ -74,7 +74,10 @@ export function ScheduleStep() {
   );
 
   // [] when the chosen service is one-off only; otherwise its allowed cadences.
+  // Non-empty also means the service is recurring-ONLY: a service that offers a
+  // plan is sold as a plan, so there is no one-time option to fall back to.
   const cadences = useMemo(() => recurrenceChoices(service), [service]);
+  const recurringOnly = cadences.length > 0;
 
   const durationMinutes = combineDuration(durationHours, durationMins);
   const durationLabel = formatDuration(t, durationMinutes);
@@ -119,17 +122,25 @@ export function ScheduleStep() {
     return false;
   });
 
-  // A cadence stops being valid when the customer goes back and switches to a
-  // service that doesn't repeat, or that pins a different set of cadences. Fall
-  // back to one-time so a stale value can't reach checkout and be rejected.
+  // A cadence stops being valid when the customer goes back and switches
+  // service — to one that doesn't repeat, or that pins a different set. Snap to
+  // something the chosen service actually sells so a stale value can't reach
+  // checkout and be rejected: one-time for a one-off service, and the shortest
+  // offered cadence for a recurring one, which has no one-time option at all.
   useEffect(() => {
     const chosen = Number(intervalDays) || 0;
-    if (chosen > 0 && !cadences.includes(chosen)) {
-      setValue("intervalDays", 0, { shouldValidate: true });
+    if (!recurringOnly) {
+      if (chosen !== 0) setValue("intervalDays", 0, { shouldValidate: true });
+      return;
     }
-  }, [cadences, intervalDays, setValue]);
+    if (!cadences.includes(chosen)) {
+      setValue("intervalDays", cadences[0], { shouldValidate: true });
+    }
+  }, [cadences, recurringOnly, intervalDays, setValue]);
 
-  const recurrenceOptions = [0, ...cadences].map((value) => ({
+  // No 0 sentinel: the picker only appears for a recurring-only service, so
+  // every option is a real cadence.
+  const recurrenceOptions = cadences.map((value) => ({
     value,
     label: intervalLabel(t, value),
   }));
@@ -194,10 +205,12 @@ export function ScheduleStep() {
         </p>
       )}
 
-      {/* Only shown for a service that can actually be booked on repeat. A
-          native select rather than a button grid: an unrestricted service
-          offers fifteen choices, which is a list, not a set of tiles. */}
-      {cadences.length > 0 && (
+      {/* Only shown for a service that can actually be booked on repeat — and
+          such a service is subscription-only, so this picks WHICH plan, never
+          whether to have one. A native select rather than a button grid: an
+          unrestricted service offers fourteen choices, which is a list, not a
+          set of tiles. */}
+      {recurringOnly && (
         <>
           <Controller
             control={control}
@@ -206,19 +219,18 @@ export function ScheduleStep() {
               <Select
                 label={t("booking.schedule.repeat.label")}
                 options={recurrenceOptions}
-                value={field.value ?? 0}
+                value={field.value || cadences[0]}
                 onBlur={field.onBlur}
                 onChange={(e) => field.onChange(Number(e.target.value))}
                 error={errors.intervalDays?.message}
+                hint={t("booking.schedule.repeat.required")}
               />
             )}
           />
 
-          {Number(intervalDays) > 0 && (
-            <p className="rounded-xl border border-brand-100 bg-brand-50 px-4 py-3 text-body-sm text-brand-800">
-              {t("booking.schedule.repeat.hint")}
-            </p>
-          )}
+          <p className="rounded-xl border border-brand-100 bg-brand-50 px-4 py-3 text-body-sm text-brand-800">
+            {t("booking.schedule.repeat.hint")}
+          </p>
         </>
       )}
 

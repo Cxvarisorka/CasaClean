@@ -27,7 +27,7 @@ const { toMinorUnits } = require("../../utils/money.util");
 describe("recurring first-cycle payment", () => {
     test("rejects recurrence unless the first payment saves or uses a card", async () => {
         const user = await createUser();
-        const service = await createService();
+        const service = await createService({ recurringEnabled: true });
         const city = await createCity();
 
         const res = await api.post("/api/v1/payment/booking/intent")
@@ -42,7 +42,7 @@ describe("recurring first-cycle payment", () => {
 
     test("persists recurrence and creates one backfilled subscription after payment", async () => {
         const user = await createUser({ stripeCustomerId: "cus_recurring_first" });
-        const service = await createService({ pricePerHour: 20 });
+        const service = await createService({ recurringEnabled: true, pricePerHour: 20 });
         const city = await createCity();
         const bookingDate = dateStr(5);
 
@@ -119,7 +119,7 @@ describe("recurring first-cycle payment", () => {
 
     test("keeps the paid booking when the recurring template cannot be created", async () => {
         const user = await createUser({ stripeCustomerId: "cus_template_fail" });
-        const service = await createService({ pricePerHour: 20 });
+        const service = await createService({ recurringEnabled: true, pricePerHour: 20 });
         const city = await createCity();
 
         stripeMock.paymentIntents.create.mockImplementation(async (params) => ({
@@ -181,6 +181,24 @@ describe("per-service recurrence rules", () => {
 
         expect(res.status).toBe(400);
         expect(res.body.message).toMatch(/can't be booked on a recurring schedule/i);
+        expect(stripeMock.paymentIntents.create).not.toHaveBeenCalled();
+        expect(await PendingBooking.countDocuments()).toBe(0);
+    });
+
+    test("refuses a one-off booking of a service that only sells a plan", async () => {
+        const user = await createUser({ stripeCustomerId: "cus_plan_only" });
+        const service = await createService({ recurringEnabled: true });
+        const city = await createCity();
+
+        // No intervalDays at all — the shape a one-off booking travels in. The
+        // rule is exclusive, so enabling recurrence WITHDRAWS the one-off offer
+        // rather than adding a second one alongside it.
+        const res = await api.post("/api/v1/payment/booking/intent")
+            .set("Cookie", cookieFor(user))
+            .send(validBookingBody(service, city, { savePaymentMethod: true }));
+
+        expect(res.status).toBe(400);
+        expect(res.body.message).toMatch(/can only be booked on a recurring schedule/i);
         expect(stripeMock.paymentIntents.create).not.toHaveBeenCalled();
         expect(await PendingBooking.countDocuments()).toBe(0);
     });
@@ -267,7 +285,7 @@ describe("per-service recurrence rules", () => {
 describe("cancelling a subscription", () => {
     test("does not cancel or refund already-created paid cycle bookings", async () => {
         const user = await createUser();
-        const service = await createService();
+        const service = await createService({ recurringEnabled: true });
         const city = await createCity();
         const subscription = await createSubscription(user, service, city);
         const booking = await createPaidBooking(user, service, city, {
@@ -298,7 +316,7 @@ describe("subscription ownership and resume", () => {
     test("hides another user's subscription and rolls a stale paused schedule forward", async () => {
         const user = await createUser();
         const otherUser = await createUser();
-        const service = await createService();
+        const service = await createService({ recurringEnabled: true });
         const city = await createCity();
         const subscription = await createSubscription(user, service, city, {
             status: "paused",

@@ -916,6 +916,8 @@ export default {
         everyDay: "Every day",
         everyDays: "Every {days} days",
         hint: "We'll charge your saved card 1 day before each visit.",
+        required:
+          "This service is offered as a recurring plan only — pick how often you'd like us to come.",
       },
     },
     payment: {
@@ -1276,7 +1278,8 @@ export default {
         allowInstantBooking: "Can be booked today (instant booking)",
         allowInstantBookingHint: "When off, this service must be booked at least 48 hours ahead. On, it can be booked for today — the city's working hours still apply.",
         recurringEnabled: "Can be booked on a repeating schedule",
-        recurringEnabledHint: "When off, this service can only be booked as a one-off visit.",
+        recurringEnabledHint:
+          "Subscription-only. When on, customers must pick a frequency and can no longer book this service as a one-off visit; when off, it is one-off only.",
         recurringIntervalDays: "Repeat frequencies offered",
         recurringIntervalDaysHint: "Pick the exact frequencies customers may choose. Select none to let them choose any frequency from every day up to every 14 days.",
         enabled: "Enabled (visible on site)",

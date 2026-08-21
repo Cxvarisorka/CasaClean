@@ -895,6 +895,8 @@ export default {
         everyDay: "Ogni giorno",
         everyDays: "Ogni {days} giorni",
         hint: "Addebiteremo la carta salvata 1 giorno prima di ogni visita.",
+        required:
+          "Questo servizio è offerto solo come piano ricorrente: scegli ogni quanto vuoi che veniamo.",
       },
     },
     payment: {
@@ -1253,7 +1255,8 @@ export default {
         allowInstantBooking: "Prenotabile in giornata (prenotazione immediata)",
         allowInstantBookingHint: "Se disattivo, il servizio va prenotato con almeno 48 ore di anticipo. Se attivo, è prenotabile anche per oggi — restano validi gli orari di lavoro della città.",
         recurringEnabled: "Prenotabile con cadenza ricorrente",
-        recurringEnabledHint: "Se disattivo, questo servizio può essere prenotato solo come intervento singolo.",
+        recurringEnabledHint:
+          "Solo in abbonamento. Se attivo, i clienti devono scegliere una frequenza e non possono più prenotare questo servizio come intervento singolo; se disattivo, è solo singolo.",
         recurringIntervalDays: "Frequenze di ripetizione offerte",
         recurringIntervalDaysHint: "Scegli le frequenze esatte tra cui i clienti possono selezionare. Non selezionarne nessuna per lasciarli scegliere liberamente, da ogni giorno fino a ogni 14 giorni.",
         enabled: "Attivo (visibile sul sito)",
