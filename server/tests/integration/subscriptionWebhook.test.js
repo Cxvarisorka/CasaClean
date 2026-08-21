@@ -39,7 +39,7 @@ const deliver = (type, object, eventId = `evt_subscription_${++eventSequence}`) 
 describe("subscription-cycle webhooks", () => {
     test("creates a paid cycle booking as a succeeded-event backstop and advances only once", async () => {
         const user = await createUser();
-        const service = await createService();
+        const service = await createService({ recurringEnabled: true });
         const city = await createCity();
         const subscription = await createSubscription(user, service, city, {
             nextServiceDate: dateStr(2),
@@ -92,7 +92,7 @@ describe("subscription-cycle webhooks", () => {
 
     test("does not create a cycle booking for a cancelled subscription", async () => {
         const user = await createUser();
-        const service = await createService();
+        const service = await createService({ recurringEnabled: true });
         const city = await createCity();
         const subscription = await createSubscription(user, service, city, {
             nextServiceDate: dateStr(2),
@@ -125,7 +125,7 @@ describe("subscription-cycle webhooks", () => {
 
     test("does not create a cycle booking once the schedule has moved past that date", async () => {
         const user = await createUser();
-        const service = await createService();
+        const service = await createService({ recurringEnabled: true });
         const city = await createCity();
         const subscription = await createSubscription(user, service, city, {
             nextServiceDate: dateStr(9),
@@ -155,7 +155,7 @@ describe("subscription-cycle webhooks", () => {
 
     test("a fully refunded cycle charge pauses the plan instead of re-charging next sweep", async () => {
         const user = await createUser();
-        const service = await createService();
+        const service = await createService({ recurringEnabled: true });
         const city = await createCity();
         const subscription = await createSubscription(user, service, city);
         await Booking.create({
@@ -202,7 +202,7 @@ describe("subscription-cycle webhooks", () => {
 
     test("a partial refund leaves the plan running", async () => {
         const user = await createUser();
-        const service = await createService();
+        const service = await createService({ recurringEnabled: true });
         const city = await createCity();
         const subscription = await createSubscription(user, service, city);
         await Booking.create({
@@ -245,7 +245,7 @@ describe("subscription-cycle webhooks", () => {
 
     test("does not send the one-off failure email for a subscription-cycle decline", async () => {
         const user = await createUser();
-        const service = await createService();
+        const service = await createService({ recurringEnabled: true });
         const city = await createCity();
 
         // Deliberately leave a matching pending draft behind. The legacy

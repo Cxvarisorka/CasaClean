@@ -127,27 +127,41 @@ const resolveServiceAndCity = async (serviceId, cityId) => {
 };
 
 /**
- * Validate a recurring cadence against the service that would repeat.
+ * Validate a booking's recurrence CHOICE — including the choice not to repeat —
+ * against the service being booked.
  *
- * Fail-closed, and the mirror of the add-on rule: recurrence is opt-in per
- * service (`recurringEnabled`), and a service that pins an explicit cadence list
- * may only repeat on one of those cadences. With no list the customer chooses
- * freely inside MIN_INTERVAL_DAYS..MAX_INTERVAL_DAYS.
+ * `recurringEnabled` is EXCLUSIVE, not additive: it doesn't add a repeating
+ * option alongside the one-off one, it replaces it. A service that offers a
+ * plan is sold *only* as a plan, so this guard fails closed in both directions:
+ * a cadence on a one-off service is refused, and so is a one-off booking of a
+ * recurring service. A service that pins an explicit cadence list may only
+ * repeat on one of those; with no list the customer chooses freely inside
+ * MIN_INTERVAL_DAYS..MAX_INTERVAL_DAYS.
  *
  * Called for every path that can create or continue a recurring plan — the
  * first on-session payment AND each unattended cycle — so turning recurrence off
  * on a service stops future charges instead of only hiding the option in the UI.
  *
  * @param {Object} service       resolved Service doc (from resolveServiceAndCity)
- * @param {number} intervalDays  requested cadence in days
+ * @param {number} [intervalDays] requested cadence in days; omitted/0 = one-off
  */
 const assertRecurrenceAllowed = (service, intervalDays) => {
+  const requested = Number(intervalDays);
+  // Absent, null or 0 all mean "book this once". The wizard's one-time sentinel
+  // is 0 and the API omits the field entirely; both land here.
+  const wantsRecurrence = intervalDays !== undefined && intervalDays !== null && requested > 0;
+
   if (!service?.recurringEnabled) {
+    // A one-off service booked once is the ordinary case — nothing to check.
+    if (!wantsRecurrence) return;
     throw new AppError("The selected service can't be booked on a recurring schedule!", 400);
   }
 
+  if (!wantsRecurrence) {
+    throw new AppError("The selected service can only be booked on a recurring schedule!", 400);
+  }
+
   const allowed = (service.recurringIntervalDays || []).map(Number);
-  const requested = Number(intervalDays);
 
   if (allowed.length > 0) {
     if (!allowed.includes(requested)) {
@@ -403,12 +417,12 @@ const buildValidatedBookingDraft = async (payload, user) => {
 
   const { service, city } = await resolveServiceAndCity(serviceId, cityId);
 
-  // A recurring first cycle only gets to exist if THIS service offers that
-  // cadence. Checked here, inside the single fail-closed entry point, so the
-  // payment controller can't create an intent for a plan that can never repeat.
-  if (payload.intervalDays !== undefined) {
-    assertRecurrenceAllowed(service, payload.intervalDays);
-  }
+  // The recurrence choice — including its absence — has to match what THIS
+  // service sells: a cadence only exists if the service repeats, and a service
+  // that repeats is sold only as a plan. Checked here, inside the single
+  // fail-closed entry point, so the payment controller can't create an intent
+  // for a plan that can never repeat, nor for a one-off of a plan-only service.
+  assertRecurrenceAllowed(service, payload.intervalDays);
 
   // 48 hours' notice (unless the service sells same-day), a start inside the
   // city's working hours, an end before closing, and nothing in the past.

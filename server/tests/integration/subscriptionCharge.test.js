@@ -18,7 +18,7 @@ const { toMinorUnits } = require("../../utils/money.util");
 
 const dueSubscription = async (overrides = {}) => {
     const user = await createUser();
-    const service = await createService({ pricePerHour: 20 });
+    const service = await createService({ recurringEnabled: true, pricePerHour: 20 });
     const city = await createCity();
     const nextServiceDate = overrides.nextServiceDate || dateStr(1);
     const subscription = await createSubscription(user, service, city, {
@@ -206,7 +206,7 @@ describe("runSubscriptionCharges", () => {
     // a backlog must drain completely in ONE sweep, and no cycle may be charged
     // twice because two workers got the same document.
     test("drains a backlog of due subscriptions in a single sweep, charging each exactly once", async () => {
-        const service = await createService({ pricePerHour: 20 });
+        const service = await createService({ recurringEnabled: true, pricePerHour: 20 });
         const city = await createCity();
 
         // More due plans than there are concurrent workers, so the workers have
