@@ -3,6 +3,8 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm install",
+  "cleanUrls": true,
+  "trailingSlash": false,
   "rewrites": [
     {
       "source": "/(.*)",
@@ -20,7 +22,7 @@
       ]
     },
     {
-      "source": "/:file(favicon.svg|apple-touch-icon.png|icons.svg|robots.txt|sitemap.xml)",
+      "source": "/:file(favicon.svg|apple-touch-icon.png|icons.svg|robots.txt|sitemap.xml|og-image.jpg|og-image-about.jpg)",
       "headers": [
         {
           "key": "Cache-Control",

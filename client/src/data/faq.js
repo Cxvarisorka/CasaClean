@@ -82,3 +82,13 @@ export const FAQ_CATEGORIES = [
 
 /** Flattened list, handy for schema and the home preview. */
 export const ALL_FAQS = FAQ_CATEGORIES.flatMap((c) => c.items);
+
+/*
+ * The subset the home page shows. Exported rather than sliced at each call site
+ * because two of them have to agree: FaqPreviewSection renders these questions
+ * and HomePage marks the same ones up as FAQ structured data. Google requires
+ * the markup to match the visible content, so a slice that drifted in one place
+ * and not the other would be an invalid-markup warning nobody would connect
+ * back to a changed number.
+ */
+export const HOME_FAQS = ALL_FAQS.slice(0, 5);

@@ -27,11 +27,80 @@
          still come from Unsplash — warm that connection while the JS parses. -->
     <link rel="preconnect" href="https://images.unsplash.com" crossorigin />
 
-    <title>CasaClean — Premium Turnover Cleaning for Vacation Rentals</title>
+    <!--
+      SEO HEAD — the tags between the markers below are generated.
+
+      This is a client-rendered SPA, and the crawlers that build a link preview
+      (Facebook, LinkedIn, WhatsApp, Slack, Telegram, iMessage, X) do not run
+      JavaScript. Whatever <Seo> renders through Helmet exists only after React
+      has mounted, which is to say: never, as far as they are concerned. So the
+      full set has to be present in the served HTML — that is what these tags are.
+
+      `scripts/prerender-seo.mjs` rewrites this block at build time from
+      `src/constants/metadata.js` and writes one copy of the page per marketing
+      route into `dist/`, so /about is served with its own title, description and
+      share card rather than the home page's. Editing between the markers by hand
+      is therefore pointless: run `npm run build`. Everything outside them is
+      preserved untouched.
+
+      Google *does* execute JavaScript, so for search results these tags are the
+      first pass and Helmet's are the authority; they are kept in agreement by
+      being generated from the same source.
+    -->
+    <!-- seo:start -->
+    <title>House &amp; Office Cleaning Services in Italy | CasaClean</title>
     <meta
       name="description"
-      content="CasaClean delivers guest-ready turnovers for Airbnb hosts, vacation rental owners and property managers — cleaning, inspections, linens and restocking, on schedule, every time."
+      content="Book vetted, insured cleaners in Rome, Milan, Florence and 9 more Italian cities. Regular, deep, move-out, office and Airbnb cleaning from €19.90/h."
     />
+    <link rel="canonical" href="https://casaclean.com/" />
+    <meta
+      name="robots"
+      content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="CasaClean" />
+    <meta
+      property="og:title"
+      content="House &amp; Office Cleaning Services in Italy | CasaClean"
+    />
+    <meta
+      property="og:description"
+      content="Book vetted, insured cleaners in Rome, Milan, Florence and 9 more Italian cities. Regular, deep, move-out, office and Airbnb cleaning from €19.90/h."
+    />
+    <meta property="og:url" content="https://casaclean.com/" />
+    <meta property="og:image" content="https://casaclean.com/og-image.jpg" />
+    <meta
+      property="og:image:secure_url"
+      content="https://casaclean.com/og-image.jpg"
+    />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="CasaClean — professional cleaning services in Italy, booked online in about a minute."
+    />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:locale:alternate" content="it_IT" />
+    <meta property="og:locale:alternate" content="ka_GE" />
+    <meta property="og:locale:alternate" content="el_GR" />
+    <meta property="og:locale:alternate" content="ru_RU" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="House &amp; Office Cleaning Services in Italy | CasaClean"
+    />
+    <meta
+      name="twitter:description"
+      content="Book vetted, insured cleaners in Rome, Milan, Florence and 9 more Italian cities. Regular, deep, move-out, office and Airbnb cleaning from €19.90/h."
+    />
+    <meta name="twitter:image" content="https://casaclean.com/og-image.jpg" />
+    <meta
+      name="twitter:image:alt"
+      content="CasaClean — professional cleaning services in Italy, booked online in about a minute."
+    />
+    <!-- seo:end -->
   </head>
   <body>
     <div id="root"></div>

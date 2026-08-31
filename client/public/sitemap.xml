@@ -1,9 +1,62 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Only pages a stranger should be able to land on. The booking wizard and the
+  account area are excluded on purpose (see robots.txt) — a sitemap entry is a
+  request to index, and asking for a sign-in wall to be indexed is asking for a
+  thin page in the results.
+
+  `priority` is relative within this file and `changefreq` is a hint; both are
+  advisory. `lastmod` is the one search engines actually act on, so it is only
+  worth keeping if it is kept honest — update the date on a page when its copy
+  changes, not on every deploy.
+-->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://casaclean.com/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
-  <url><loc>https://casaclean.com/services</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
-  <url><loc>https://casaclean.com/about</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://casaclean.com/faq</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://casaclean.com/careers</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
-  <url><loc>https://casaclean.com/contact</loc><changefreq>yearly</changefreq><priority>0.5</priority></url>
+  <url>
+    <loc>https://casaclean.com/</loc>
+    <lastmod>2026-08-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://casaclean.com/services</loc>
+    <lastmod>2026-08-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://casaclean.com/about</loc>
+    <lastmod>2026-08-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://casaclean.com/faq</loc>
+    <lastmod>2026-08-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://casaclean.com/contact</loc>
+    <lastmod>2026-08-21</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://casaclean.com/careers</loc>
+    <lastmod>2026-08-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://casaclean.com/privacy</loc>
+    <lastmod>2026-08-21</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://casaclean.com/terms</loc>
+    <lastmod>2026-08-21</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
 </urlset>

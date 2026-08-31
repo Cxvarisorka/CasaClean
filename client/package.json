@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/prerender-seo.mjs",
     "analyze": "vite build --mode analyze",
+    "og": "node scripts/generate-og-images.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
