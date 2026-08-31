@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { Accordion } from "@/components/ui/Accordion";
 import { SectionHeading } from "@/components/shared/SectionHeading";
 import { Reveal } from "@/components/shared/Reveal";
-import { ALL_FAQS } from "@/data/faq";
+import { HOME_FAQS } from "@/data/faq";
 import { useTranslation } from "@/i18n";
 import { ROUTES } from "@/constants/routes";
 
@@ -17,7 +17,6 @@ import { ROUTES } from "@/constants/routes";
 
 export function FaqPreviewSection() {
   const { t } = useTranslation();
-  const preview = ALL_FAQS.slice(0, 5);
 
   return (
     <section className="py-20 lg:py-28">
@@ -29,8 +28,8 @@ export function FaqPreviewSection() {
         />
 
         <Reveal className="mt-12">
-          <Accordion type="single" defaultValue={preview[0].id}>
-            {preview.map((faq) => (
+          <Accordion type="single" defaultValue={HOME_FAQS[0].id}>
+            {HOME_FAQS.map((faq) => (
               <Accordion.Item
                 key={faq.id}
                 value={faq.id}

@@ -1,5 +1,24 @@
+# CasaClean — https://casaclean.com
+#
+# Everything under the marketing site is open. What is blocked below is blocked
+# because it is either behind a sign-in or personal to one visitor: crawling it
+# produces a soft-404 or a sign-in page under a URL that promises otherwise,
+# which costs crawl budget and, worse, can get an empty shell indexed.
+
 User-agent: *
 Allow: /
+
 Disallow: /booking
+Disallow: /profile
+Disallow: /admin
+Disallow: /signin
+Disallow: /signup
+Disallow: /forgot-password
+Disallow: /reset-password
+
+# The share cards must stay crawlable — a blocked og:image is a link preview
+# with a blank frame, and several networks refuse to render the card at all.
+Allow: /og-image.jpg
+Allow: /og-image-about.jpg
 
 Sitemap: https://casaclean.com/sitemap.xml

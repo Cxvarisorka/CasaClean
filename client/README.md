@@ -26,9 +26,11 @@ React application.
 npm install
 cp .env.example .env      # set VITE_API_BASE_URL / VITE_SITE_URL
 npm run dev               # start the dev server
-npm run build             # production build
+npm run build             # production build (+ per-route SEO head prerender)
 npm run preview           # serve the build
 npm run lint              # eslint
+npm test                  # vitest
+npm run og                # re-render the social share cards in public/
 ```
 
 The API base URL is read from `VITE_API_BASE_URL` and defaults to the local

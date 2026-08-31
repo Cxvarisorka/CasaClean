@@ -6,8 +6,14 @@ import { PageHero, CtaSection } from "@/components/sections";
 import { SectionHeading } from "@/components/shared/SectionHeading";
 import { Icon } from "@/components/shared/Icon";
 import { Reveal } from "@/components/shared/Reveal";
-import { Seo } from "@/seo";
+import {
+  Seo,
+  breadcrumbSchema,
+  organizationSchema,
+  webPageSchema,
+} from "@/seo";
 import { PAGE_META, SITE } from "@/constants/metadata";
+import { ROUTES } from "@/constants/routes";
 import { IMAGES } from "@/constants/images";
 import { COMPANY_VALUES } from "@/data/company";
 import { SERVICES } from "@/data/services";
@@ -23,6 +29,17 @@ import { viewportOnce } from "@/animations/pageTransitions";
  * brand. Copy lives in `pages.about.*` so every language says the same thing.
  */
 
+/*
+ * The trail to this page. Written in English, not through `t()`: a breadcrumb
+ * in structured data is read by a crawler, which sees the page in whatever
+ * language happens to be stored in the visitor's browser — and a trail that
+ * changes wording between crawls is worse than one that is simply stable.
+ */
+const BREADCRUMB = [
+  { name: "Home", path: ROUTES.home },
+  { name: "About", path: ROUTES.about },
+];
+
 const AboutPage = () => {
   const { t } = useTranslation();
 
@@ -31,7 +48,27 @@ const AboutPage = () => {
 
   return (
     <Page>
-      <Seo {...PAGE_META.about} />
+      <Seo
+        {...PAGE_META.about}
+        schema={[
+          /*
+           * `AboutPage` rather than a plain `WebPage`: it states that this
+           * document *is* the description of the organization it names, which
+           * is what makes it a candidate source for the knowledge panel rather
+           * than one more indexed page.
+           */
+          webPageSchema({
+            ...PAGE_META.about,
+            type: "AboutPage",
+            breadcrumb: BREADCRUMB,
+          }),
+          breadcrumbSchema(BREADCRUMB, PAGE_META.about.path),
+          // Restated here (it is also site-wide) so the About page carries the
+          // full company record in its own markup — same `@id`, so the two
+          // merge into one entity rather than competing.
+          organizationSchema(),
+        ]}
+      />
 
       <PageHero
         image={IMAGES.interiorLux}

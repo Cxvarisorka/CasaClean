@@ -61,7 +61,7 @@ client/
 ├── package.json
 └── src/
     ├── main.jsx            # Entry: globals.css + App
-    ├── App.jsx             # Root: AppProviders + global Seo + AppRouter
+    ├── App.jsx             # Root: AppProviders + global JSON-LD + AppRouter
     ├── app/                # Application shell
     │   ├── providers/      # Provider composition order
     │   ├── layouts/        # MainLayout, EmptyLayout, DashboardLayout (scaffold)
@@ -97,7 +97,7 @@ Mounts `App` into `#root` after importing `styles/globals.css` (Tailwind + desig
 
 ### Root (`App.jsx`)
 
-Wraps the tree in `AppProviders`, injects **site-wide** `<Seo>` (default title, path `/`, Organization + WebSite JSON-LD), then renders `AppRouter`.
+Wraps the tree in `AppProviders`, injects **site-wide** `<SchemaMarkup>` (Organization + WebSite JSON-LD) — deliberately not a `<Seo>`; see §13 — then renders `AppRouter`.
 
 ### Provider stack (`app/providers/AppProviders.jsx`)
 
@@ -432,29 +432,48 @@ Auth validation uses **schema factories** `makeSignInSchema(t)` so error strings
 
 ---
 
-## 13. SEO and discoverability (`src/seo/` + `public/`)
+## 13. SEO and discoverability (`src/seo/` + `public/` + `scripts/`)
 
 ### Per-page `<Seo>` component
 
-Combines `MetaTags` (title, description, canonical, Open Graph, Twitter) and optional `SchemaMarkup` (JSON-LD).
+Combines `MetaTags` (title, description, canonical, robots directives, Open Graph, Twitter) and optional `SchemaMarkup` (JSON-LD). Every page owns exactly one.
+
+**Meta belongs to the page, never to `App.jsx`.** Under React 19 `react-helmet-async` renders each instance's tags natively instead of merging them across instances, so a `<title>` or canonical declared at the root is *not* overridden by the page's — it sits beside it, and a crawler reads whichever comes first in the document. `App.jsx` therefore ships only `<SchemaMarkup>`: JSON-LD blocks are the one part that is genuinely additive. `src/seo/seo.test.jsx` pins the tag counts so this can't quietly come back.
 
 ### Structured data builders (`StructuredData.js`)
 
-Pure functions (testable, framework-free):
+Pure functions (testable, framework-free) that emit a **linked graph** rather than loose blocks. Every node carries a stable `@id` (`ID.organization`, `ID.website`, `ID.localBusiness`, `ID.page(path)`) and refers to the others by it, so search engines merge the organization described on About with the one publishing Home into a single entity.
 
 - `organizationSchema`, `websiteSchema` — global (in `App.jsx`)
-- `localBusinessSchema`, `faqSchema` — home / FAQ
-- `serviceSchema`, `breadcrumbSchema` — services
+- `webPageSchema` — per page; `type` varies (`WebPage`, `AboutPage`)
+- `localBusinessSchema` — home; carries `areaServed` (the 12 cities), `geo`, `openingHoursSpecification` and a `hasOfferCatalog` of the six services
+- `faqSchema` — home preview + FAQ page, over `HOME_FAQS` so the markup matches the visible accordion
+- `serviceSchema`, `breadcrumbSchema` — services, About
+
+`aggregateRating` is **never** emitted unless a real published-review count is passed in. A rating a visitor can't find on the page is what Google's review-snippet policy treats as fabricated, and the penalty reaches every rich result on the domain.
 
 Site constants from `constants/metadata.js` (`SITE`, `PAGE_META`).
 
+### Social share cards
+
+`SITE.ogImage` points at a real 1200×630 JPEG in `public/`, rendered by **`npm run og`** (`scripts/generate-og-images.mjs`) and committed. The script drives whatever Chromium is installed in headless screenshot mode, then re-encodes the PNG to JPEG through a canvas in the same browser — no image dependency, ~100 KB per card, which keeps it under the size at which WhatsApp and Telegram give up on the preview. One card per page that needs its own (`og-image.jpg`, `og-image-about.jpg`), wired through `PAGE_META.<page>.image`.
+
+### Build-time head prerendering
+
+Social crawlers — Facebook, LinkedIn, WhatsApp, Slack, Telegram, iMessage, X — **do not run JavaScript**, so everything Helmet does is invisible to them. `npm run build` therefore runs `scripts/prerender-seo.mjs`, which writes `dist/<route>/index.html` for each marketing route with that route's tags swapped into the `<!-- seo:start -->` / `<!-- seo:end -->` block of `index.html`. Static files are matched before the SPA rewrite, so `/about` is served its own head and everything else still falls through to the SPA.
+
+The static block and `MetaTags` are two code paths describing the same page; `src/seo/seo.test.jsx` compares them so they cannot drift.
+
+**Canonical form:** one spelling per URL, everywhere — the root keeps its trailing slash (`https://casaclean.com/`), matching the sitemap.
+
 ### Static files
 
-- `public/robots.txt`
-- `public/sitemap.xml`
-- `index.html` — baseline meta, `theme-color`, Google Fonts preconnect
+- `public/robots.txt` — blocks the signed-in surfaces (`/booking`, `/profile`, `/admin`, auth routes), explicitly allows the share cards
+- `public/sitemap.xml` — public marketing routes only, with `lastmod`
+- `index.html` — baseline meta, `theme-color`, Unsplash preconnect, and the generated SEO block
+- `vercel.json` — `cleanUrls` + `trailingSlash: false` so a URL has one canonical form at the edge too
 
-`VITE_SITE_URL` drives canonical and OG absolute URLs.
+`VITE_SITE_URL` drives canonical and OG absolute URLs, and is read from both `import.meta.env` and `process.env` so the Node-side prerender resolves the same origin the bundle does.
 
 ---
 

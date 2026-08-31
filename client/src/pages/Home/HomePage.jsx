@@ -1,8 +1,8 @@
 import { Page } from "@/components/shared/Page";
 import { CtaSection } from "@/components/sections/CtaSection";
-import { Seo, faqSchema, localBusinessSchema } from "@/seo";
+import { Seo, faqSchema, localBusinessSchema, webPageSchema } from "@/seo";
 import { PAGE_META } from "@/constants/metadata";
-import { ALL_FAQS } from "@/data/faq";
+import { HOME_FAQS } from "@/data/faq";
 import {
   HeroSection,
   TrustedBySection,
@@ -29,7 +29,17 @@ const HomePage = () => {
     <Page>
       <Seo
         {...PAGE_META.home}
-        schema={[localBusinessSchema(), faqSchema(ALL_FAQS.slice(0, 5))]}
+        schema={[
+          webPageSchema({ ...PAGE_META.home, type: "WebPage" }),
+          localBusinessSchema(),
+          /*
+           * The same five questions FaqPreviewSection renders below, and only
+           * those. FAQ markup has to match what a visitor can actually read on
+           * the page — marking up the full nine while showing five is the
+           * mismatch Google's FAQ policy singles out.
+           */
+          faqSchema(HOME_FAQS),
+        ]}
       />
 
       <HeroSection />

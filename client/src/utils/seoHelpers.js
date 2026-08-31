@@ -13,10 +13,13 @@ export function buildTitle(title) {
   return title.includes(SITE.name) ? title : `${title} · ${SITE.name}`;
 }
 
-/** Builds an absolute canonical URL from a path. */
+/**
+ * Builds an absolute canonical URL from a path. The root keeps its trailing
+ * slash — see the note in seo/MetaTags.jsx on why the form has to be one form.
+ */
 export function canonicalUrl(path = "/") {
   if (path.startsWith("http")) return path;
-  return `${SITE.url}${path === "/" ? "" : path}`;
+  return `${SITE.url}${path}`;
 }
 
 /** Clamps a description to a search-friendly length without cutting words. */
