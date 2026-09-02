@@ -20,6 +20,12 @@
  * everything unrecognised still falls through to the SPA. The app boots
  * identically either way and Helmet takes over on mount.
  *
+ * One trap in that rewrite (client/vercel.json): `cleanUrls: true` strips the
+ * `.html` extension at build time, so a rewrite destination of `/index.html`
+ * no longer resolves and every non-prerendered URL — /admin, /booking, /signin,
+ * a refreshed /services/:slug — becomes a hard Vercel 404. The destination
+ * must be `/index` (no extension) for as long as cleanUrls is on.
+ *
  * Runs from `npm run build`; `node scripts/prerender-seo.mjs` re-runs it against
  * an existing `dist/`.
  */
