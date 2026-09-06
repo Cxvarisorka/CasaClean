@@ -18,9 +18,9 @@
 // This is a NOTIFICATION, not part of the transaction. By the time it runs the
 // money has moved and the reservation exists, so every failure here — the admin
 // lookup, the name resolution, SMTP — is swallowed and logged rather than
-// propagated. Fire-and-forget for the same reason the invoice email is: this
-// runs inside a Stripe webhook and the charge worker, and a slow mail host must
-// never stall either one.
+// propagated. Fire-and-forget for the same reason the confirmation email is:
+// this runs inside a Stripe webhook and the charge worker, and a slow mail host
+// must never stall either one.
 
 const City = require('../models/city.model');
 const Service = require('../models/service.model');

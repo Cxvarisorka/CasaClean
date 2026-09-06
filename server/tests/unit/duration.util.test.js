@@ -1,8 +1,8 @@
 // A booking's length is TOTAL MINUTES — 85 is a 1 h 25 min visit. What counts
 // as a valid duration, how the "Hours + Minutes" pair combines into one, how a
 // legacy record's `hours` is read, and how a length is worded to a customer are
-// all shared by the Zod schema, the Booking model, the confirmation email, the
-// admin alert and the invoice, so they are pinned here.
+// all shared by the Zod schema, the Booking model, the confirmation email and
+// the admin alert, so they are pinned here.
 const {
     MIN_DURATION_MINUTES,
     MAX_DURATION_MINUTES,

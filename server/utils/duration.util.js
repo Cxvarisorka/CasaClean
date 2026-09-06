@@ -1,7 +1,7 @@
 // Booking durations
 // -----------------
 // A booking's length is TOTAL MINUTES (Booking.durationMinutes, and its copies
-// on PendingBooking / Subscription / Invoice). Minutes are the canonical
+// on PendingBooking / Subscription). Minutes are the canonical
 // representation everywhere: the customer types "1 h 25 m", the wizard combines
 // that into 85, and 85 is what travels, gets stored, gets priced and gets
 // printed. Nothing downstream ever sees 1.4166…
@@ -58,7 +58,7 @@ const splitDuration = (totalMinutes) => {
  * The duration of a booking-shaped record, in minutes.
  *
  * `durationMinutes` is the field every write sets. `hours` is the legacy field
- * on records (bookings, subscriptions, invoices) written before durations went
+ * on records (bookings, subscriptions) written before durations went
  * to the minute; it held whole/half hours, so ×60 is exact for every value it
  * could ever have carried. Returns 0 when neither is usable, which callers
  * treat as "unknown" rather than "instant".
@@ -76,7 +76,7 @@ const durationInMinutes = (record) => {
 /**
  * A duration in minutes as human text: 120 -> "2 h", 85 -> "1 h 25 min".
  * Used by every customer-facing surface that states a booking's length (the
- * confirmation email, the admin alert, the invoice line and its PDF), so a
+ * confirmation email, the admin alert), so a
  * booking never reads as "1.4166 h" or a bare minute count.
  */
 const formatDuration = (totalMinutes) => {

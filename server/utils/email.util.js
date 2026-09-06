@@ -42,13 +42,13 @@ const getTransporter = () => {
         // Reuse SMTP connections instead of opening one per message. Without
         // this, every email paid a fresh TCP handshake + TLS negotiation + AUTH
         // before a single byte of the message moved — and several paths send more
-        // than one message in a row (a paid booking sends the customer's invoice
-        // and the admin alert; a cron sweep sends one pair per due plan).
+        // than one message in a row (a paid booking sends the customer's
+        // confirmation and the admin alert; a cron sweep sends one pair per due plan).
         //
         // maxConnections is small on purpose: shared SMTP providers cap
         // concurrent connections per account and answer an over-eager client with
         // a temporary failure, which for us would mean a silently undelivered
-        // invoice. maxMessages recycles a connection periodically because
+        // confirmation. maxMessages recycles a connection periodically because
         // providers also cap messages per connection.
         pool: true,
         maxConnections: 3,
@@ -73,7 +73,7 @@ const getTransporter = () => {
  *                                     just hit Reply and reach the customer.
  * @param {Array}  [options.attachments] - nodemailer attachment descriptors,
  *                                     e.g. [{ filename, content: Buffer,
- *                                     contentType }]. Used for the invoice PDF.
+ *                                     contentType }].
  */
 const sendEmail = async ({ email, subject, html, text, replyTo, attachments }) => {
     await getTransporter().sendMail({

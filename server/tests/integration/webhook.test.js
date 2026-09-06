@@ -125,11 +125,11 @@ describe("payment_intent.succeeded (booking-creation backstop)", () => {
         expect(String(booking.user)).toBe(String(user._id));
         expect(booking.totalAmount).toBe(40);
 
-        // Draft consumed; the invoice email is dispatched fire-and-forget after
-        // the webhook has already ACKed, so wait for it rather than race it.
+        // Draft consumed; the confirmation email is dispatched fire-and-forget
+        // after the webhook has already ACKed, so wait for it rather than race it.
         expect(await PendingBooking.countDocuments({ paymentIntentId: "pi_hook_1" })).toBe(0);
-        // Two audiences, both dispatched after the ACK: the customer's invoice
-        // email and the team's new-booking alert.
+        // Two audiences, both dispatched after the ACK: the customer's
+        // confirmation email and the team's new-booking alert.
         await waitForEmails(2);
         expect(customerEmails()).toHaveLength(1);
         const alerts = bookingAlerts();

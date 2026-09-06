@@ -439,7 +439,7 @@ export const terms = {
       blocks: [
         {
           type: "p",
-          text: "The prices shown on the site are an invitation to book, not an offer. Your booking becomes a contract when your payment succeeds and we send you a confirmation email with the invoice attached.",
+          text: "The prices shown on the site are an invitation to book, not an offer. Your booking becomes a contract when your payment succeeds and we send you a confirmation email.",
         },
         {
           type: "ul",
@@ -479,7 +479,7 @@ export const terms = {
             "Catalogue prices are net of VAT. VAT is added on top at the applicable Italian rate, and both figures are shown before you pay and printed on your invoice.",
             "If you are a business established in another EU member state and your VAT number is verified against the VIES database, no VAT is charged and your invoice carries the reverse-charge notice under Article 196 of Directive 2006/112/EC — you account for the VAT yourself. Verification is not instant: until your number is confirmed, VAT is charged normally.",
             "Payment is taken in advance, online, by card through Stripe. We never see or store your card number.",
-            "An invoice is issued for every successful payment and emailed to you as a PDF. You can download it again at any time from your account.",
+            "An invoice is issued for every successful payment and sent to you by email. Ask us at any time if you need another copy.",
           ],
         },
       ],

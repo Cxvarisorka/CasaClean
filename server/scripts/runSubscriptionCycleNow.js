@@ -75,7 +75,7 @@ const run = async () => {
     if (after.status !== 'active') {
         console.log(`Subscription is now '${after.status}': ${after.pausedReason || after.lastError || 'no reason recorded'}`);
     }
-    console.log('The cycle booking and its invoice carry the tax snapshot — check both.');
+    console.log('The cycle booking carries the tax snapshot — check it.');
 };
 
 run()

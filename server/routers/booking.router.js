@@ -23,7 +23,7 @@ const { createBookingSchema, editBookingSchema } = require('../validations/booki
 const bookingRouter = express.Router();
 
 // Admin-only manual/offline booking creation (walk-in / phone, paid by
-// cash/invoice). Customers now book through the online payment flow
+// cash). Customers now book through the online payment flow
 // (/api/v1/payment/booking/*), which charges the card before the booking is
 // created — so this direct-create path is restricted to admins.
 bookingRouter.post('/', bookingLimiter, protect, restrictTo('admin'), validate(createBookingSchema), createBooking);

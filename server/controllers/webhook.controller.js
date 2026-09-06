@@ -18,7 +18,6 @@ const PendingBooking = require('../models/pendingBooking.model');
 const Subscription = require('../models/subscription.model');
 const sendEmail = require('../utils/email.util');
 const { promotePendingBooking, refundOrphanedPayment } = require('./payment.controller');
-const { markInvoiceRefunded } = require('../services/invoice.service');
 const {
   applyVerificationResult,
   applyVatNumberDeleted
@@ -178,16 +177,6 @@ const handleStripeWebhook = async (req, res) => {
             { paymentStatus: 'refunded', refundedAt: new Date(), stripeStatus: 'refunded' },
             { returnDocument: 'after' }
           );
-
-          // Keep the invoice honest: a downloaded PDF must never claim money was
-          // kept that has since been returned. Idempotent (scoped to 'issued')
-          // and non-fatal — a bookkeeping stamp can't be allowed to fail the
-          // webhook and trigger Stripe retries.
-          if (booking) {
-            await markInvoiceRefunded(booking._id, booking.refundedAt).catch((err) =>
-              console.error('Invoice refund stamp error:', err.message)
-            );
-          }
 
           // A refund issued straight from the Stripe dashboard is a deliberate
           // "undo this charge". If the refunded charge paid for a recurring

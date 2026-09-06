@@ -7,8 +7,7 @@
 //
 // This is FREE and independent of Stripe Tax — we are not asking Stripe to
 // calculate anything, only to answer "is this a real, currently-registered VAT
-// number?". The rate and the money are decided by utils/tax.util.js, and the
-// invoice is rendered by our own code.
+// number?". The rate and the money are decided by utils/tax.util.js.
 //
 // Verification is ASYNCHRONOUS: `createTaxId` almost always comes back
 // `pending`, and Stripe delivers the real answer minutes later as a

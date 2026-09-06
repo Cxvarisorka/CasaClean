@@ -47,7 +47,6 @@ const reviewRouter = require('./routers/review.router');
 const workerRouter = require('./routers/worker.router');
 const paymentRouter = require('./routers/payment.router');
 const subscriptionRouter = require('./routers/subscription.router');
-const invoiceRouter = require('./routers/invoice.router');
 const contactMessageRouter = require('./routers/contactMessage.router');
 
 // Imported without side effects. startJobs is invoked only after app.listen so
@@ -193,7 +192,6 @@ app.use('/api/v1/review', reviewRouter);
 app.use('/api/v1/worker', workerRouter);
 app.use('/api/v1/payment', paymentRouter);
 app.use('/api/v1/subscription', subscriptionRouter);
-app.use('/api/v1/invoice', invoiceRouter);
 app.use('/api/v1/contact', contactMessageRouter);
 
 // 404 — any unmatched route falls through to here.
@@ -222,9 +220,6 @@ const start = async () => {
         //     reviews are now per-booking, so the booking-unique one replaces it.
         //   - Booking/User: drops the retired customerEmail and role+isVerified
         //     indexes (no query ever used them — pure write overhead).
-        //   - Invoice: the unique `booking` and `number` indexes are what make
-        //     issuing idempotent and numbering collision-proof, so they must
-        //     exist before the first payment lands.
         //   - PendingBooking/PaymentAttempt/StripeEvent carry TTL indexes that
         //     are the ONLY thing expiring those collections.
         //

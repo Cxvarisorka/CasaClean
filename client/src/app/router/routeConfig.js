@@ -62,7 +62,6 @@ const AdminLayout = lazy(() =>
 const AdminDashboardPage = lazy(() => import("@/pages/Admin/DashboardPage"));
 const AdminBookingsPage = lazy(() => import("@/pages/Admin/BookingsPage"));
 const AdminSubscriptionsPage = lazy(() => import("@/pages/Admin/SubscriptionsPage"));
-const AdminInvoicesPage = lazy(() => import("@/pages/Admin/InvoicesPage"));
 const AdminCalendarPage = lazy(() => import("@/pages/Admin/CalendarPage"));
 const AdminServicesPage = lazy(() => import("@/pages/Admin/ServicesPage"));
 const AdminSpecialRequestsPage = lazy(() => import("@/pages/Admin/SpecialRequestsPage"));
@@ -157,7 +156,6 @@ export const ADMIN_ROUTES = [
   { path: "", element: AdminDashboardPage, index: true },
   { path: "bookings", element: AdminBookingsPage },
   { path: "subscriptions", element: AdminSubscriptionsPage },
-  { path: "invoices", element: AdminInvoicesPage },
   { path: "calendar", element: AdminCalendarPage },
   { path: "services", element: AdminServicesPage },
   { path: "special-requests", element: AdminSpecialRequestsPage },

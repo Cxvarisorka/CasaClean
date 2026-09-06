@@ -25,9 +25,9 @@ const User = require('../models/user.model');
 const catchAsync = require('../utils/catchAsync.util');
 const AppError = require('../utils/appError.util');
 const { toMinorUnits, fromMinorUnits } = require('../utils/money.util');
-const { buildValidatedBookingDraft } = require('../services/booking.service');
+const { buildValidatedBookingDraft, renderBookingConfirmationEmail } = require('../services/booking.service');
 const { ensureStripeCustomer } = require('../services/stripeCustomer.service');
-const { issueAndDeliverInvoice } = require('../services/invoice.service');
+const sendEmail = require('../utils/email.util');
 const { notifyAdminsOfNewBooking } = require('../services/bookingAlert.service');
 const { createSubscriptionFromFirstBooking } = require('../services/subscription.service');
 
@@ -248,31 +248,34 @@ const promotePendingBooking = async (paymentIntentId, paymentIntent = null) => {
   // Draft fulfilled — remove it so it isn't reaped/processed again.
   await PendingBooking.deleteOne({ paymentIntentId }).catch(() => {});
 
-  // Issue the invoice and email it (confirmation + PDF attachment) — one email,
-  // not a confirmation followed by a near-identical receipt.
-  //
-  // Best-effort and deliberately NOT awaited: this runs inside the Stripe
-  // webhook (and the finalize request), and a slow/unreachable SMTP host must
-  // not delay the response past Stripe's delivery timeout. issueAndDeliverInvoice
-  // contains its own failures and falls back to the plain confirmation email, so
-  // the customer always hears from us.
-  issueAndDeliverInvoice(booking, {
-    customerName: d.customerName,
-    customerEmail: d.customerEmail,
-    serviceName: d.serviceName,
-    bookingDate: d.bookingDate,
-    bookingTime: d.bookingTime,
-    durationMinutes: d.durationMinutes,
-    cleaners: d.cleaners,
-    streetName: d.streetName,
-    houseNumber: d.houseNumber,
-    totalAmount: d.totalAmount
-  }).catch((err) => console.error('Invoice delivery error:', err.message));
+  // Email the booking confirmation. Best-effort and deliberately NOT awaited:
+  // this runs inside the Stripe webhook (and the finalize request), and a
+  // slow/unreachable SMTP host must not delay the response past Stripe's
+  // delivery timeout. Exactly one customer email per payment.
+  try {
+    const { subject, html, text } = renderBookingConfirmationEmail({
+      customerName: d.customerName,
+      serviceName: d.serviceName,
+      bookingDate: d.bookingDate,
+      bookingTime: d.bookingTime,
+      durationMinutes: d.durationMinutes,
+      cleaners: d.cleaners,
+      streetName: d.streetName,
+      houseNumber: d.houseNumber,
+      totalAmount: d.totalAmount,
+      recurring: Boolean(booking.subscriptionId)
+    });
+    sendEmail({ email: d.customerEmail, subject, html, text }).catch((err) =>
+      console.error('Confirmation email error:', err.message)
+    );
+  } catch (err) {
+    console.error('Confirmation email render error:', err.message);
+  }
 
   // Tell the team a booking just landed. Sits on the fresh-create path only —
   // the idempotent returns above are the finalize/webhook race resolving, and a
   // second alert for the same booking would read as a second booking.
-  // Fire-and-forget for the same reason as the invoice above.
+  // Fire-and-forget for the same reason as the confirmation email above.
   notifyAdminsOfNewBooking({ booking, serviceName: d.serviceName }).catch((err) =>
     console.error('Admin booking notification error:', err.message)
   );

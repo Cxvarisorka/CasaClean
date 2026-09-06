@@ -1,7 +1,7 @@
 // VAT treatment
 // -------------
 // Decides how much a given customer actually pays, and how that amount splits
-// into net + VAT on their invoice.
+// into net + VAT.
 //
 // Catalogue prices in this product are NET — the number on the site is the price
 // before VAT, and VAT is ADDED ON TOP for whoever owes it. There are two
@@ -24,10 +24,9 @@
 //      customer could hand themselves a discount by posting customerType.
 //
 //   2. THE SPLIT ALWAYS RECONCILES. netAmount + vatAmount === totalAmount to the
-//      cent, in both treatments, so no invoice can print a total that doesn't
-//      add up (see addVatExclusive in invoice.util.js).
+//      cent, in both treatments (see addVatExclusive in vat.util.js).
 
-const { getVatRate, roundMoney, addVatExclusive } = require('./invoice.util');
+const { getVatRate, roundMoney, addVatExclusive } = require('./vat.util');
 
 const STANDARD = 'standard';
 const REVERSE_CHARGE = 'reverse-charge';
@@ -67,8 +66,8 @@ const resolveTaxTreatment = (user) => {
     treatment: reverseCharge ? REVERSE_CHARGE : STANDARD,
     customerType: isBusiness ? 'business' : 'individual',
     vatNumber: reverseCharge ? user.vatNumber : '',
-    // Snapshotted so the invoice can be addressed to the company as it was
-    // registered at booking time, not as it reads whenever the PDF is rendered.
+    // Snapshotted so the record keeps the company name as it was registered at
+    // booking time, not as it reads later.
     companyName: isBusiness ? user.companyName || '' : '',
     catalogueVatRate,
     // What the customer is actually charged VAT at.

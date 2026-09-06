@@ -45,7 +45,7 @@ const assertEnv = () => {
         // SMTP transport. Without it the server still boots and still accepts
         // signups, but every outbound message is silently lost: nobody can
         // verify an email address (and therefore nobody can sign in), no
-        // password can be reset, no invoice reaches a paying customer and no
+        // password can be reset, no confirmation reaches a paying customer and no
         // booking alert reaches the team. That is a dead site that looks alive,
         // which is exactly the failure mode this check exists to prevent.
         // MAIL_FROM is deliberately NOT required — it falls back to

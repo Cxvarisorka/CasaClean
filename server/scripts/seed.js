@@ -12,7 +12,7 @@
  * updates the seeded rows and never duplicates them. Anything an admin has
  * created by hand is left alone entirely.
  *
- * WHAT IT DOES NOT TOUCH: users, bookings, subscriptions, invoices, reviews and
+ * WHAT IT DOES NOT TOUCH: users, bookings, subscriptions, reviews and
  * contact messages. Seeding is for the catalogue; the rest is real business data.
  * `--reset` therefore only clears the three catalogue collections — and it still
  * refuses to run if any booking references them, because deleting a service that

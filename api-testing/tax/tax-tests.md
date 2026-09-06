@@ -250,7 +250,7 @@ The full loop to prove the re-check:
 3. `--dry-run` again → **€120.00**, `treatment: "reverse-charge"`. No edit to the
    subscription was needed; it re-read the customer.
 4. Run it for real. The new cycle booking must have `totalAmount` 120.00 and the
-   reverse-charge snapshot, and its invoice must state Article 196.
+   reverse-charge snapshot.
 5. Set `vatStatus` back to `"unverified"`, force another cycle → **€146.40** and
    `standard` again. The already-charged cycle from step 4 must be **unchanged**
    — a completed transaction is never restated.
@@ -283,23 +283,7 @@ booking silently re-taxed.
 Bookings made before VAT was configured have no stored treatment; editing one
 must leave its total exactly as it was.
 
-## 11. The invoice
-
-See [invoice/invoice-tests.md](../invoice/invoice-tests.md) §9 for the
-reverse-charge invoice: net line items, the €0.00 VAT line, the customer's VAT
-number, and the Article 196 notice.
-
-Two things to check on the document itself:
-
-- **It adds up.** Line items are stated net on every invoice, so they sum to the
-  `Subtotal (net)` line — which IS the total under the reverse charge, and the
-  total minus the VAT for everyone else. Add a special request to the booking and
-  confirm: a €12.20 add-on prints as €12.20.
-- **The PDF renders.** Download it (`GET /invoice/:id/pdf`) — the reverse-charge
-  path draws blocks the standard one never touches, so a PDF that opens is a real
-  check, not a formality.
-
-## 12. The short version
+## 11. The short version
 
 If you only have fifteen minutes, this is the whole feature. Set
 `INVOICE_VAT_RATE=22` and use a €120.00 catalogue booking throughout.
@@ -315,8 +299,7 @@ If you only have fifteen minutes, this is the whole feature. Set
 | 7 | As admin, book on behalf of the verified business | **€120.00** — the customer's status, not the admin's |
 | 8 | As admin, book a walk-in (no `userId`) | **€146.40** |
 | 9 | Force a recurring cycle (§8) before and after verifying | **€146.40** then **€120.00**, no plan edit |
-| 10 | Open the business invoice | net lines summing to 120.00, €0.00 VAT, VAT number, Article 196 |
-| 11 | Edit an old business booking's duration in the panel | repriced on **its own** stored treatment |
+| 10 | Edit an old business booking's duration in the panel | repriced on **its own** stored treatment |
 
 ## What the automated tests already cover
 
@@ -327,13 +310,13 @@ before doing any of it by hand:
   added on top and reconciling to the cent at every rate, re-applying a stored
   treatment.
 - `tests/integration/tax.test.js` — registering a number, the webhook states, the
-  price at each of them, admin/walk-in bookings, the invoice and its PDF.
+  price at each of them, admin/walk-in bookings.
 - `tests/integration/taxLifecycle.test.js` — the price following a customer
   **through** every transition: verifying, lapsing, being deleted, being replaced;
   the `/auth/me` block the wizard reads; admin edits re-pricing on the booking's
   own treatment.
 - `tests/integration/taxRecurring.test.js` — unattended cycles re-resolving the
-  treatment, in both directions, and the invoice each cycle issues.
+  treatment, in both directions.
 - `client/src/features/booking/utils/pricing.test.js` — the wizard displaying the
   treatment the server resolved (it never decides one itself).
 

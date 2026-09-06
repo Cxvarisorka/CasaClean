@@ -10,7 +10,7 @@
 //   accent gold -> #f59e0b
 //   ink (text)  -> #0e1424 / #636c88
 
-const { formatEuro, formatDateLong } = require("./invoice.util");
+const { formatEuro, formatDateLong } = require("./vat.util");
 // Durations are total minutes; formatDuration keeps raw minute counts out of
 // the text ("1 h 25 min", never "85").
 const { formatDuration, durationInMinutes } = require("./duration.util");
@@ -357,8 +357,8 @@ const contactReplyEmail = ({ customerName, replyBody, originalMessage, originalS
 
 /**
  * Internal "a booking just came in" alert, sent to the team — the admin accounts
- * and the business mailbox — NOT to the customer, who gets their own invoice /
- * confirmation email from invoice.service.js.
+ * and the business mailbox — NOT to the customer, who gets their own
+ * confirmation email.
  *
  * It is written to be actionable from the notification alone: everything needed
  * to staff the job (when, where, how long, how many cleaners) and to reach the

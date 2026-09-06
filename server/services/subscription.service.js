@@ -28,7 +28,6 @@ const {
   renderBookingConfirmationEmail,
   formatEuro
 } = require('./booking.service');
-const { issueAndDeliverInvoice } = require('./invoice.service');
 const { notifyAdminsOfNewBooking } = require('./bookingAlert.service');
 // Catalogue prices are VAT-exclusive; VAT is added on top unless the customer is
 // a verified business.
@@ -167,16 +166,12 @@ const renderSubscriptionCancelledEmail = ({ subscription }) => {
 };
 
 /**
- * Invoice and notify the customer for one charged cycle.
+ * Notify the customer for one charged cycle.
  *
- * Every cycle is a separate payment, so every cycle gets its own numbered
- * invoice — same as a one-off booking. `issueAndDeliverInvoice` contains all of
- * its own failures (falling back to the plain confirmation email), so this stays
- * fire-and-forget: an unreachable SMTP host must never stall the charge worker
- * or leave a captured payment half-processed.
- *
- * `booking` may be absent only if the cycle booking couldn't be located, in
- * which case there is nothing to invoice and the plain receipt is sent instead.
+ * Every cycle is a separate payment, so every cycle sends its own confirmation
+ * email. Rendering and sending are best-effort and fire-and-forget: an
+ * unreachable SMTP host must never stall the charge worker or leave a captured
+ * payment half-processed.
  */
 const sendCycleReceipt = ({ subscription, booking, serviceName, serviceDate, amount }) => {
   // Every charged cycle creates a real, confirmed visit, so the team is told
@@ -224,13 +219,6 @@ const sendCycleReceipt = ({ subscription, booking, serviceName, serviceDate, amo
     houseNumber: subscription.houseNumber,
     totalAmount: amount
   };
-
-  if (booking?._id) {
-    issueAndDeliverInvoice(booking, fallback).catch((err) => {
-      console.error('Subscription invoice delivery error:', err.message);
-    });
-    return;
-  }
 
   try {
     const { subject, html, text } = renderBookingConfirmationEmail({

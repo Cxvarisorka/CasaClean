@@ -89,7 +89,7 @@ const bookingSchema = new mongoose.Schema({
   // How long the visit lasts, in TOTAL MINUTES — 85 is a 1 h 25 min booking.
   // The bounds live in utils/duration.util.js so the Zod layer and this one
   // can't drift, and minutes are what every downstream calculation reads
-  // (pricing, the working-hours window, the cancellation fee, the invoice).
+  // (pricing, the working-hours window, the cancellation fee).
   durationMinutes: {
     type: Number,
     required: [true, "Booking duration is required!"],
@@ -121,7 +121,7 @@ const bookingSchema = new mongoose.Schema({
   },
   // --- VAT treatment (snapshot) -----------------------------------------------
   // Resolved server-side from the customer's stored, Stripe-verified profile at
-  // pricing time (utils/tax.util.js) and frozen here, so the invoice states what
+  // pricing time (utils/tax.util.js) and frozen here, so the record states what
   // was actually charged rather than re-deriving it from configuration that may
   // have changed since. `netAmount + vatAmount === totalAmount` in both
   // treatments. Absent on bookings made before VAT handling existed — readers
@@ -141,10 +141,10 @@ const bookingSchema = new mongoose.Schema({
       default: 'individual'
     },
     // The customer's VAT number as it read at booking time (reverse charge only)
-    // — an invoice must print the number the relief was granted against.
+    // — the record keeps the number the relief was granted against.
     vatNumber: { type: String, default: '' },
-    // Registered company name at booking time; the invoice is addressed to this
-    // rather than the contact's personal name when it's set.
+    // Registered company name at booking time, kept alongside the contact's
+    // personal name when it's set.
     companyName: { type: String, default: '' },
     // The rate catalogue prices are taxed at, as it stood when this booking was
     // priced. Kept so a later rate change can't restate a completed transaction.
@@ -216,7 +216,7 @@ const bookingSchema = new mongoose.Schema({
     ref: 'Subscription'
   },
   // How the booking was paid for: an online card charge, or a manual/offline
-  // (cash/invoice) booking entered by an admin.
+  // (cash) booking entered by an admin.
   paymentMethod: {
     type: String,
     enum: ['card', 'manual'],
@@ -228,9 +228,9 @@ const bookingSchema = new mongoose.Schema({
   // (offline booking, no Stripe).
   //
   // 'partially-refunded' is deliberately its own state rather than 'refunded':
-  // money was kept, so an invoice must not be stamped as reversed and the
-  // booking must not read as if the customer got everything back. It also can't
-  // be 'paid', or a support view would show a charge that no longer stands.
+  // money was kept, so the booking must not read as if the customer got
+  // everything back. It also can't be 'paid', or a support view would show a
+  // charge that no longer stands.
   paymentStatus: {
     type: String,
     enum: ['unpaid', 'paid', 'refunded', 'partially-refunded', 'manual'],

@@ -15,7 +15,6 @@
 
 const {
   stripeMock,
-  customerEmails,
   waitForCustomerEmails,
   waitForBookingAlerts
 } = require('../setup/testEnv');
@@ -24,7 +23,6 @@ const { createSubscription } = require('../setup/subscriptionFixtures');
 
 const User = require('../../models/user.model');
 const Booking = require('../../models/booking.model');
-const Invoice = require('../../models/invoice.model');
 const Subscription = require('../../models/subscription.model');
 const { runSubscriptionCharges } = require('../../jobs/subscriptionCharge.job');
 const { toMinorUnits } = require('../../utils/money.util');
@@ -77,11 +75,10 @@ const makeDueAgain = (subscription) =>
 /**
  * Run the sweep and wait for the cycle receipt to actually go out.
  *
- * Invoicing and mail are deliberately fire-and-forget (a slow SMTP host must
- * never stall a charge worker), so the sweep resolves before the invoice row
- * exists. Without this the leftover work lands during the NEXT test, after the
- * harness has wiped the collections — which shows up as a bogus invoice-number
- * collision rather than as a failure in the test that caused it.
+ * Mail is deliberately fire-and-forget (a slow SMTP host must never stall a
+ * charge worker), so the sweep resolves before the receipt is sent. Without
+ * this the leftover work lands during the NEXT test, after the harness has
+ * wiped the collections, rather than as a failure in the test that caused it.
  *
  * `cyclesSoFar` is cumulative within a test: one successful charge, one receipt.
  */
@@ -150,8 +147,8 @@ describe('a recurring cycle is priced on the customer’s current VAT status', (
     expect(booking.tax.treatment).toBe('reverse-charge');
     expect(booking.tax.vatRate).toBe(0);
     expect(booking.tax.vatAmount).toBe(0);
-    // Snapshotted onto the cycle's own booking, so the invoice can be addressed
-    // to the company as it was registered when the charge ran.
+    // Snapshotted onto the cycle's own booking, keeping the company identity
+    // as it was registered when the charge ran.
     expect(booking.tax.vatNumber).toBe('IT09876543210');
     expect(booking.tax.companyName).toBe('Bianchi Uffici Srl');
   });
@@ -282,67 +279,3 @@ describe('a status change between cycles moves the next charge', () => {
   });
 });
 
-describe('the invoice for a recurring cycle', () => {
-  it('states the reverse charge for a verified business', async () => {
-    const { subscription } = await dueSubscription(VERIFIED);
-    mockOwnedCard(subscription);
-    mockCharge('pi_cycle_invoice_rc');
-
-    await chargeAndSettle();
-
-    const booking = await Booking.findOne({ paymentIntentId: 'pi_cycle_invoice_rc' });
-    const invoice = await Invoice.findOne({ booking: booking._id }).lean();
-
-    expect(invoice).not.toBeNull();
-    expect(invoice.reverseCharge).toBe(true);
-    expect(invoice.vatRate).toBe(0);
-    expect(invoice.vatAmount).toBe(0);
-    expect(invoice.subtotal).toBe(CATALOGUE);
-    expect(invoice.total).toBe(CATALOGUE);
-    expect(invoice.customer.name).toBe('Bianchi Uffici Srl');
-    expect(invoice.customer.vatNumber).toBe('IT09876543210');
-
-    // Items are stated net, so they sum to the subtotal.
-    const sum = invoice.lineItems.reduce((total, item) => total + item.amount, 0);
-    expect(Math.round(sum * 100) / 100).toBe(invoice.subtotal);
-
-    const [sent] = customerEmails();
-    expect(sent.text).toMatch(/reverse charge/i);
-  });
-
-  it('breaks VAT out normally for an individual’s cycle', async () => {
-    const { subscription } = await dueSubscription();
-    mockOwnedCard(subscription);
-    mockCharge('pi_cycle_invoice_std');
-
-    await chargeAndSettle();
-
-    const booking = await Booking.findOne({ paymentIntentId: 'pi_cycle_invoice_std' });
-    const invoice = await Invoice.findOne({ booking: booking._id }).lean();
-
-    expect(invoice.reverseCharge).toBe(false);
-    expect(invoice.vatRate).toBe(22);
-    expect(invoice.subtotal).toBe(CATALOGUE);
-    expect(invoice.vatAmount).toBe(26.4);
-    expect(invoice.total).toBe(WITH_VAT);
-  });
-
-  it('numbers each cycle separately — one invoice per charge', async () => {
-    const { subscription } = await dueSubscription(VERIFIED);
-    mockOwnedCard(subscription);
-
-    mockCharge('pi_cycle_inv_1');
-    await chargeAndSettle();
-
-    await makeDueAgain(subscription);
-    mockCharge('pi_cycle_inv_2');
-    await chargeAndSettle(2);
-
-    const invoices = await Invoice.find({}).sort({ createdAt: 1 }).lean();
-    expect(invoices).toHaveLength(2);
-    expect(new Set(invoices.map((i) => i.number)).size).toBe(2);
-    // Both cycles carried the relief.
-    expect(invoices.every((i) => i.reverseCharge === true)).toBe(true);
-    expect(invoices.every((i) => i.total === CATALOGUE)).toBe(true);
-  });
-});

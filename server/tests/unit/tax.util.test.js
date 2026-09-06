@@ -12,7 +12,7 @@ const {
   applyTaxTreatment,
   priceForCustomer
 } = require('../../utils/tax.util');
-const { roundMoney } = require('../../utils/invoice.util');
+const { roundMoney } = require('../../utils/vat.util');
 
 // The rate is read from the environment on every call, so each test states the
 // rate it assumes rather than depending on suite ordering.
@@ -174,7 +174,7 @@ describe('applyTaxTreatment', () => {
   it('never records a VAT number on a standard-treatment booking', () =>
     withRate(22, () => {
       // A business can claim a number long before VIES confirms it. Snapshotting
-      // it anyway would put an unearned relief basis on the invoice.
+      // it anyway would record an unearned relief basis.
       const { tax } = priceForCustomer(120, {
         customerType: 'business',
         companyName: 'Pending Srl',
@@ -183,8 +183,8 @@ describe('applyTaxTreatment', () => {
       });
       expect(tax.treatment).toBe(STANDARD);
       expect(tax.vatNumber).toBe('');
-      // The company name IS kept — the invoice is still addressed to the
-      // business, it simply pays VAT.
+      // The company name IS kept — the record still names the business, it
+      // simply pays VAT.
       expect(tax.companyName).toBe('Pending Srl');
       expect(tax.customerType).toBe('business');
     }));

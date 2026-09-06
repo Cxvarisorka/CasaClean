@@ -5,8 +5,7 @@
  * is not something to show a customer. `formatDuration` turns it into
  * "1 h 25 min" using the locale's own unit labels, and every surface that states
  * a duration — the live summary, the review step, the admin tables — goes
- * through it, so the wizard, the confirmation email and the invoice all word it
- * the same way.
+ * through it, so the wizard and the confirmation email word it the same way.
  *
  * The customer never types a total: the wizard collects an Hours field and a
  * Minutes field and `combineDuration` joins them, mirroring the server's

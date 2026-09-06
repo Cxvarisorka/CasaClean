@@ -154,7 +154,7 @@ const userSchema = new mongoose.Schema({
         default: "individual"
     },
     // Stored uppercase and space-free ("IT01234567890") — the format Stripe and
-    // VIES expect, and the format the invoice prints.
+    // VIES expect.
     vatNumber: {
         type: String,
         trim: true,
@@ -175,8 +175,8 @@ const userSchema = new mongoose.Schema({
     stripeTaxIdId: {
         type: String
     },
-    // Registered company name, printed on the invoice instead of the personal
-    // name when the customer is a business.
+    // Registered company name, kept alongside the personal name when the
+    // customer is a business.
     companyName: {
         type: String,
         trim: true,

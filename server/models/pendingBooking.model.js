@@ -67,9 +67,9 @@ const pendingBookingSchema = new mongoose.Schema({
     cleaners: { type: Number, required: true },
     totalAmount: { type: Number, required: true },
     // The VAT treatment resolved when the draft was priced (see
-    // utils/tax.util.js). Carried through promotion so the Booking — and the
-    // invoice built from it — record what the customer was actually charged,
-    // even if their VAT status changes between paying and the webhook landing.
+    // utils/tax.util.js). Carried through promotion so the Booking records what
+    // the customer was actually charged, even if their VAT status changes
+    // between paying and the webhook landing.
     tax: {
       treatment: { type: String, enum: ['standard', 'reverse-charge'], default: 'standard' },
       customerType: { type: String, enum: ['individual', 'business'], default: 'individual' },

@@ -10,7 +10,7 @@ export {
 } from "./api/subscriptionApi";
 export { MySubscriptions } from "./components/MySubscriptions";
 // Durations are total minutes, and the admin panel states them the same way the
-// wizard, the emails and the invoices do.
+// wizard and the emails do.
 export {
   combineDuration,
   splitDuration,

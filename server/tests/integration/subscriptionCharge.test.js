@@ -102,8 +102,8 @@ describe("runSubscriptionCharges", () => {
             paymentIntentId: "pi_cycle_success",
             amount: 40
         });
-        // The cycle's invoice email is fire-and-forget (the charge worker must
-        // not block on SMTP), so wait for the dispatch before asserting on it.
+        // The cycle's confirmation email is fire-and-forget (the charge worker
+        // must not block on SMTP), so wait for the dispatch before asserting on it.
         await waitForCustomerEmails(1);
         expect(sendEmailMock).toHaveBeenCalledWith(expect.objectContaining({ email: user.email }));
 

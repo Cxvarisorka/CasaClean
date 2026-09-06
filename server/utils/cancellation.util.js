@@ -10,7 +10,7 @@
 // rule (how close is "inside", and what an hour is worth) live here so the
 // controller reads as policy rather than arithmetic.
 
-const { roundMoney } = require('./invoice.util');
+const { roundMoney } = require('./vat.util');
 const { durationInMinutes } = require('./duration.util');
 // The moment a booking starts is the same "YYYY-MM-DD" + "HH:MM" pair the
 // advance-notice rule works from, so it is defined once, there.
@@ -42,8 +42,8 @@ const isLateCancellation = (booking, now = Date.now()) =>
  * for the shopping list attached to it.
  *
  * The labour is recovered by SUBTRACTION (charge − add-ons) rather than by
- * re-reading the service's current `pricePerHour`, the same rule the invoice
- * lines follow: the booking's own figures are what the customer was charged, and
+ * re-reading the service's current `pricePerHour`: the booking's own figures
+ * are what the customer was charged, and
  * a catalogue price edit must never restate that. Add-on catalogue prices are
  * net today, so they are grossed up at the booking's own snapshotted VAT rate
  * before being subtracted from the gross charge; a legacy booking (no `tax`

@@ -429,7 +429,7 @@ export const terms = {
       blocks: [
         {
           type: "p",
-          text: "I prezzi esposti sul sito costituiscono un invito a prenotare, non una proposta contrattuale. La tua prenotazione diventa un contratto quando il pagamento va a buon fine e ti inviamo l'email di conferma con la fattura allegata.",
+          text: "I prezzi esposti sul sito costituiscono un invito a prenotare, non una proposta contrattuale. La tua prenotazione diventa un contratto quando il pagamento va a buon fine e ti inviamo l'email di conferma.",
         },
         {
           type: "ul",
@@ -469,7 +469,7 @@ export const terms = {
             "I prezzi di listino sono al netto dell'IVA, che viene aggiunta nella misura applicabile in Italia. Entrambi gli importi sono mostrati prima del pagamento e riportati in fattura.",
             "Se sei un'impresa stabilita in un altro Stato membro dell'UE e la tua partita IVA risulta verificata sul VIES, l'IVA non viene applicata e la fattura riporta la dicitura di inversione contabile ai sensi dell'articolo 196 della Direttiva 2006/112/CE: l'imposta è assolta da te. La verifica non è immediata; finché il numero non è confermato, l'IVA viene addebitata normalmente.",
             "Il pagamento avviene in anticipo, online, con carta tramite Stripe. Non vediamo né conserviamo mai il numero della tua carta.",
-            "Per ogni pagamento andato a buon fine viene emessa una fattura, inviata via email in PDF. Puoi riscaricarla in qualsiasi momento dal tuo account.",
+            "Per ogni pagamento andato a buon fine viene emessa una fattura, che ti inviamo via email. Se ti serve un'altra copia, richiedicela in qualsiasi momento.",
           ],
         },
       ],

@@ -307,8 +307,7 @@ curl -X PATCH http://localhost:3000/api/v1/booking/PASTE_BOOKING_ID/cancel ^
 | 9 | Not logged in | **401** | "Authorization is required!" |
 
 > **Check #2 carefully:** the customer's email must state both figures — what was
-> refunded and the fee that was kept — and the invoice must stay `issued`, since
-> the money it documents was only partly returned. An **admin** cancelling the
+> refunded and the fee that was kept. An **admin** cancelling the
 > same booking (`PATCH /:id` with `{"status":"cancelled"}`) always refunds in
 > full — that is the case-by-case override.
 

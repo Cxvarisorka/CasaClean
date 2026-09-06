@@ -27,8 +27,6 @@ const {
   formatEuro
 } = require('../services/booking.service');
 
-// Invoices track the money, so a refund has to be reflected on them too.
-const { markInvoiceRefunded } = require('../services/invoice.service');
 // Catalogue prices are VAT-exclusive; VAT is added on top unless the customer is
 // a verified business.
 const { priceForCustomer, applyTaxTreatment } = require('../utils/tax.util');
@@ -317,7 +315,7 @@ const createBooking = catchAsync(async (req, res, next) => {
   const status = onBehalf ? 'pending' : 'confirmed';
 
   // This endpoint is admin-only (customers pay online via /payment/booking/*),
-  // so every booking created here is a MANUAL / offline (cash/invoice) booking:
+  // so every booking created here is a MANUAL / offline (cash) booking:
   // no Stripe charge is taken. The money is settled out-of-band.
   // Whitelist exactly what we persist — we never spread req.body, so a caller
   // can't mass-assign server-managed fields (user/paymentIntentId/totalAmount).
@@ -606,11 +604,6 @@ const editBooking = catchAsync(async (req, res, next) => {
       if (refundUpdate) {
         Object.assign(updates, refundUpdate);
 
-        // Stamp the invoice so an exported PDF reflects the reversal.
-        await markInvoiceRefunded(id, refundUpdate.refundedAt).catch((err) =>
-          console.error('Invoice refund stamp error:', err.message)
-        );
-
         // Best-effort refund email.
         try {
           const { subject, html, text } = renderRefundEmail({
@@ -778,16 +771,6 @@ const cancelMyBooking = catchAsync(async (req, res, next) => {
 
   // Best-effort refund email (only when an actual refund was issued).
   if (refundUpdate) {
-    // Stamp the invoice so an exported PDF reflects the reversal — but only for
-    // a full refund. A late cancellation kept money the invoice correctly says
-    // was charged, so marking that document 'refunded' would misstate it; the
-    // retained fee stands on the invoice as issued.
-    if (refundUpdate.paymentStatus === 'refunded') {
-      await markInvoiceRefunded(id, refundUpdate.refundedAt).catch((err) =>
-        console.error('Invoice refund stamp error:', err.message)
-      );
-    }
-
     try {
       const { subject, html, text } = renderRefundEmail({
         customerName: booking.customerName,

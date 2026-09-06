@@ -17,14 +17,11 @@ const {
   createCity,
   createService,
   createSpecialRequest,
-  validBookingBody,
-  dateStr
+  validBookingBody
 } = require('../setup/fixtures');
 
 const User = require('../../models/user.model');
 const Booking = require('../../models/booking.model');
-const Invoice = require('../../models/invoice.model');
-const { issueInvoiceForBooking } = require('../../services/invoice.service');
 
 const VAT_RATE = '22';
 
@@ -387,8 +384,8 @@ describe('pricing by customer type', () => {
   });
 });
 
-describe('the invoice a business receives', () => {
-  it('states the reverse charge, with net line items that sum to the total', async () => {
+describe('reverse-charge charging details', () => {
+  it('charges a verified business net, with add-ons at their catalogue price', async () => {
     const [user, city, addOn] = await Promise.all([
       verifiedBusiness(),
       createCity(),
@@ -412,150 +409,11 @@ describe('the invoice a business receives', () => {
     // 60 + 12.20 = 72.20 net, charged as-is under the reverse charge.
     expect(finalize.body.data.booking.totalAmount).toBe(72.2);
 
-    const [sent] = await waitForCustomerEmails(1);
-    const invoice = await Invoice.findOne({ booking: finalize.body.data.booking._id }).lean();
-
-    expect(invoice.reverseCharge).toBe(true);
-    expect(invoice.vatRate).toBe(0);
-    expect(invoice.vatAmount).toBe(0);
-    expect(invoice.subtotal).toBe(72.2);
-    expect(invoice.total).toBe(72.2);
-
-    // Addressed to the company, carrying the VAT number the relief rests on.
-    expect(invoice.customer.name).toBe('Bianchi Uffici Srl');
-    expect(invoice.customer.vatNumber).toBe('IT09876543210');
-
-    // Catalogue prices are net, so the add-on prints at its catalogue price.
-    const addOnLine = invoice.lineItems.find((l) => l.description === 'Fridge cleaning');
-    expect(addOnLine.amount).toBe(12.2);
-    // Items are stated net, so they sum to the subtotal the VAT line sits under.
-    const sum = invoice.lineItems.reduce((total, item) => total + item.amount, 0);
-    expect(Math.round(sum * 100) / 100).toBe(invoice.subtotal);
-
-    // And the customer is told why there is no VAT.
-    expect(sent.text).toMatch(/reverse charge/i);
-    expect(sent.html).toMatch(/reverse charge/i);
-  });
-
-  it('breaks VAT out normally for an individual', async () => {
-    const [user, city] = await Promise.all([createUser(), createCity()]);
-    const service = await createService({ pricePerHour: 30 });
-    const booking = await Booking.create({
-      user: user._id,
-      serviceId: service._id,
-      cityId: city._id,
-      customerName: user.fullname,
-      customerEmail: user.email,
-      customerPhone: user.phone,
-      streetName: 'Via Roma',
-      houseNumber: '12',
-      propertySize: '80',
-      doorbellName: 'Rossi',
-      bookingDate: '2026-12-01',
-      bookingTime: '10:00',
-      durationMinutes: 120,
-      cleaners: 1,
-      totalAmount: 73.2,
-      tax: {
-        treatment: 'standard',
-        customerType: 'individual',
-        catalogueVatRate: 22,
-        vatRate: 22,
-        netAmount: 60,
-        vatAmount: 13.2
-      },
-      status: 'confirmed',
-      paymentMethod: 'card',
-      paymentStatus: 'paid',
-      amountPaid: 73.2,
-      paidAt: new Date()
-    });
-
-    const invoice = await issueInvoiceForBooking(booking._id);
-
-    expect(invoice.reverseCharge).toBe(false);
-    expect(invoice.vatRate).toBe(22);
-    expect(invoice.subtotal).toBe(60);
-    expect(invoice.vatAmount).toBe(13.2);
-    expect(invoice.total).toBe(73.2);
-
-    // The itemised lines are net, so they sum to the subtotal, not the total.
-    const sum = invoice.lineItems.reduce((total, item) => total + item.amount, 0);
-    expect(Math.round(sum * 100) / 100).toBe(60);
-  });
-
-  it('cites Article 196 in the PDF, and still renders it', async () => {
-    const [user, city] = await Promise.all([verifiedBusiness(), createCity()]);
-    const service = await createService({ pricePerHour: 30 });
-    mockPaidIntent('pi_test_vat_pdf');
-
-    const cookie = cookieFor(user);
-    const intent = await api
-      .post('/api/v1/payment/booking/intent')
-      .set('Cookie', cookie)
-      .send(validBookingBody(service, city));
-    const finalize = await api
-      .post('/api/v1/payment/booking/finalize')
-      .set('Cookie', cookie)
-      .send({ paymentIntentId: intent.body.data.paymentIntentId });
-
-    const [sent] = await waitForCustomerEmails(1);
-    const invoice = await Invoice.findOne({
-      booking: finalize.body.data.booking._id
-    }).lean();
-
-    // The reverse-charge branch of the renderer draws extra blocks (the legal
-    // notice, the customer VAT line) that the standard path never touches — so
-    // it gets its own end-to-end render, not just a field assertion.
-    const res = await api
-      .get(`/api/v1/invoice/${invoice._id}/pdf`)
-      .set('Cookie', cookie);
-
-    expect(res.status).toBe(200);
-    expect(res.headers['content-type']).toBe('application/pdf');
-    expect(res.body.subarray(0, 5).toString()).toBe('%PDF-');
-
-    // And the emailed copy states the legal basis, with the number it rests on.
-    expect(sent.text).toMatch(/Article 196/);
-    expect(sent.html).toMatch(/Article 196/);
-    expect(sent.html).toContain('IT09876543210');
-  });
-
-  it('marks a reverse-charge invoice refunded when the booking is cancelled', async () => {
-    const [user, city] = await Promise.all([verifiedBusiness(), createCity()]);
-    const service = await createService({ pricePerHour: 30 });
-    mockPaidIntent('pi_test_vat_refund');
-    stripeMock.refunds.create.mockResolvedValue({ id: 're_vat_1', status: 'succeeded' });
-
-    const cookie = cookieFor(user);
-    const intent = await api
-      .post('/api/v1/payment/booking/intent')
-      .set('Cookie', cookie)
-      // Comfortably outside the 24h cancellation window, so the cancel actually
-      // refunds rather than keeping the money.
-      .send(validBookingBody(service, city, { bookingDate: dateStr(5) }));
-    const finalize = await api
-      .post('/api/v1/payment/booking/finalize')
-      .set('Cookie', cookie)
-      .send({ paymentIntentId: intent.body.data.paymentIntentId });
-
+    // The customer still gets exactly one confirmation email for the payment.
     await waitForCustomerEmails(1);
-    const bookingId = finalize.body.data.booking._id;
-
-    const cancelled = await api
-      .patch(`/api/v1/booking/${bookingId}/cancel`)
-      .set('Cookie', cookie)
-      .send({});
-    expect(cancelled.status).toBe(200);
-
-    const invoice = await Invoice.findOne({ booking: bookingId }).lean();
-    expect(invoice.status).toBe('refunded');
-    // The refund does not restate the document — it stays a net invoice.
-    expect(invoice.reverseCharge).toBe(true);
-    expect(invoice.total).toBe(60);
   });
 
-  it('issues nothing but one honest total when no rate is configured', async () => {
+  it('charges one honest total when no rate is configured', async () => {
     // The whole feature is invisible without INVOICE_VAT_RATE: a verified
     // business and an individual are charged identically.
     const saved = process.env.INVOICE_VAT_RATE;
@@ -594,9 +452,9 @@ describe('the invoice a business receives', () => {
 
 // An exact-minute duration is where pricing, VAT and Stripe can most easily
 // disagree: 85/60 x 20 is 28.3333..., and every layer has to land on the same
-// cent. This walks one such booking from the quote to the invoice.
+// cent. This walks one such booking from the quote to the charge.
 describe('exact-minute pricing, end to end', () => {
-  it('prices, charges and invoices a 1 h 25 m booking with VAT on top', async () => {
+  it('prices and charges a 1 h 25 m booking with VAT on top', async () => {
     const [user, city] = await Promise.all([createUser(), createCity()]);
     const service = await createService({ pricePerHour: 20 });
     mockPaidIntent('pi_test_minutes_vat');
@@ -628,16 +486,6 @@ describe('exact-minute pricing, end to end', () => {
     expect(booking.tax.netAmount).toBe(28.33);
     expect(booking.tax.vatAmount).toBe(6.23);
     expect(booking.tax.netAmount + booking.tax.vatAmount).toBeCloseTo(booking.totalAmount, 2);
-
-    const invoice = await issueInvoiceForBooking(booking._id);
-    expect(invoice.subtotal).toBe(28.33);
-    expect(invoice.vatAmount).toBe(6.23);
-    expect(invoice.total).toBe(34.56);
-    // The lines are stated NET, so they sum to the subtotal the VAT sits under.
-    const sum = invoice.lineItems.reduce((total, item) => total + item.amount, 0);
-    expect(sum).toBe(invoice.subtotal);
-    expect(invoice.service.durationMinutes).toBe(85);
-    expect(invoice.lineItems[0].detail).toBe('1 h 25 min × 1 cleaner');
   });
 
   it('gives a VIES-verified business the same minute-exact net, with no VAT added', async () => {
@@ -667,10 +515,5 @@ describe('exact-minute pricing, end to end', () => {
     expect(booking.tax.treatment).toBe('reverse-charge');
     expect(booking.tax.vatAmount).toBe(0);
     expect(booking.tax.netAmount).toBe(28.33);
-
-    const invoice = await issueInvoiceForBooking(booking._id);
-    expect(invoice.reverseCharge).toBe(true);
-    expect(invoice.subtotal).toBe(28.33);
-    expect(invoice.total).toBe(28.33);
   });
 });

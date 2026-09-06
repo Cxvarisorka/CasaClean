@@ -27,7 +27,6 @@ export const ROUTES = {
     dashboard: "/admin",
     bookings: "/admin/bookings",
     subscriptions: "/admin/subscriptions",
-    invoices: "/admin/invoices",
     calendar: "/admin/calendar",
     services: "/admin/services",
     specialRequests: "/admin/special-requests",

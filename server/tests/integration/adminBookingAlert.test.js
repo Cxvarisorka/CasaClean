@@ -177,7 +177,7 @@ describe('new-booking alerts', () => {
       createService()
     ]);
     mockPaidIntent('pi_test_alert_smtp');
-    // Every send fails — the customer's invoice email and the team's alert alike.
+    // Every send fails — the customer's confirmation email and the team's alert alike.
     sendEmailMock.mockRejectedValue(new Error('SMTP is down'));
     const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 

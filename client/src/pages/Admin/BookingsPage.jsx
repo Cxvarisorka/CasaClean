@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { CalendarCheck, FileText, Plus, Pencil, Trash2, Eye } from "lucide-react";
+import { CalendarCheck, Plus, Pencil, Trash2, Eye } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Select } from "@/components/ui/Select";
@@ -14,7 +13,6 @@ import {
   PAYMENT_STATUS_META,
   useCollection,
 } from "@/features/admin";
-import { invoiceApi } from "@/features/admin/api/adminApi";
 import { useTranslation } from "@/i18n";
 import { formatDuration } from "@/features/booking";
 
@@ -57,12 +55,6 @@ const changedOnly = (values, original) =>
   Object.fromEntries(
     Object.entries(values).filter(([key, val]) => !sameValue(val, original?.[key]))
   );
-
-/*
- * A booking only has an invoice once money has actually moved. 'unpaid' bookings
- * have nothing to bill, and the API rejects them — so don't offer the button.
- */
-const INVOICEABLE = ["paid", "refunded", "manual"];
 
 /*
  * A label and its value. They only share a line from `xs`: inside a dialog on a
@@ -224,24 +216,6 @@ export default function BookingsPage() {
     }));
   }, [items, statusFilter, dateFrom, dateTo, serviceNameById, cityNameById]);
 
-  /*
-   * Export the booking's invoice as a PDF.
-   *
-   * Issuing is idempotent server-side, so one call covers both cases: a booking
-   * paid through the normal flow already has its invoice and gets it back, while
-   * an offline/manual or pre-invoicing booking has one issued on the spot.
-   * `send: false` because this is an export — the admin is fetching a document,
-   * not (re)mailing the customer. Delivery lives on the Invoices page.
-   */
-  const invoiceMutation = useMutation({
-    mutationFn: async (booking) => {
-      const invoice = await invoiceApi.issueForBooking(booking._id, { send: false });
-      return invoiceApi.downloadPdf(invoice._id, invoice.number);
-    },
-    onError: (err) =>
-      window.alert(err?.message || t("admin.invoices.downloadFailed")),
-  });
-
   const handleSubmit = async (values) => {
     if (!editing) {
       if (await create(values)) setEditing(undefined);
@@ -371,20 +345,6 @@ export default function BookingsPage() {
             <Button variant="ghost" size="icon" aria-label={t("admin.action.view")} onClick={() => setViewing(b)}>
               <Eye className="size-4.5" />
             </Button>
-            {INVOICEABLE.includes(b.payment_status) && (
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label={t("admin.bookings.invoice")}
-                title={t("admin.bookings.invoice")}
-                loading={
-                  invoiceMutation.isPending && invoiceMutation.variables?._id === b._id
-                }
-                onClick={() => invoiceMutation.mutate(b)}
-              >
-                <FileText className="size-4.5" />
-              </Button>
-            )}
             <Button variant="ghost" size="icon" aria-label={t("admin.action.edit")} onClick={() => setEditing(b)}>
               <Pencil className="size-4.5" />
             </Button>
